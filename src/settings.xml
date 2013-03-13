@@ -2,7 +2,6 @@
 <!-- The main configuration file for the application. You can overlay the default application parameters by system environmental parameters.-->
 <configuration>
   <system/>
-  <!-- /Users/dmitry/Documents -->
-  <properties fileName="/Users/dimm/Documents/etc/vospace/application.properties"/>
+  <properties fileName="/etc/vospace/application.properties"/>
   <properties fileName="constants.properties"/>
 </configuration>
