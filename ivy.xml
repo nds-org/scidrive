@@ -1,0 +1,38 @@
+<ivy-module version="2.0">
+    <info organisation="edu.jhu.pha" module="vobox"/>
+    <configurations>
+        <conf name="catalina"/>
+        <conf name="compile"/>
+    </configurations>
+    <dependencies>
+        <dependency org="org.apache.tomcat" name="servlet-api" rev="6.0.36" conf="catalina->default"/>
+        <dependency org="org.apache.tomcat" name="catalina-ant" rev="6.0.36" conf="catalina->default" transitive="false"/>
+            
+        <dependency org="org.apache.commons" name="commons-lang3" rev="3.1" conf="compile->default"/>
+        <dependency org="commons-io" name="commons-io" rev="2.4" conf="compile->default"/>
+        <dependency org="commons-jxpath" name="commons-jxpath" rev="1.3" conf="compile->default"/>
+        <dependency org="com.sun.jersey" name="jersey-server" rev="1.5" conf="compile->default"/>
+        <dependency org="com.sun.jersey.contribs" name="jersey-multipart" rev="1.5" conf="compile->default"/>
+        <dependency org="org.openid4java" name="openid4java" rev="0.9.7" conf="compile->default"/>
+        <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.2.3" conf="compile->default"/>
+        <dependency org="xmlwriter" name="xmlwriter" rev="2.2.2" conf="compile->default"/>
+        <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.12" conf="compile->default"/>
+        <dependency org="org.apache.axis2" name="axis2-kernel" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+        <dependency org="org.apache.axis2" name="axis2-adb" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+        <dependency org="log4j" name="log4j" rev="1.2.17" conf="compile->default"/>
+        <dependency org="commons-configuration" name="commons-configuration" rev="1.6" conf="compile->default"/>
+        <dependency org="org.apache.tika" name="tika-app" rev="1.3" conf="compile->default"/>
+        <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="compile->default"/>
+        <dependency org="com.rabbitmq" name="amqp-client" rev="3.0.2" conf="compile->default"/>
+        <dependency org="mysql" name="mysql-connector-java" rev="5.1.23" conf="compile->default"/>
+        <dependency org="org.agmip.thirdparty" name="ximpleware-vtd-xml" rev="2.11" conf="compile->default"/>
+        <dependency org="xom" name="xom" rev="1.2.5" conf="compile->default"/>
+        <dependency org="org.apache.sanselan" name="sanselan" rev="0.97-incubator" conf="compile->default"/><!-- FITS parsing -->
+    </dependencies>
+</ivy-module>

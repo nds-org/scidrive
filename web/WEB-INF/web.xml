@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+
+	<display-name>VOSpace</display-name>
+
+	<!--servlet>
+		<servlet-name>Cert_test</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.openid.UserName</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Cert_test</servlet-name>
+		<url-pattern>/username</url-pattern>
+	</servlet-mapping-->
+
+	<servlet>
+		<servlet-name>Jersey REST Service</servlet-name>
+		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+		<init-param>
+			<param-name>com.sun.jersey.config.property.packages</param-name>
+			<param-value>edu.jhu.pha.vosync.rest;edu.jhu.pha.vospace.rest</param-value>
+		</init-param>
+	    <init-param>
+	        <param-name>com.sun.jersey.spi.container.ContainerRequestFilters</param-name>
+	        <param-value>edu.jhu.pha.vospace.rest.OAuthAuthenticationFilter</param-value>
+	    </init-param>
+	    <init-param>
+	        <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>
+	        <param-value>edu.jhu.pha.vospace.rest.OptionsFilter</param-value>
+	    </init-param>
+   		<load-on-startup>5</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Jersey REST Service</servlet-name>
+		<url-pattern>/*</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>Settings</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.SettingsServlet</servlet-class>
+		<init-param>
+			<param-name>settingsFileName</param-name>
+			<param-value>settings.xml</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DB Connection pool</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.DbPoolServlet</servlet-class>
+		<load-on-startup>2</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>JobsProcessor</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.jobs.JobsProcessorServlet</servlet-class>
+	    <init-param>
+	        <param-name>processJobs</param-name>
+	        <param-value>true</param-value>
+	    </init-param>
+		<load-on-startup>3</load-on-startup>
+	</servlet>
+	
+	<servlet>
+		<servlet-name>NodeProcessor</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.process.NodeProcessingServlet</servlet-class>
+		<load-on-startup>4</load-on-startup>
+	</servlet>
+	
+	<!-- servlet>
+		<servlet-name>UDTServlet</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.UdtServlet</servlet-class>
+		<load-on-startup>5</load-on-startup>
+	</servlet-->
+	
+	<!-- servlet>
+		<servlet-name>DBCleanerServlet</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.DbCleanerServlet</servlet-class>
+		<load-on-startup>30</load-on-startup>
+	</servlet-->
+	
+	<!--servlet>
+		<servlet-name>SynchronizationServlet</servlet-name>
+		<servlet-class>edu.jhu.pha.vospace.SynchronizationServlet</servlet-class>
+		<load-on-startup>35</load-on-startup>
+	</servlet-->
+	
+	<!-- OAuth -->
+    <servlet>
+        <servlet-name>RequestTokenServlet</servlet-name>
+        <servlet-class>edu.jhu.pha.vospace.oauth.RequestTokenServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>AuthorizationServlet</servlet-name>
+        <servlet-class>edu.jhu.pha.vospace.oauth.AuthorizationServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>AccessTokenServlet</servlet-name>
+        <servlet-class>edu.jhu.pha.vospace.oauth.AccessTokenServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>EchoServlet</servlet-name>
+        <servlet-class>edu.jhu.pha.vospace.oauth.EchoServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RequestTokenServlet</servlet-name>
+        <url-pattern>/request_token</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AuthorizationServlet</servlet-name>
+        <url-pattern>/authorize</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AccessTokenServlet</servlet-name>
+        <url-pattern>/access_token</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>EchoServlet</servlet-name>
+        <url-pattern>/echo</url-pattern>
+    </servlet-mapping>
+
+</web-app>
