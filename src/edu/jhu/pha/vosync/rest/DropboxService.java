@@ -1,17 +1,28 @@
 /*******************************************************************************
- * Copyright 2013 Johns Hopkins University
+ * Copyright (c) 2011, Johns Hopkins University
+ * All rights reserved.
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the Johns Hopkins University nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
  * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL Johns Hopkins University BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 package edu.jhu.pha.vosync.rest;
 
@@ -28,6 +39,7 @@ import java.util.UUID;
 import java.util.Vector;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -54,6 +66,18 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.Version;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
@@ -683,6 +707,45 @@ public class DropboxService {
 		
 	}
 
+	@Path("cont_search")
+	@GET
+	public Response cont_search(@QueryParam("query") String queryStr) {
+		final String username = (String)request.getAttribute("username");
+
+		try {
+			Directory directory = FSDirectory.open(new File(conf.getString("lucene.index")));
+			
+		    DirectoryReader ireader = DirectoryReader.open(directory);
+		    IndexSearcher isearcher = new IndexSearcher(ireader);
+		    
+		    Analyzer analyzer = new EnglishAnalyzer(Version.LUCENE_41);
+		    QueryParser parser = new QueryParser(Version.LUCENE_41, "content", analyzer);
+		    String queryFullStr = "owner:\""+username+"\" AND "+queryStr;
+		    Query query = parser.parse(queryFullStr);
+		    ScoreDoc[] hits = isearcher.search(query, null, 100).scoreDocs;
+		    
+		    StringBuffer buf = new StringBuffer();
+		    
+		    buf.append("<p>Results: "+hits.length+"</p>");
+		    
+		    for (int i = 0; i < hits.length; i++) {
+		      Document hitDoc = isearcher.doc(hits[i].doc);
+		      buf.append("<h3>"+hitDoc.get("source")+"</h3>");
+		      if(hitDoc.get("content").length() > 1024)
+		    	  buf.append("<p>"+hitDoc.get("content").substring(0,1024)+"...</p>");
+		      else
+		    	  buf.append("<p>"+hitDoc.get("content")+"</p>");
+		    }
+		    ireader.close();
+		    directory.close();
+
+		    return Response.ok(buf.toString()).build();
+		} catch(Exception ex) {
+			ex.printStackTrace();
+			return Response.ok().build();
+		}
+	}
+	
 	@PUT @Path("regions_put/{path:.+}")
 	public Response putFileRegions(@PathParam("path") String fullPath, InputStream regionsInpStream) {
 		VospaceId identifier;
