@@ -1,5 +1,12 @@
 <fileprocessors>
 	<processor>
+		<id>docsprocessor</id>
+		<mimetype>application/msword</mimetype>
+		<mimetype>application/vnd.openxmlformats-officedocument.wordprocessingml.document</mimetype>
+		<mimetype>text/plain</mimetype>
+		<processor>edu.sdsc.vospace.process.DocumentsProcessor</processor>
+	</processor>
+	<processor>
 		<id>fitsprocessor</id>
 		<mimetype>application/fits</mimetype>
 		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
