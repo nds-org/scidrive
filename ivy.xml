@@ -34,5 +34,6 @@
         <dependency org="org.agmip.thirdparty" name="ximpleware-vtd-xml" rev="2.11" conf="compile->default"/>
         <dependency org="xom" name="xom" rev="1.2.5" conf="compile->default"/>
         <dependency org="org.apache.sanselan" name="sanselan" rev="0.97-incubator" conf="compile->default"/><!-- FITS parsing -->
+        <dependency org="net.sourceforge.nekohtml" name="nekohtml" rev="1.9.18" conf="compile->default"/>
     </dependencies>
 </ivy-module>
