@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info>
+  <mime-type type="application/enzoparameterfile">
+    <alias type="text/enzoparameterfile"/>
+    <sub-class-of type="text/plain"/>
+    <_comment>Enzo Parameter File</_comment>
+    <magic priority="50">
+      <match value="InitialCycleNumber" type="string" offset="0"/>
+    </magic>
+  </mime-type>
+</mime-info>
