@@ -7,13 +7,8 @@
 		<processor>edu.sdsc.vospace.process.DocumentsProcessor</processor>
 	</processor>
 	<processor>
-		<id>fitsprocessor</id>
-		<mimetype>application/fits</mimetype>
-		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
-		<mimetype>image/tiff</mimetype>
-		<mimetype>text/plain</mimetype>
-		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>
-		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
-		<config>/edu/jhu/pha/vospace/process/tika/tika-conf.xml</config>
+		<id>simprocessor</id>
+		<mimetype>application/enzoparameterfile</mimetype>
+		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
 	</processor>
 </fileprocessors>
