@@ -254,14 +254,11 @@ public class ContainerNode extends DataNode {
 		NodesList childrenList = getDirectChildren(false, 0, -1);
 		List<Node> children = childrenList.getNodesList();
 
-		logger.debug("1: "+parent);
 		parent = parent + getUri().getNodePath().getNodeName()+"/";
-		logger.debug("2: "+parent);
 		
 		for(Node child: children) {
 			if(child.getType() == NodeType.CONTAINER_NODE) {
 				out.putNextEntry(new TarEntry(TarHeader.createHeader(parent+child.getUri().getNodePath().getNodeName(), 0, child.getNodeInfo().getMtime().getTime()/1000, true)));
-				logger.debug("Add cont: "+parent+" "+child.getUri().toString());
 				((ContainerNode)child).tarContainer(parent, out);
 			} else {
 				try {
