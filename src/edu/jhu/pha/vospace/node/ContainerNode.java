@@ -216,8 +216,6 @@ public class ContainerNode extends DataNode {
 	}
 
 	public InputStream exportData() {
-		final ContainerNode node = this;
-
 		final PipedInputStream pipedIn = new PipedInputStream();
 		PipedOutputStream pipedOut = null;
 
@@ -228,7 +226,7 @@ public class ContainerNode extends DataNode {
     		Runnable runTransfer = new Runnable() {
     	        public void run() {
     	        	try {
-    		        	tarContainer("", node, tarOut);
+    		        	tarContainer("", tarOut);
     	        	} catch(IOException ex) {
     	        		logger.error(ex.getMessage());
     	        	} finally {
@@ -237,7 +235,7 @@ public class ContainerNode extends DataNode {
     	        				tarOut.close();
     	        		} catch(Exception ex) {}
     	        	}
-    	        	logger.debug("Finishing node "+node.getUri()+" thread");
+    	        	logger.debug("Finishing node "+getUri()+" thread");
     	        }
     	      };
 
@@ -251,17 +249,20 @@ public class ContainerNode extends DataNode {
 		return null;
 	}
 	
-	private void tarContainer(String parent, ContainerNode node, TarOutputStream out) throws IOException {
+	protected void tarContainer(String parent, TarOutputStream out) throws IOException {
 		BufferedInputStream origin = null;
 		NodesList childrenList = getDirectChildren(false, 0, -1);
 		List<Node> children = childrenList.getNodesList();
 
-		parent = parent + node.getUri().getNodePath().getNodeName()+"/";
+		logger.debug("1: "+parent);
+		parent = parent + getUri().getNodePath().getNodeName()+"/";
+		logger.debug("2: "+parent);
 		
 		for(Node child: children) {
 			if(child.getType() == NodeType.CONTAINER_NODE) {
 				out.putNextEntry(new TarEntry(TarHeader.createHeader(parent+child.getUri().getNodePath().getNodeName(), 0, child.getNodeInfo().getMtime().getTime()/1000, true)));
-				tarContainer(parent, (ContainerNode)child, out);
+				logger.debug("Add cont: "+parent+" "+child.getUri().toString());
+				((ContainerNode)child).tarContainer(parent, out);
 			} else {
 				try {
 					InputStream nodeInpStream = child.exportData();
