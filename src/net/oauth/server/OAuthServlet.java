@@ -91,6 +91,7 @@ public class OAuthServlet {
                     .getParameters().entrySet());
             response.addHeader("WWW-Authenticate", message
                     .getAuthorizationHeader(realm));
+            response.setHeader("Access-Control-Allow-Origin", "*");
             if (sendBody) {
                 sendForm(response, message.getParameters());
             }
