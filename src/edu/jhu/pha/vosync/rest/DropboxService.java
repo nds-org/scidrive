@@ -585,20 +585,21 @@ public class DropboxService {
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
 			throw new NotFoundException("Is a root folder");
 		} else {
-			if(!overwrite) {
+			if(parentRev != null) {
 				if(metastore.isStored(identifier)){
 					//throw new BadRequestException(identifier.toString()+" exists.");
 					//logger.debug("Found conflict in node "+identifier);
-					
-					node = NodeFactory.getInstance().getNode(identifier, username);
+
+
+					node = NodeFactory.getNode(identifier, username);
 					
 					if(node.getNodeInfo().isDeleted()) {
 						logger.debug("Node "+node.getUri().toString()+" is deleted. Recreating the node metadata.");
 						node.remove();
-						node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+						node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
 						node.setNode(null);
-					} else if(!parentRev.equals(node.getNodeInfo().getRevision())) {
-						throw new BadRequestException("Revision parameter error");
+					} else if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
 
 						//TODO fix the revisions
 						/*logger.debug("Revisions do not match: "+parentRev+" "+node.getNodeInfo().getCurrentRev());
@@ -622,15 +623,18 @@ public class DropboxService {
 						}*/
 					}
 				} else {
-					node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
 			} else {
 				try {
-					node = NodeFactory.getInstance().getNode(identifier, username);
+					node = NodeFactory.getNode(identifier, username);
+					if(!overwrite) {
+						throw new BadRequestException("Node exists");
+					}
 				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-					node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
@@ -638,7 +642,7 @@ public class DropboxService {
 		}
 		
 		if(!(node instanceof DataNode)) {
-			throw new NotFoundException("Is a container");
+			throw new NotFoundException("Node is a container");
 		}
 		
 		((DataNode)node).setData(fileDataInp);
