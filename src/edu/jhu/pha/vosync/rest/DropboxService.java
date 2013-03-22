@@ -258,6 +258,10 @@ public class DropboxService {
 	
 	@PUT @Path("account/service")
 	public Response setAccountService(InputStream serviceCredInpStream) {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode credNode = mapper.readTree(serviceCredInpStream);
@@ -270,11 +274,18 @@ public class DropboxService {
 	
 	@GET @Path("account/service")
 	public Response getAccountService() {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
 		return Response.ok(UserHelper.getUserServices((String)request.getAttribute("username")).toString()).build();
 	}
 	
 	@GET @Path("regions/info")
 	public Response getRegionsInfo() {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
 		MetaStore mstore = MetaStoreFactory.getInstance().getMetaStore(null);
 		if(mstore instanceof MetaStoreDistributed) {
 			RegionsInfo regionsInfo = ((MetaStoreDistributed)mstore).getRegionsInfo();
@@ -320,6 +331,10 @@ public class DropboxService {
 
 	@GET @Path("regions/{path:.+}")
 	public Response getFileRegions(@PathParam("path") String fullPath) {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
@@ -396,7 +411,11 @@ public class DropboxService {
 	@GET @Path("transfers/info")
 	@Produces(MediaType.APPLICATION_JSON)
 	public byte[] getTransfersInfo() {
-	    return DbPoolServlet.goSql("Get transfers queue",
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
+		return DbPoolServlet.goSql("Get transfers queue",
 	    		"select id, state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ?",
 	            new SqlWorker<byte[]>() {
 	                @Override
@@ -698,8 +717,12 @@ public class DropboxService {
 
 	@Path("cont_search")
 	@GET
-	public Response cont_search(@QueryParam("query") String queryStr) {
+	public Response contSearch(@QueryParam("query") String queryStr) {
 		final String username = (String)request.getAttribute("username");
+
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
 
 		try {
 			Directory directory = FSDirectory.open(new File(conf.getString("lucene.index")));
@@ -737,6 +760,10 @@ public class DropboxService {
 	
 	@PUT @Path("regions_put/{path:.+}")
 	public Response putFileRegions(@PathParam("path") String fullPath, InputStream regionsInpStream) {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
 		VospaceId identifier;
 
 		if(!(Boolean)request.getAttribute("write_permission")) {
@@ -801,7 +828,7 @@ public class DropboxService {
 	 * @return
 	 */
 	@PUT @Path("shares/{root:dropbox|sandbox}/{path:.+}")
-	public byte[] putshares(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("group") String group, @DefaultValue("false") @QueryParam("write_perm") Boolean write_perm) {
+	public byte[] putShares(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("group") String group, @DefaultValue("false") @QueryParam("write_perm") Boolean write_perm) {
 		final String username = (String)request.getAttribute("username");
 
 		if(!(Boolean)request.getAttribute("write_permission")) {
@@ -846,9 +873,9 @@ public class DropboxService {
 	}
 
 	@GET @Path("shares")
-	public byte[] getshares() {
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
+	public byte[] getShares() {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
 		}
 		
 		final String username = (String)request.getAttribute("username");
@@ -896,9 +923,9 @@ public class DropboxService {
 	}
 
 	@DELETE @Path("shares/{share_id:.+}")
-	public Response delete_share(@PathParam("share_id") final String share_id) {
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
+	public Response deleteShare(@PathParam("share_id") final String share_id) {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
 		}
 		
 		final String username = (String)request.getAttribute("username");
@@ -921,8 +948,12 @@ public class DropboxService {
 
 	@Path("share_groups")
 	@GET
-	public byte[] share_groups() {
-    	ByteArrayOutputStream byteOut = null;
+	public byte[] shareGroups() {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
+		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
 	    	byteOut = new ByteArrayOutputStream();
@@ -961,8 +992,12 @@ public class DropboxService {
 	
 	@Path("share_groups/{group_id}")
 	@GET
-	public byte[] share_group_members(@PathParam("group_id") final int group_id) {
-    	ByteArrayOutputStream byteOut = null;
+	public byte[] shareGroupMembers(@PathParam("group_id") final int group_id) {
+		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
+			throw new ForbiddenException("");
+		}
+
+		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
 	    	byteOut = new ByteArrayOutputStream();
