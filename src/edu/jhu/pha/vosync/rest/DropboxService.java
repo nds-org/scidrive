@@ -54,6 +54,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -1091,6 +1092,37 @@ public class DropboxService {
 		
 			return Response.ok(byteOut.toByteArray()).build();
 		} catch (Exception e) {
+			throw new InternalServerErrorException(e.getMessage());
+		}
+	}
+	
+	@Path("chunked_upload")
+	@PUT
+	public Response chunkedUpload(@QueryParam("upload_id") String uploadId) {
+		
+		if(null == uploadId) {
+			uploadId = RandomStringUtils.randomAlphanumeric(15);
+		}
+		
+		try {
+	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
+	
+			g2.writeStartObject();
+			
+			g2.writeStringField("upload_id", uploadId);
+			g2.writeStringField("offset", "");//31337
+			g2.writeStringField("expires", "");//"Tue, 19 Jul 2011 21:55:38 +0000"
+			
+			g2.writeEndObject();
+			
+			g2.close();
+			byteOut.close();
+			
+			return Response.ok(byteOut.toByteArray()).build();
+		} catch (JsonGenerationException e) {
+			throw new InternalServerErrorException(e.getMessage());
+		} catch (IOException e) {
 			throw new InternalServerErrorException(e.getMessage());
 		}
 	}
