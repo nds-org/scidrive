@@ -92,6 +92,7 @@ import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
@@ -105,6 +106,8 @@ import edu.jhu.pha.vosync.exception.ForbiddenException;
 import edu.jhu.pha.vosync.exception.InternalServerErrorException;
 import edu.jhu.pha.vosync.exception.NotAcceptableException;
 import edu.jhu.pha.vosync.exception.NotFoundException;
+import edu.jhu.pha.vosync.meta.Chunk;
+import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
 
 /**
  * @author Dmitry Mishin
@@ -1098,12 +1101,57 @@ public class DropboxService {
 	
 	@Path("chunked_upload")
 	@PUT
-	public Response chunkedUpload(@QueryParam("upload_id") String uploadId) {
+	public Response chunkedUpload(@QueryParam("upload_id") String uploadId, @QueryParam("offset") long offset, InputStream fileDataInp) {
+		final String username = (String)request.getAttribute("username");
+
+		VoSyncMetaStore voMeta = new VoSyncMetaStore(username);
+
+		logger.debug("New chunk: "+uploadId+" "+offset);
 		
 		if(null == uploadId) {
 			uploadId = RandomStringUtils.randomAlphanumeric(15);
 		}
 		
+		Chunk newChunk = voMeta.getLastChunk(uploadId);
+		
+		if(offset != newChunk.getChunkStart()) { // return error with proper offset
+			logger.error("Wrong offset: "+offset+" should be:"+newChunk.getChunkStart());
+			ResponseBuilder errorResp = Response.status(400);
+			errorResp.entity(genChunkResponse(uploadId, newChunk.getChunkStart()));
+			return errorResp.build();
+		}
+
+		VospaceId identifier;
+		try {
+			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"_"+newChunk.getChunkNum()));
+			DataNode node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
+
+			node.getStorage().createContainer(new NodePath("/"+conf.getString("chunked_container")));
+			node.getStorage().putBytes(identifier.getNodePath(), fileDataInp);
+			
+			NodeInfo info = new NodeInfo();
+			
+			node.getStorage().updateNodeInfo(identifier.getNodePath(), info);
+			node.setNodeInfo(info);
+			
+			newChunk.setSize(info.getSize());
+			
+			logger.debug("new size: "+info.getSize());
+			
+			voMeta.putNewChunk(newChunk);
+			
+			byte[] resp = genChunkResponse(uploadId, newChunk.getChunkStart()+newChunk.getSize());
+			logger.debug(new String(resp));
+			
+			return Response.ok(resp).build();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+			throw new InternalServerErrorException(e.getMessage());
+		}
+
+	}
+	
+	private static byte[] genChunkResponse(String uploadId, long offset) {
 		try {
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
@@ -1111,15 +1159,14 @@ public class DropboxService {
 			g2.writeStartObject();
 			
 			g2.writeStringField("upload_id", uploadId);
-			g2.writeStringField("offset", "");//31337
-			g2.writeStringField("expires", "");//"Tue, 19 Jul 2011 21:55:38 +0000"
+			g2.writeNumberField("offset", offset);//31337
+			g2.writeStringField("expires", "Tue, 19 Jul 2014 21:55:38 +0000");//"Tue, 19 Jul 2011 21:55:38 +0000"
 			
 			g2.writeEndObject();
 			
 			g2.close();
 			byteOut.close();
-			
-			return Response.ok(byteOut.toByteArray()).build();
+			return byteOut.toByteArray();
 		} catch (JsonGenerationException e) {
 			throw new InternalServerErrorException(e.getMessage());
 		} catch (IOException e) {
