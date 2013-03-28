@@ -22,14 +22,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import net.oauth.OAuthAccessor;
-import net.oauth.OAuthMessage;
-import net.oauth.OAuthProblemException;
-import net.oauth.server.OAuthServlet;
-
 import org.apache.log4j.Logger;
-
-import edu.jhu.pha.vospace.oauth.MySQLOAuthProvider;
 
 /** A base class for VOSpace servlets that need to do error handling & redirection. */
 public abstract class BaseServlet extends HttpServlet {
@@ -64,12 +57,12 @@ public abstract class BaseServlet extends HttpServlet {
     }
 
     /** Fetch the current OAuth access token from the database. */
-    public OAuthAccessor getAccessor(HttpServletRequest request)
+    /*public OAuthAccessor getAccessor(HttpServletRequest request)
             throws IOException, OAuthProblemException
     {
         OAuthMessage requestMessage = OAuthServlet.getMessage(request, null);
         return MySQLOAuthProvider.getAccessor(requestMessage.getToken());
-    }
+    }*/
 
     public static boolean isBlank(String s) { return s == null || s.trim().length() == 0; }
 }

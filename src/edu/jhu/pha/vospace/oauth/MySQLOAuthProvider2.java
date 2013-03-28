@@ -14,12 +14,16 @@
  * limitations under the License.
  ******************************************************************************/
 package edu.jhu.pha.vospace.oauth;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.Vector;
 
@@ -32,6 +36,11 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.oauth.server.spi.OAuthConsumer;
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.node.Node;
+import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodePath;
+import edu.jhu.pha.vospace.node.NodeType;
+import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.rest.VoboxOAuthProvider.Consumer;
 
 /**
@@ -40,9 +49,7 @@ import edu.jhu.pha.vospace.rest.VoboxOAuthProvider.Consumer;
  */
 public class MySQLOAuthProvider2 {
 
-    //public static final OAuthValidator VALIDATOR = new SimpleOAuthValidator();
-
-	private static final Logger logger = Logger.getLogger(MySQLOAuthProvider.class);
+	private static final Logger logger = Logger.getLogger(MySQLOAuthProvider2.class);
 
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -50,7 +57,6 @@ public class MySQLOAuthProvider2 {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 
-	
     public static synchronized Token getRequestToken(final String tokenStr) {
         
     	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
@@ -67,7 +73,6 @@ public class MySQLOAuthProvider2 {
                         Token token = null;
 
                         stmt.setString(1, tokenStr);
-                        stmt.setString(2, tokenStr);
                         ResultSet rs = stmt.executeQuery();
             			if(rs.next()){
             	            token = new Token(
@@ -75,7 +80,10 @@ public class MySQLOAuthProvider2 {
             	                    rs.getString("token_secret"), 
             	                    rs.getString("consumer_key"), 
             	                    rs.getString("callback_url"), 
-            	                    null);
+            	                    new MultivaluedMapImpl());
+            	            
+            	            if(null != rs.getString("container_name"))
+            	            	token.getAttributes().add("root_container", rs.getString("container_name"));
             			}
             			
             			return token;
@@ -84,12 +92,10 @@ public class MySQLOAuthProvider2 {
         );
         
         return tokenObj;
-        
     }
 
 	
     public static synchronized Token getAccessToken(final String tokenStr) {
-        logger.debug("Get access token");
     	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
         		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission "+
         				"from oauth_accessors "+
@@ -106,12 +112,23 @@ public class MySQLOAuthProvider2 {
                         stmt.setString(1, tokenStr);
                         ResultSet rs = stmt.executeQuery();
             			if(rs.next()){
+            				
+            				Set<String> rolesSet = new HashSet<String>();
+            				rolesSet.add("user");
+            				
             	            token = new Token(
             	                    rs.getString("access_token"), 
             	                    rs.getString("token_secret"), 
             	                    rs.getString("consumer_key"), 
-            	                    rs.getString("callback_url"), 
+            	                    rs.getString("callback_url"),
+            	                    new VoboxUser(
+            	                    		rs.getString("identity"),
+            	                    		rs.getString("container_name"),
+            	                    		rs.getBoolean("accessor_write_permission")
+            	                    	),
+            	                    rolesSet,
             	                    new MultivaluedMapImpl());
+            	            
             			}
             			return token;
                     }
@@ -119,7 +136,6 @@ public class MySQLOAuthProvider2 {
         );
         
         return tokenObj;
-        
     }
 
 	
@@ -127,7 +143,6 @@ public class MySQLOAuthProvider2 {
 	
 	
     public static synchronized OAuthConsumer getConsumer(final String consumer_key) {
-        logger.debug("Get consumer");
     	return DbPoolServlet.goSql("Get oauth consumer",
         		"select callback_url, consumer_key, consumer_secret, consumer_description, container from oauth_consumers where consumer_key = ?",
                 new SqlWorker<Consumer>() {
@@ -139,7 +154,6 @@ public class MySQLOAuthProvider2 {
                         ResultSet rs = stmt.executeQuery();
             			if(rs.next()){
             	            consumer = new Consumer(
-            	                    rs.getString("callback_url"), 
             	                    rs.getString("consumer_key"), 
             	                    rs.getString("consumer_secret"), 
             	                    new MultivaluedMapImpl());
@@ -147,7 +161,6 @@ public class MySQLOAuthProvider2 {
                             consumer.getAttributes().add("description", rs.getString("consumer_description"));
                             consumer.getAttributes().add("container", rs.getString("container"));
             			}
-            			
             			return consumer;
                     }
                 }
@@ -246,6 +259,61 @@ public class MySQLOAuthProvider2 {
         		requestToken.getCallbackUrl(),
         		requestToken.getAttributes()
         		);
+    }
+    
+    /**
+     * Set the access token
+     * If userId != null, creates link to user's container as root matching the name in consumer. The container should exist already.
+     * @param accessor The OAuth accessor object
+     * @param userId the owner userId
+     * @throws OAuthException
+     */
+    public static synchronized void markAsAuthorized(final Token requestToken, final String userId) {
+    	
+		try {
+			if(null == requestToken.getAttributes().getFirst("root_container")) { // No predefined one (can be predefined for sharing); in this case set the default one
+				final String default_root_container = ((Consumer)requestToken.getConsumer()).getAttributes().getFirst("container");
+		        if (!UserHelper.userExists(userId)) {
+		            UserHelper.addDefaultUser(userId);
+		        }
+
+				//First check if the root node exists
+				VospaceId identifier = new VospaceId(new NodePath(default_root_container));
+				Node node = NodeFactory.createNode(identifier, userId, NodeType.CONTAINER_NODE);
+				logger.debug("Marking as authorized, root node: "+identifier.toString());
+				if(!node.isStoredMetadata()){
+					node.setNode(null);
+					logger.debug("Creating the node "+node.getUri());
+				}
+
+		        DbPoolServlet.goSql("Mark oauth token as authorized",
+		        		"update oauth_accessors set container_id = (select container_id from containers join user_identities on containers.user_id = user_identities.user_id where identity = ? and container_name = ?), authorized = 1 where request_token = ?;",
+		                new SqlWorker<Integer>() {
+		                    @Override
+		                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
+		            			stmt.setString(1, userId);
+		            			stmt.setString(2, default_root_container);
+		            			stmt.setString(3, requestToken.getToken());
+		                        return stmt.executeUpdate();
+		                    }
+		                }
+		        );
+			} else { // the container is already set up (sharing)
+	            DbPoolServlet.goSql("Mark oauth token as authorized",
+	            		"update oauth_accessors set authorized = 1 where request_token = ?;",
+	                    new SqlWorker<Integer>() {
+	                        @Override
+	                        public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
+	                			stmt.setString(1, requestToken.getToken());
+	                            return stmt.executeUpdate();
+	                        }
+	                    }
+	            );
+			}
+		} catch(URISyntaxException ex) {
+			logger.error("Error creating root (app) node for user: "+ex.getMessage());
+		}
+    	
     }
 
 }

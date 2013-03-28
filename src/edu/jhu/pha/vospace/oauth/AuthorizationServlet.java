@@ -28,12 +28,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import net.oauth.OAuth;
-import net.oauth.OAuthAccessor;
-import net.oauth.OAuthException;
-import net.oauth.OAuthMessage;
-import net.oauth.server.OAuthServlet;
-
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.openid4java.OpenIDException;
@@ -84,7 +78,7 @@ public class AuthorizationServlet extends BaseServlet {
         	
         	Vector<String> userLogins = null;
         	if(isShareRequest(request)){
-        		userLogins = MySQLOAuthProvider.getShareUsers(request.getParameter("share"));
+        		userLogins = MySQLOAuthProvider2.getShareUsers(request.getParameter("share"));
         		if(null == userLogins || userLogins.isEmpty()) { // open to any user TODO check NULL user
         			authorizeRequestToken(request, response, null);
         			return;
@@ -168,7 +162,8 @@ public class AuthorizationServlet extends BaseServlet {
     
     private void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
             throws IOException, Oops {
-        ConsumerManager manager = getConsumerManager();
+        ConsumerManager manager = new ConsumerManager();
+        manager.setAllowStateless(false);
         ParameterList params = new ParameterList(request.getParameterMap());
         try {
             VerificationResult verification = manager.verify(request.getRequestURL().toString(), params, null);
@@ -269,18 +264,17 @@ public class AuthorizationServlet extends BaseServlet {
             throw new Oops("No request token found in request.");
 		
 		try {
-            OAuthAccessor accessor = MySQLOAuthProvider.getAccessor(token);
-            
-            if(null != accessor.getProperty("root_container")){ // pre-shared container accessor
+			Token reqToken = MySQLOAuthProvider2.getRequestToken(token);
+            if(null != reqToken.getAttributes().getFirst("root_container")){ // pre-shared container accessor
             	if(shareId != null) {//already created the share - user bound sharing
-	        		Vector<String> groupUserLogins = MySQLOAuthProvider.getShareUsers(shareId);
+	        		Vector<String> groupUserLogins = MySQLOAuthProvider2.getShareUsers(shareId);
 	        		if(!groupUserLogins.contains(username)){ // the username of the one authorized != user that share was created for
 	        			throw new PermissionDeniedException("401 Unauthorized");
 	        		}
             	} // else share is open for everyone
             }
             
-            MySQLOAuthProvider.markAsAuthorized(accessor, username);
+            MySQLOAuthProvider2.markAsAuthorized(reqToken, username);
 
             if(null != callbackUrl && !callbackUrl.isEmpty()){
             	logger.debug("Redirecting user to "+callbackUrl);
@@ -297,30 +291,16 @@ public class AuthorizationServlet extends BaseServlet {
         	logger.error("Error performing the token authorization "+e.getMessage());
 			e.printStackTrace();
             throw new Oops(e.getMessage());
-		} catch (OAuthException e) {
-        	logger.error("Error performing the token authorization "+e.getMessage());
-			e.printStackTrace();
-            throw new Oops(e.getMessage());
 		}
 	}
-
-    private String getUsername(String id) {
-        int slash = id.lastIndexOf('/');
-        return id.substring(slash + 1);
-    }
-
-    public static ConsumerManager getConsumerManager() {
-        ConsumerManager manager = new ConsumerManager();
-        manager.setAllowStateless(false);
-        return manager;
-    }
 
     /** Initiate OpenID authentication.  Return null if successful and no further action is necessary;
      *  return an error message if there was a problem. */
     private String initiateOpenid(HttpServletRequest request, HttpServletResponse response, String idLess)
             throws IOException
     {
-        ConsumerManager manager = getConsumerManager();
+        ConsumerManager manager = new ConsumerManager();
+        manager.setAllowStateless(false);
         try {
             List discoveries = manager.discover(idLess);
             DiscoveryInformation discovered = manager.associate(discoveries);
@@ -355,51 +335,6 @@ public class AuthorizationServlet extends BaseServlet {
         else throw new IllegalArgumentException("Unknown provider: \"" + providerName + "\".");
     }
 
-    
-    /**
-     * Temporary for dropcloud
-     * @param request
-     * @param response
-     * @param accessor
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void returnToConsumer(HttpServletRequest request, 
-            HttpServletResponse response, OAuthAccessor accessor)
-    throws IOException, ServletException{
-        // send the user back to site's callBackUrl
-        String callback = request.getParameter("oauth_callback");
-        if(null == callback)
-        	callback = "none";
-        if("none".equals(callback) 
-            && accessor.consumer.callbackURL != null 
-                && accessor.consumer.callbackURL.length() > 0){
-            // first check if we have something in our properties file
-            callback = accessor.consumer.callbackURL;
-        }
-        
-        if( "none".equals(callback) ) {
-            // no call back it must be a client
-            response.setContentType("text/plain");
-            PrintWriter out = response.getWriter();
-            out.println("You have successfully authorized '" 
-                    + accessor.consumer.getProperty("description") 
-                    + "'. Please close this browser window and click continue"
-                    + " in the client.");
-            out.close();
-        } else {
-            // if callback is not passed in, use the callback from config
-            if(callback == null || callback.length() <=0 )
-                callback = accessor.consumer.callbackURL;
-            String token = accessor.requestToken;
-            if (token != null) {
-                callback = OAuth.addParameters(callback, "oauth_token", token);
-            }
-
-            response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
-            response.setHeader("Location", callback);
-        }
-    }
     
     /** Private exception class for displaying error conditions to the user within this servlet. */
     private static class Oops extends Exception {

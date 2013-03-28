@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import javax.annotation.security.RolesAllowed;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -43,6 +44,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.configuration.Configuration;
@@ -61,6 +63,7 @@ import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
+import edu.jhu.pha.vospace.oauth.VoboxUser;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
@@ -74,7 +77,7 @@ public class TransfersController {
 
 	private static final Logger logger = Logger.getLogger(TransfersController.class);
 	private static Configuration conf = SettingsServlet.getConfig();;
-	private @Context HttpServletRequest request;
+	private @Context SecurityContext security; 
 	
 	/**
 	 * Manages the transfers methods:
@@ -87,17 +90,15 @@ public class TransfersController {
 	 * @return HTTP result
 	 */
 	@POST
-	//@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.TEXT_XML)
+	@RolesAllowed({"user"})
     public Response transferNodePost(String xmlNode) {
 		logger.debug("Got new job");
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
+
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
-		String username = (String)request.getAttribute("username");
-		
-		UUID jobUID = submitJob(xmlNode, username);
+		UUID jobUID = submitJob(xmlNode, user.getName());
 
 		try {
 			//String redirectUri = conf.getString("application.url")+"/transfers/"+jobUID.toString();
@@ -218,6 +219,7 @@ public class TransfersController {
 	 */
 	@GET @Path("{jobId}")
 	@Produces(MediaType.TEXT_XML)
+	@RolesAllowed({"user"})
 	public String getTransferDetails(@PathParam("jobId") String jobId) {
 		return getJob(jobId);
 	}
@@ -322,11 +324,9 @@ public class TransfersController {
 	
 	@POST @Path("{jobid}/phase")
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@RolesAllowed({"user"})
     public Response changeJobPhase(@PathParam("jobid") String jobId, String phase) {
 		logger.debug("Got new phase "+phase+" for job "+jobId);
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
 		
 		/**TODO make something here */
 		return Response.ok().build();
@@ -339,6 +339,7 @@ public class TransfersController {
 	 */
 	@GET @Path("{jobid}/error")
 	@Produces(MediaType.TEXT_PLAIN)
+	@RolesAllowed({"user"})
 	public String getTransferErrorDetails(@PathParam("jobid") String jobId) {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 
@@ -357,6 +358,7 @@ public class TransfersController {
 	 */
 	@GET @Path("{jobid}/results")
 	@Produces(MediaType.TEXT_XML)
+	@RolesAllowed({"user"})
 	public String getTransferResults(@PathParam("jobid") String jobId) {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 
@@ -390,6 +392,7 @@ public class TransfersController {
 	 */
 	@GET @Path("{jobid}/results/details")
 	@Produces(MediaType.TEXT_XML)
+	@RolesAllowed({"user"})
 	public String getTransferResultsDetails(@PathParam("jobid") String jobId) {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		
@@ -445,6 +448,7 @@ public class TransfersController {
 	 */
 	@GET @Path("{jobid}/phase")
 	@Produces(MediaType.TEXT_PLAIN)
+	@RolesAllowed({"user"})
 	public String getTransferPhase(@PathParam("jobid") String jobId) {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		
@@ -461,7 +465,9 @@ public class TransfersController {
 	 */
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
+	@RolesAllowed({"user"})
 	public String getTransfersQueue() {
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 	    return DbPoolServlet.goSql("Get transfers queue",
 	    		"select id, state, direction, starttime, endtime, target from jobs where login = ?",
 	            new SqlWorker<String>() {
@@ -470,7 +476,7 @@ public class TransfersController {
 	            		StringBuffer resultBuf = new StringBuffer();
 	            		resultBuf.append("id, state, direction, starttime, endtime, path\n");
 
-	            		stmt.setString(1, (String)request.getAttribute("username"));
+	            		stmt.setString(1, user.getName());
 
 	            		ResultSet resSet = stmt.executeQuery();
 	        			while(resSet.next()) {

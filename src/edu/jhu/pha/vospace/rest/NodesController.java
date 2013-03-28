@@ -19,6 +19,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+
+import javax.annotation.security.RolesAllowed;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
@@ -34,6 +36,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 
 import nu.xom.Builder;
 import nu.xom.Serializer;
@@ -54,6 +57,7 @@ import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.StructuredDataNode;
 import edu.jhu.pha.vospace.node.UnstructuredDataNode;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.VoboxUser;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
 
 /**
@@ -63,11 +67,11 @@ import edu.jhu.pha.vosync.exception.ForbiddenException;
 @Path("/nodes/")
 public class NodesController {
 	private static final Logger logger = Logger.getLogger(NodesController.class);
-	private @Context HttpServletRequest request;
-	private @Context HttpServletResponse response;
 	private static final Configuration conf = SettingsServlet.getConfig();
-	
+	private @Context SecurityContext security; 
+
 	@GET
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getNodeXml(@QueryParam("uri") String uri, @DefaultValue("max") @QueryParam("detail") String detail, @DefaultValue("xml") @QueryParam("view") String view) {
 		return getNodeXml("", uri, detail, view);
 	}
@@ -77,10 +81,12 @@ public class NodesController {
 	 * @return The node description in VOSpace XML format
 	 */
 	@GET @Path("{path:.+}")
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getNodeXml(@PathParam("path") String fullPath, @QueryParam("uri") String uri, @DefaultValue("max") @QueryParam("detail") String detail, @DefaultValue("xml") @QueryParam("view") String view) {
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
@@ -92,12 +98,13 @@ public class NodesController {
 		else if(view.equals("xml"))
 			type = MediaType.TEXT_XML_TYPE;
 		
-		Node node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+		Node node = NodeFactory.getNode(identifier, user.getName());
 		
 		if(view != null && view.equals("data")) {// return the data contents
-			response.setHeader("Content-Disposition", "attachment; filename="+identifier.getNodePath().getNodeName());
-			response.setHeader("Content-Length", Long.toString(node.getNodeInfo().getSize()));
-			return Response.ok(node.exportData()).build();
+			return Response.ok(node.exportData()).
+					header("Content-Disposition", "attachment; filename="+identifier.getNodePath().getNodeName()).
+					header("Content-Length", Long.toString(node.getNodeInfo().getSize())).
+					build();
 		} else {
 			byte[] nodeBytes;
 			switch(node.getType()) {
@@ -140,21 +147,18 @@ public class NodesController {
 	 * @return The XML node description
 	 */
 	@PUT @Path("{path:.+}")
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response createNode(@PathParam("path") String fullPath, @Context HttpHeaders headers, byte[] nodeBytes) {
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
-
 		
-		
-		Node newNode = NodeFactory.getInstance().createNode(identifier, (String)request.getAttribute("username"), getType(nodeBytes));
+		Node newNode = NodeFactory.createNode(identifier, user.getName(), getType(nodeBytes));
 		if (!newNode.hasValidParent()) throw new InternalServerErrorException("ContainerNotFound");
 		
 		// Does node already exist?
@@ -182,15 +186,14 @@ public class NodesController {
 	 * @return HTTP result
 	 */
 	@DELETE @Path("{path:.+}")
+	@RolesAllowed({"user", "rwshareuser"})
     public Response deleteNode(@PathParam("path") String fullPath) {
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
 		try {
-			String username = (String)request.getAttribute("username");
-			VospaceId identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
-			Node node = NodeFactory.getInstance().getNode(identifier, username);
+			String username = user.getName();
+			VospaceId identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
+			Node node = NodeFactory.getNode(identifier, username);
 			node.remove();
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
@@ -207,19 +210,18 @@ public class NodesController {
 	 */
 	@POST @Path("{path:.+}")
 	@Produces(MediaType.TEXT_XML)
+	@RolesAllowed({"user", "rwshareuser"})
     public Response setNode(@PathParam("path") String fullPath, @Context HttpHeaders headers, byte[] nodeBytes) {
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		Node currentNode = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+		Node currentNode = NodeFactory.getNode(identifier, user.getName());
 
 		if(!currentNode.isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");

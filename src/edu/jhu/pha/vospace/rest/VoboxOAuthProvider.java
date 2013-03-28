@@ -1,5 +1,6 @@
 package edu.jhu.pha.vospace.rest;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -57,13 +58,11 @@ public class VoboxOAuthProvider implements OAuthProvider {
     public static class Consumer implements OAuthConsumer {
         private final String key;
         private final String secret;
-        private final String owner;
         private final MultivaluedMap<String, String> attribs;
 
-        public Consumer(String key, String secret, String owner, MultivaluedMap<String, String> attributes) {
+        public Consumer(String key, String secret, MultivaluedMap<String, String> attributes) {
             this.key = key;
             this.secret = secret;
-            this.owner = owner;
             this.attribs = attributes;
         }
 
@@ -77,23 +76,20 @@ public class VoboxOAuthProvider implements OAuthProvider {
             return secret;
         }
 
-        /** Returns identifier of owner of this consumer - i.e. who registered
-         * the consumer.
-         *
-         * @return consumer owner
-         */
-        public String getOwner() {
-            return owner;
-        }
-
-        /** Returns additional attributes associated with the consumer (e.g. name,
-         * URI, description, etc.)
-         *
-         * @return name-values pairs of additional attributes
-         */
         public MultivaluedMap<String, String> getAttributes() {
             return attribs;
         }
+
+        @Override
+        public Principal getPrincipal() {
+            return null;
+        }
+
+        @Override
+        public boolean isInRole(String role) {
+            return false;
+        }
+
 
     }
 

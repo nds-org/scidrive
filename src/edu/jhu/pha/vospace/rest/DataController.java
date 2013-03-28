@@ -20,10 +20,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.UUID;
 
+import javax.annotation.security.RolesAllowed;
 import javax.mail.internet.MimeUtility;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -31,9 +33,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
+
+import com.sun.jersey.spi.container.ContainerRequest;
 
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
@@ -60,7 +65,7 @@ import edu.jhu.pha.vosync.exception.ForbiddenException;
 public class DataController {
 	
 	private static final Logger logger = Logger.getLogger(DataController.class);
-	private @Context HttpServletRequest request;
+	private @Context SecurityContext security; 
 	private static Configuration conf = SettingsServlet.getConfig();
 	
 	/**
@@ -69,7 +74,7 @@ public class DataController {
 	 * @return transfer representation
 	 */
 	@GET @Path("{jobid}")
-	public Response getTransferData(@PathParam("jobid") String jobId) {
+	public Response getTransferData(@HeaderParam("user-agent") String userAgent, @PathParam("jobid") String jobId) {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		if(null == job)
 			throw new NotFoundException("The job "+jobId+" is not found.");
@@ -90,8 +95,7 @@ public class DataController {
 				InputStream dataInp = node.exportData();
 				
 				String fileName;
-				String user_agent = request.getHeader("user-agent");
-				boolean isInternetExplorer = (user_agent.indexOf("MSIE") > -1);
+				boolean isInternetExplorer = (userAgent.indexOf("MSIE") > -1);
 				if (isInternetExplorer) {
 				    fileName = URLEncoder.encode(targetId.getNodePath().getNodeName(), "utf-8");
 				} else {
@@ -135,11 +139,8 @@ public class DataController {
 	 * @return HTTP response
 	 */
 	@PUT @Path("{jobid}") 
+	@RolesAllowed({"user", "rwshareuser"})
     public Response uploadNodePut(@PathParam("jobid") String jobId, InputStream fileDataInp) {
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		if(null == job)
 			throw new NotFoundException("The job "+jobId+" is not found.");
