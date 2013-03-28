@@ -59,8 +59,6 @@ public class AccessTokenServlet extends HttpServlet {
     protected void doOptions(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
         response.setHeader("Access-Control-Allow-Origin", "*");
-        //response.setHeader("Access-Control-Max-Age", "0");
-        //response.setHeader("Access-Control-Allow-Methods", "PUT, GET, POST, HEAD, OPTIONS");
         response.setHeader("Access-Control-Allow-Headers", "authorization,x-requested-with");
         super.doOptions(request, response);
     }

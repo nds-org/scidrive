@@ -96,37 +96,40 @@ public class OAuthAuthenticationFilter implements ContainerRequestFilter {
                 }
               }
         } else {
-	    	if(null == authHeader && null == request.getParameter("oauth_version"))
+	    	if(null == authHeader && null == request.getParameter("oauth_version") && 
+	    			(null == containerRequest.getFormParameters() || 
+	    			  null == containerRequest.getFormParameters().get("oauth_version") ||
+	    			  containerRequest.getFormParameters().get("oauth_version").size() == 0
+        			  )){
 	            throw new PermissionDeniedException("401 Unauthorized.");
-	    	
-	    	if((null != authHeader && authHeader.startsWith("OAuth")) || (null != request.getParameter("oauth_version") && request.getParameter("oauth_version").equals("1.0"))) {
-		    	try {
-			        OAuthMessage requestMessage = OAuthServlet.getMessage(request, null);
-			        OAuthAccessor accessor = MySQLOAuthProvider.getAccessor(requestMessage.getToken());
-			        MySQLOAuthProvider.VALIDATOR.validateMessage(requestMessage, accessor);
-			        String userId = (String) accessor.getProperty("user");
-			        request.setAttribute("username", userId);
-			        request.setAttribute("root_container", accessor.getProperty("root_container"));
-			        request.setAttribute("write_permission", accessor.getProperty("write_permission"));
-		    	} catch (OAuthProblemException e){
-		            logger.error("Error authenticating the user: "+e.getProblem());
-		            e.printStackTrace();
-		            throw new PermissionDeniedException(e);
-				} catch (OAuthException e) {
-		            logger.error("Error authenticating the user: "+e.getMessage());
-		            e.printStackTrace();
-		            throw new PermissionDeniedException(e);
-		        } catch (IOException e) {
-		            logger.error("Error authenticating the user: "+e.getMessage());
-					e.printStackTrace();
-		            throw new InternalServerErrorException(e);
-				} catch (URISyntaxException e) {
-		            logger.error("Error authenticating the user: "+e.getMessage());
-					e.printStackTrace();
-		            throw new BadRequestException(e);
-				}
 	    	}
-        }
+	    	
+	    	try {
+		        OAuthMessage requestMessage = OAuthServlet.getMessage(containerRequest, null);
+		        OAuthAccessor accessor = MySQLOAuthProvider.getAccessor(requestMessage.getToken());
+		        MySQLOAuthProvider.VALIDATOR.validateMessage(requestMessage, accessor);
+		        String userId = (String) accessor.getProperty("user");
+		        request.setAttribute("username", userId);
+		        request.setAttribute("root_container", accessor.getProperty("root_container"));
+		        request.setAttribute("write_permission", accessor.getProperty("write_permission"));
+	    	} catch (OAuthProblemException e){
+	            logger.error("Error authenticating the user: "+e.getProblem());
+	            e.printStackTrace();
+	            throw new PermissionDeniedException(e);
+			} catch (OAuthException e) {
+	            logger.error("Error authenticating the user: "+e.getMessage());
+	            e.printStackTrace();
+	            throw new PermissionDeniedException(e);
+	        } catch (IOException e) {
+	            logger.error("Error authenticating the user: "+e.getMessage());
+				e.printStackTrace();
+	            throw new InternalServerErrorException(e);
+			} catch (URISyntaxException e) {
+	            logger.error("Error authenticating the user: "+e.getMessage());
+				e.printStackTrace();
+	            throw new BadRequestException(e);
+			}
+    	}
         
         return containerRequest;
     }

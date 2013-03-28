@@ -17,6 +17,9 @@
         <dependency org="com.sun.jersey" name="jersey-core" rev="1.17.1" conf="compile->default"/>
         <dependency org="com.sun.jersey" name="jersey-servlet" rev="1.17.1" conf="compile->default"/>
         
+        <dependency org="com.sun.jersey.contribs.jersey-oauth" name="oauth-server" rev="1.17.1" conf="compile->default"/>
+        <dependency org="com.sun.jersey.contribs.jersey-oauth" name="oauth-signature" rev="1.17.1" conf="compile->default"/>
+        
         <dependency org="org.openid4java" name="openid4java" rev="0.9.7" conf="compile->default"/>
         <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.2.3" conf="compile->default"/>
         <dependency org="xmlwriter" name="xmlwriter" rev="2.2.2" conf="compile->default"/>
