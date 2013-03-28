@@ -455,5 +455,18 @@ public class SwiftStorageManager implements StorageManager {
 		}
 		updateCredentials();
 	}
+
+	@Override
+	public void putChunkedBytes(NodePath nodePath, String chunkedId) {
+		try {
+			String manifest = conf.getString("chunked_container")+"/"+chunkedId;
+			getClient().createManifestObject(nodePath.getContainerName(), "application/file", nodePath.getNodeRelativeStoragePath(), manifest, new Hashtable<String, String>());
+		} catch (HttpException e) {
+			throw new InternalServerErrorException(e);
+		} catch (IOException e) {
+			throw new InternalServerErrorException(e);
+		}
+		updateCredentials();
+	}
 	
 }

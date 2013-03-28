@@ -52,6 +52,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.SecurityContext;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -1123,7 +1124,10 @@ public class DropboxService {
 
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"_"+newChunk.getChunkNum()));
+			
+			String chunkNumberString = String.format("%07d", newChunk.getChunkNum());
+			
+			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"/"+chunkNumberString));
 			DataNode node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
 
 			node.getStorage().createContainer(new NodePath("/"+conf.getString("chunked_container")));
@@ -1136,12 +1140,9 @@ public class DropboxService {
 			
 			newChunk.setSize(info.getSize());
 			
-			logger.debug("new size: "+info.getSize());
-			
 			voMeta.putNewChunk(newChunk);
 			
 			byte[] resp = genChunkResponse(uploadId, newChunk.getChunkStart()+newChunk.getSize());
-			logger.debug(new String(resp));
 			
 			return Response.ok(resp).build();
 		} catch (URISyntaxException e) {
@@ -1149,6 +1150,75 @@ public class DropboxService {
 			throw new InternalServerErrorException(e.getMessage());
 		}
 
+	}
+
+	@Path("commit_chunked_upload/{root:dropbox|sandbox}/{path:.+}")
+	@POST
+	public Response commitChunkedUpload(@PathParam("root") String root, @PathParam("path") String fullPath, @FormParam("upload_id") String uploadId, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
+		final String username = (String)request.getAttribute("username");
+
+		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(username);
+		
+		if(!(Boolean)request.getAttribute("write_permission")) {
+			throw new ForbiddenException("ReadOnly");
+		}
+		
+		if(null == uploadId || !(vosyncMeta.chunkedExists(uploadId))) {
+			throw new BadRequestException("Parameter upload_id is missing or invalid");
+		}
+		
+		VospaceId identifier;
+		try {
+			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+		} catch (URISyntaxException e) {
+			throw new BadRequestException("InvalidURI");
+		}
+
+		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(username);
+		
+		Node node;
+		if(identifier.getNodePath().getParentPath().isRoot(false)){
+			throw new NotFoundException("Is a root folder");
+		} else {
+			if(parentRev != null) {
+				if(metastore.isStored(identifier)){
+					node = NodeFactory.getNode(identifier, username);
+					
+					if(node.getNodeInfo().isDeleted()) {
+						logger.debug("Node "+node.getUri().toString()+" is deleted. Recreating the node metadata.");
+						node.remove();
+						node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
+						node.setNode(null);
+					} else if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
+						//TODO fix the revisions
+					}
+				} else {
+					node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
+					node.createParent();
+					node.setNode(null);
+				}
+			} else {
+				try {
+					node = NodeFactory.getNode(identifier, username);
+					if(!overwrite) {
+						throw new BadRequestException("Node exists");
+					}
+				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
+					node = (DataNode)NodeFactory.createNode(identifier, username, NodeType.DATA_NODE);
+					node.createParent();
+					node.setNode(null);
+				}
+			}
+		}
+		
+		if(!(node instanceof DataNode)) {
+			throw new NotFoundException("Node is a container");
+		}
+		
+		((DataNode)node).setChunkedData(uploadId);
+		Response resp =Response.ok(node.export("json-dropbox",Detail.max)).build(); 
+		return resp;
 	}
 	
 	private static byte[] genChunkResponse(String uploadId, long offset) {

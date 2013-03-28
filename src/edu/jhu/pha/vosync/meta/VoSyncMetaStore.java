@@ -7,6 +7,7 @@ import java.sql.SQLException;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.node.VospaceId;
 
 public class VoSyncMetaStore {
 	
@@ -55,6 +56,48 @@ public class VoSyncMetaStore {
                         stmt.setInt(2, chunk.getChunkNum());
                         stmt.setLong(3, chunk.getSize());
                         stmt.setString(4, owner);
+                        return stmt.execute();
+                    }
+                }
+        );
+	}
+
+	public boolean chunkedExists(final String uploadId) {
+        return DbPoolServlet.goSql("Checking chunked upload to exist in DB",
+                "select count(chunked_name) from `chunked_uploads` "+
+           		"JOIN `user_identities` ON chunked_uploads.user_id = user_identities.user_id "+
+        		"WHERE identity = ? and chunked_name = ?",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, owner);
+                        stmt.setString(2, uploadId);
+                        ResultSet resSet = stmt.executeQuery();
+                        if(resSet.next()) {
+                        	return resSet.getInt(1) > 0;
+                        } else { // can't happen
+                        	return false;
+                        }
+                    }
+                }
+        );
+	}
+	
+	public boolean mapChunkedToNode(final VospaceId identifier, final String chunkedId) {
+        return DbPoolServlet.goSql("Mapping chunked to node",
+        		"update chunked_uploads set node_id = "+
+        		"(SELECT nodes.node_id FROM nodes "+
+        		"JOIN containers ON nodes.container_id = containers.container_id "+
+        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) "+
+        		"WHERE chunked_name = ?",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, identifier.getNodePath().getContainerName());
+                        stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
+                        stmt.setString(3, owner);
+                        stmt.setString(4, chunkedId);
                         return stmt.execute();
                     }
                 }
