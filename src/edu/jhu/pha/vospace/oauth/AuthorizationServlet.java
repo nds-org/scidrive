@@ -32,7 +32,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.openid4java.OpenIDException;
 import org.openid4java.consumer.ConsumerManager;
-import org.openid4java.consumer.JdbcNonceVerifier;
 import org.openid4java.consumer.VerificationResult;
 import org.openid4java.discovery.DiscoveryException;
 import org.openid4java.discovery.DiscoveryInformation;

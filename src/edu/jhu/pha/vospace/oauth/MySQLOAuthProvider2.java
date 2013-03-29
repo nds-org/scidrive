@@ -195,7 +195,7 @@ public class MySQLOAuthProvider2 {
      * 
      * @throws OAuthException
      */
-    public static synchronized Token generateRequestToken(final String consumer_key, final String callback_url, MultivaluedMap<String, String> attributes) {
+    public static synchronized Token generateRequestToken(final String consumer_key, final String callback_url, final MultivaluedMap<String, String> attributes) {
     	
         // generate token and secret based on consumer_key
         
@@ -208,19 +208,39 @@ public class MySQLOAuthProvider2 {
         
         Token tokenObj = new Token(token, secret, consumer_key, callback_url, attributes);
         
-        DbPoolServlet.goSql("Insert new request token",
-        		"insert into oauth_accessors (request_token, token_secret, consumer_id, created) select ?, ?, consumer_id , ? from oauth_consumers where consumer_key = ?",
-                new SqlWorker<Boolean>() {
-                    @Override
-                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-            			stmt.setString(1, token);
-            			stmt.setString(2, secret);
-            			stmt.setString(3, dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
-            			stmt.setString(4, consumer_key);
-                        return stmt.execute();
-                    }
-                }
-        );
+        if(null == attributes.getFirst("share")) {
+	        DbPoolServlet.goSql("Insert new request token",
+	        		"insert into oauth_accessors (request_token, token_secret, consumer_id, created) select ?, ?, consumer_id , ? from oauth_consumers where consumer_key = ?",
+	                new SqlWorker<Boolean>() {
+	                    @Override
+	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	            			stmt.setString(1, token);
+	            			stmt.setString(2, secret);
+	            			stmt.setString(3, dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
+	            			stmt.setString(4, consumer_key);
+	                        return stmt.execute();
+	                    }
+	                }
+	        );
+        } else {
+	        DbPoolServlet.goSql("Insert new request token",
+	        		"insert into oauth_accessors (request_token, token_secret, consumer_id, container_id, created, accessor_write_permission) "+
+	        				"select ?, ?, consumer_id , container_id, ?, share_write_permission from oauth_consumers, container_shares "+
+	        				"where consumer_key = ? and share_id = ?",
+	                new SqlWorker<Boolean>() {
+	                    @Override
+	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	            			stmt.setString(1, token);
+	            			stmt.setString(2, secret);
+	            			stmt.setString(3, dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
+	            			stmt.setString(4, consumer_key);
+	            		    stmt.setString(5, attributes.getFirst("share"));
+	                        return stmt.execute();
+	                    }
+	                }
+	        );
+        }
+        
         return tokenObj;
     }
     
