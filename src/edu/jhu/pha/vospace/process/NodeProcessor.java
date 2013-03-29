@@ -23,6 +23,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -50,11 +52,14 @@ import org.xml.sax.SAXException;
 import com.rabbitmq.client.QueueingConsumer;
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
+import edu.jhu.pha.vospace.rest.JobDescription;
+import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 
 public class NodeProcessor extends Thread {
 
@@ -117,6 +122,35 @@ public class NodeProcessor extends Thread {
 			            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
 			            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
 
+			            		
+			            		
+			            		// Get content URL (HTTP) 
+			            		String owner = (String)nodeData.get("owner");
+			            		String source = nodeTikaMeta.get(TikaCoreProperties.SOURCE);
+			                    
+			            		JobDescription job = new JobDescription();
+			            		job.setTarget(source);
+
+			            		job.setDirection(DIRECTION.PULLFROMVOSPACE);
+			            		job.setId(UUID.randomUUID().toString());
+			            		job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+			            		job.setState(JobDescription.STATE.PENDING);
+			            		job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
+			            		job.setUsername(owner);
+			            		
+			            		Method submitJobMethod;
+			            		try {
+			            			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
+			            			submitJobMethod.invoke(null, owner, job);
+			            			String simEndpointUrl = conf.getString("application.url")+"/data/"+job.getId();
+			            			nodeTikaMeta.set(Metadata.CONTENT_LOCATION, simEndpointUrl);
+			            		}
+			            		catch (Exception e) {
+			            			logger.error("Could not obtain content URL: "+e.getMessage());
+			            		}
+			            		
+			            		
+			            		
 			            		TikaInputStream inp = null;
 			            		try {
 			            			inp = TikaInputStream.get(node.exportData());

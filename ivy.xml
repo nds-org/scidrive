@@ -29,6 +29,14 @@
             <exclude org="javax.servlet" name="servlet-api" /> 
             <exclude org="javax.servlet" name="jsp-api" />
         </dependency>
+		<dependency org="org.apache.axis2" name="axis2-transport-local" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+		<dependency org="org.apache.axis2" name="axis2-transport-http" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
         <dependency org="log4j" name="log4j" rev="1.2.17" conf="compile->default"/>
         <dependency org="commons-configuration" name="commons-configuration" rev="1.6" conf="compile->default"/>
         <dependency org="org.apache.tika" name="tika-app" rev="1.3" conf="compile->default"/>
@@ -42,5 +50,7 @@
         <dependency org="org.apache.lucene" name="lucene-core" rev="4.1.0" conf="compile->default"/>
         <dependency org="org.apache.lucene" name="lucene-queryparser" rev="4.1.0" conf="compile->default"/>
         <dependency org="org.apache.lucene" name="lucene-analyzers-common" rev="4.1.0" conf="compile->default"/>
+		<dependency org="org.python" name="jython-standalone" rev="2.7-b1" conf="compile->default"/>
+
     </dependencies>
 </ivy-module>
