@@ -2575,7 +2575,6 @@ public String storeObjectAs(String container, String name, HttpEntity entity, Ma
            			if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT ||
            			    response.getStatusCode() == HttpStatus.SC_OK)
     				{
-    					logger.debug ("Object metadata retreived  : "+objName);
     					String mimeType = response.getContentType();
     					String lastModified = response.getLastModified();
     					String eTag = response.getETag();
@@ -2591,6 +2590,10 @@ public String storeObjectAs(String container, String name, HttpEntity entity, Ma
     						if ( h.getName().startsWith(FilesConstants.X_OBJECT_META) )
     						{
     							headerMap.put(h.getName().substring(FilesConstants.X_OBJECT_META.length()), unencodeURI(h.getValue()));
+    						}
+    						if ( h.getName().startsWith(FilesConstants.MANIFEST_HEADER) )
+    						{
+    							metaData.setManifestPrefix(unencodeURI(h.getValue()));
     						}
     					}
     					if (headerMap.size() > 0)
