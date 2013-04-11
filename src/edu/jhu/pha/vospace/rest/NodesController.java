@@ -21,8 +21,6 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 
 import javax.annotation.security.RolesAllowed;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -58,7 +56,6 @@ import edu.jhu.pha.vospace.node.StructuredDataNode;
 import edu.jhu.pha.vospace.node.UnstructuredDataNode;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.VoboxUser;
-import edu.jhu.pha.vosync.exception.ForbiddenException;
 
 /**
  * Provides the REST service for /nodes/ path: the functions for manipulating the nodes content and metadata
@@ -148,7 +145,7 @@ public class NodesController {
 	 */
 	@PUT @Path("{path:.+}")
 	@RolesAllowed({"user", "rwshareuser"})
-	public Response createNode(@PathParam("path") String fullPath, @Context HttpHeaders headers, byte[] nodeBytes) {
+	public Response createNode(@PathParam("path") String fullPath, byte[] nodeBytes) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
 		VospaceId identifier;

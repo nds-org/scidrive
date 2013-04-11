@@ -90,7 +90,6 @@ public class TransfersController {
 	 * @return HTTP result
 	 */
 	@POST
-	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_XML)
 	@RolesAllowed({"user"})
     public Response transferNodePost(String xmlNode) {
