@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 import com.sun.jersey.spi.container.ContainerRequest;
 
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
@@ -139,7 +140,6 @@ public class DataController {
 	 * @return HTTP response
 	 */
 	@PUT @Path("{jobid}") 
-	@RolesAllowed({"user", "rwshareuser"})
     public Response uploadNodePut(@PathParam("jobid") String jobId, InputStream fileDataInp) {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		if(null == job)
