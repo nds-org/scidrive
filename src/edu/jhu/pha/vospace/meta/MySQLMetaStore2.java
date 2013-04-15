@@ -49,12 +49,8 @@ import edu.jhu.pha.vospace.node.VospaceId;
  */
 public class MySQLMetaStore2 implements MetaStore{
 	
-	//TODO CHECK since it has changed to new DB
-	
 	private static final Logger logger = Logger.getLogger(MySQLMetaStore2.class);
 	private String owner;
-	static Configuration conf = SettingsServlet.getConfig();
-	static final SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
 
 	public MySQLMetaStore2(String username) {
 		this.owner = username;

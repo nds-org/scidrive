@@ -376,11 +376,17 @@ public class SwiftStorageManager implements StorageManager {
 				List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
-						try { getClient().deleteObject(npath.getContainerName(), obj.getName()); } catch (Exception e) {}
+						try {
+							removeObjectSegments(npath.getContainerName(), obj.getName());
+							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
+						} catch (Exception e) {}
 					}
 					contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
 				}
-				try {getClient().deleteObject(npath.getContainerName(), npath.getNodeRelativeStoragePath()); } catch (Exception e) {}
+				try {
+					removeObjectSegments(npath.getContainerName(), npath.getNodeRelativeStoragePath());
+					getClient().deleteObject(npath.getContainerName(), npath.getNodeRelativeStoragePath()); 
+				} catch (Exception e) {}
 			}
 		} catch(FilesNotFoundException e) {
 			//ignore
@@ -392,6 +398,32 @@ public class SwiftStorageManager implements StorageManager {
 			throw new InternalServerErrorException(e);
 		}
 		updateCredentials();
+	}
+
+	/**
+	 * @param npath
+	 * @param obj
+	 * @throws IOException
+	 * @throws FilesNotFoundException
+	 * @throws HttpException
+	 * @throws FilesAuthorizationException
+	 * @throws FilesInvalidNameException
+	 * @throws FilesException
+	 */
+	void removeObjectSegments(String containerName, String objectName)
+			throws IOException, FilesNotFoundException, HttpException,
+			FilesAuthorizationException, FilesInvalidNameException,
+			FilesException {
+		FilesObjectMetaData meta = getClient().getObjectMetaData(containerName, objectName);
+		// if != null then exists manifest for chunked upload
+		if(null != meta.getManifestPrefix()){
+			NodePath path = new NodePath(meta.getManifestPrefix());
+			List<FilesObject> segmList = getClient().listObjects(path.getContainerName(), path.getNodeRelativeStoragePath(), '/');
+			for(FilesObject segm: segmList) {
+				getClient().deleteObject(conf.getString("chunked_container"), segm.getName());
+				logger.debug("Deleted segm "+segm.getName());
+			}
+		}
 	}
 	
 
@@ -452,6 +484,24 @@ public class SwiftStorageManager implements StorageManager {
 		} catch (HttpException ex) {
 			ex.printStackTrace();
 			throw new InternalServerErrorException(ex);
+		}
+		updateCredentials();
+	}
+
+	@Override
+	public void putChunkedBytes(NodePath nodePath, String chunkedId) {
+		try {
+			String manifest = conf.getString("chunked_container")+"/"+chunkedId;
+			try {
+				removeObjectSegments(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath());
+				getClient().updateObjectManifest(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath(), manifest);
+			} catch(FilesNotFoundException ex) {
+				getClient().createManifestObject(nodePath.getContainerName(), "application/file", nodePath.getNodeRelativeStoragePath(), manifest, new Hashtable<String, String>());
+			}
+		} catch (HttpException e) {
+			throw new InternalServerErrorException(e);
+		} catch (IOException e) {
+			throw new InternalServerErrorException(e);
 		}
 		updateCredentials();
 	}

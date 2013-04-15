@@ -40,12 +40,6 @@ public interface StorageManager {
     public void createContainer(NodePath nodePath);
 
     /**
-     * Create a container at the specified location in the current backend storage
-     * @param locationId The location of the container
-     */
-    //public void createNode(NodePath nodePath);
-
-    /**
      * Get the bytes from the specified location in the current backend storage
      * @param locationId The location of the bytes
      * @return a stream containing the requested bytes
@@ -78,10 +72,17 @@ public interface StorageManager {
 	/**
      * Put the bytes from the specified input stream at the specified location in 
      * the current backend storage
-     * @param locationId The location for the bytes
+     * @param nodePath the node path
      * @param stream The stream containing the bytes
      */
     public void putBytes(NodePath nodePath, InputStream stream);
+
+	/**
+     * Create a manifest the uploaded chunks
+     * @param locationId The location for the bytes
+     * @param chunkedId the name of chunks folder
+     */
+    public void putChunkedBytes(NodePath nodePath, String chunkedId);
 
 	/**
      * Remove the bytes at the specified location in the current backend storage

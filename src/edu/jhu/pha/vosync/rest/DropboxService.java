@@ -53,6 +53,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.SecurityContext;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -88,6 +89,7 @@ import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
@@ -100,6 +102,8 @@ import edu.jhu.pha.vosync.exception.BadRequestException;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
 import edu.jhu.pha.vosync.exception.InternalServerErrorException;
 import edu.jhu.pha.vosync.exception.NotFoundException;
+import edu.jhu.pha.vosync.meta.Chunk;
+import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
 
 /**
  * @author Dmitry Mishin
@@ -572,11 +576,10 @@ public class DropboxService {
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
 			throw new NotFoundException("Is a root folder");
 		} else {
-			if(!overwrite) {
+			if(parentRev != null) {
 				if(metastore.isStored(identifier)){
 					//throw new BadRequestException(identifier.toString()+" exists.");
 					//logger.debug("Found conflict in node "+identifier);
-					
 					node = NodeFactory.getNode(identifier, user.getName());
 					
 					if(node.getNodeInfo().isDeleted()) {
@@ -584,8 +587,8 @@ public class DropboxService {
 						node.remove();
 						node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
 						node.setNode(null);
-					} else if(!parentRev.equals(node.getNodeInfo().getRevision())) {
-						throw new BadRequestException("Revision parameter error");
+					} else if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
 
 						//TODO fix the revisions
 						/*logger.debug("Revisions do not match: "+parentRev+" "+node.getNodeInfo().getCurrentRev());
@@ -625,7 +628,7 @@ public class DropboxService {
 		}
 		
 		if(!(node instanceof DataNode)) {
-			throw new NotFoundException("Is a container");
+			throw new NotFoundException("Node is a container");
 		}
 		
 		((DataNode)node).setData(fileDataInp);
@@ -1063,6 +1066,146 @@ public class DropboxService {
 		
 			return Response.ok(byteOut.toByteArray()).build();
 		} catch (Exception e) {
+			throw new InternalServerErrorException(e.getMessage());
+		}
+	}
+	
+	@Path("chunked_upload")
+	@PUT
+	@RolesAllowed({"user", "rwshareuser"})
+	public Response chunkedUpload(@QueryParam("upload_id") String uploadId, @QueryParam("offset") long offset, InputStream fileDataInp) {
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		VoSyncMetaStore voMeta = new VoSyncMetaStore(user.getName());
+
+		logger.debug("New chunk: "+uploadId+" "+offset);
+		
+		if(null == uploadId) {
+			uploadId = RandomStringUtils.randomAlphanumeric(15);
+		}
+		
+		Chunk newChunk = voMeta.getLastChunk(uploadId);
+		
+		if(offset != newChunk.getChunkStart()) { // return error with proper offset
+			logger.error("Wrong offset: "+offset+" should be:"+newChunk.getChunkStart());
+			ResponseBuilder errorResp = Response.status(400);
+			errorResp.entity(genChunkResponse(uploadId, newChunk.getChunkStart()));
+			return errorResp.build();
+		}
+
+		VospaceId identifier;
+		try {
+			
+			String chunkNumberString = String.format("%07d", newChunk.getChunkNum());
+			
+			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"/"+chunkNumberString));
+			DataNode node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+
+			node.getStorage().createContainer(new NodePath("/"+conf.getString("chunked_container")));
+			node.getStorage().putBytes(identifier.getNodePath(), fileDataInp);
+			
+			NodeInfo info = new NodeInfo();
+			
+			node.getStorage().updateNodeInfo(identifier.getNodePath(), info);
+			node.setNodeInfo(info);
+			
+			newChunk.setSize(info.getSize());
+			
+			voMeta.putNewChunk(newChunk);
+			
+			byte[] resp = genChunkResponse(uploadId, newChunk.getChunkStart()+newChunk.getSize());
+			
+			return Response.ok(resp).build();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+			throw new InternalServerErrorException(e.getMessage());
+		}
+
+	}
+
+	@Path("commit_chunked_upload/{root:dropbox|sandbox}/{path:.+}")
+	@POST
+	@RolesAllowed({"user", "rwshareuser"})
+	public Response commitChunkedUpload(@PathParam("root") String root, @PathParam("path") String fullPath, @FormParam("upload_id") String uploadId, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(user.getName());
+		
+		if(null == uploadId || !(vosyncMeta.chunkedExists(uploadId))) {
+			throw new BadRequestException("Parameter upload_id is missing or invalid");
+		}
+		
+		VospaceId identifier;
+		try {
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
+		} catch (URISyntaxException e) {
+			throw new BadRequestException("InvalidURI");
+		}
+
+		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
+		
+		Node node;
+		if(identifier.getNodePath().getParentPath().isRoot(false)){
+			throw new NotFoundException("Is a root folder");
+		} else {
+			if(parentRev != null) {
+				if(metastore.isStored(identifier)){
+					node = NodeFactory.getNode(identifier, user.getName());
+					
+					if(node.getNodeInfo().isDeleted()) {
+						logger.debug("Node "+node.getUri().toString()+" is deleted. Recreating the node metadata.");
+						node.remove();
+						node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+						node.setNode(null);
+					} else if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
+						//TODO fix the revisions
+					}
+				} else {
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node.createParent();
+					node.setNode(null);
+				}
+			} else {
+				try {
+					node = NodeFactory.getNode(identifier, user.getName());
+					if(!overwrite) {
+						throw new BadRequestException("Node exists");
+					}
+				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node.createParent();
+					node.setNode(null);
+				}
+			}
+		}
+		
+		if(!(node instanceof DataNode)) {
+			throw new NotFoundException("Node is a container");
+		}
+		
+		((DataNode)node).setChunkedData(uploadId);
+		Response resp =Response.ok(node.export("json-dropbox",Detail.max)).build(); 
+		return resp;
+	}
+	
+	private static byte[] genChunkResponse(String uploadId, long offset) {
+		try {
+	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
+	
+			g2.writeStartObject();
+			
+			g2.writeStringField("upload_id", uploadId);
+			g2.writeNumberField("offset", offset);//31337
+			g2.writeStringField("expires", "Tue, 19 Jul 2014 21:55:38 +0000");//"Tue, 19 Jul 2011 21:55:38 +0000"
+			
+			g2.writeEndObject();
+			
+			g2.close();
+			byteOut.close();
+			return byteOut.toByteArray();
+		} catch (JsonGenerationException e) {
+			throw new InternalServerErrorException(e.getMessage());
+		} catch (IOException e) {
 			throw new InternalServerErrorException(e.getMessage());
 		}
 	}

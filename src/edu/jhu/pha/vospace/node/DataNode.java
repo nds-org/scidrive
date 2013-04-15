@@ -34,6 +34,7 @@ import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.jobs.JobsProcessorServlet;
+import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
 
 public class DataNode extends Node implements Cloneable {
 	private static final Logger logger = Logger.getLogger(DataNode.class);
@@ -131,7 +132,7 @@ public class DataNode extends Node implements Cloneable {
 		
 		try {
 			// Update root container size
-			ContainerNode contNode = (ContainerNode)NodeFactory.getInstance().getNode(
+			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
 					new VospaceId(new NodePath(getUri().getNodePath().getContainerName())), 
 					this.getOwner());
 			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
@@ -166,6 +167,60 @@ public class DataNode extends Node implements Cloneable {
 	@Override
 	public NodeType getType() {
 		return NodeType.DATA_NODE;
+	}
+
+
+	public void setChunkedData(String uploadId) {
+		if(!getMetastore().isStored(getUri()))
+			throw new NotFoundException("NodeNotFound");
+		logger.debug("Updating chunked node "+getUri().toString());
+		
+		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(this.owner);
+
+		// put the node data into storage
+		getStorage().putChunkedBytes(getUri().getNodePath(), uploadId);
+
+		vosyncMeta.mapChunkedToNode(this.getUri(), uploadId);
+		
+		// update node size from storage to metadata
+		getStorage().updateNodeInfo(getUri().getNodePath(), getNodeInfo());
+		
+		getNodeInfo().setRevision(getNodeInfo().getRevision()+1);//increase revision version to store in DB
+		
+		getMetastore().storeInfo(getUri(), getNodeInfo());
+		
+		try {
+			// Update root container size
+			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
+					new VospaceId(new NodePath(getUri().getNodePath().getContainerName())), 
+					this.getOwner());
+			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
+			getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
+			//logger.debug("Updated node "+contNode.getUri().toString()+" size to: "+contNode.getNodeInfo().getSize());
+		} catch (URISyntaxException e) {
+			logger.error("Updating root node size failed: "+e.getMessage());
+		}
+		
+		QueueConnector.goAMQP("setData", new QueueConnector.AMQPWorker<Boolean>() {
+			@Override
+			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
+
+				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
+				channel.exchangeDeclare(conf.getString("process.exchange.nodeprocess"), "fanout", true);
+
+				Map<String,Object> nodeData = new HashMap<String,Object>();
+				nodeData.put("uri",getUri().toString());
+				nodeData.put("owner",getOwner());
+    			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
+
+    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
+    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
+				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
+		    	
+		    	return true;
+			}
+		});
+
 	}
 
 }
