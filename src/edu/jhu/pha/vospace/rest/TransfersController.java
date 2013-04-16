@@ -237,7 +237,7 @@ public class TransfersController {
 				writeAttribute("xmlns:vos", conf.getString("namespace.vos")).
 				writeAttribute("xmlns:xlink", conf.getString("namespace.xlink")).
 				writeAttribute("xmlns:xsi", conf.getString("namespace.xsi")).
-				writeAttribute("xmlns:schemaLocation", conf.getString("schema_location"));
+				writeAttribute("xmlns:schemaLocation", conf.getString("namespace.schema_location"));
 
 		  
 			xw.writeEntity("uws:jobId").writeText(jobId).endEntity();
