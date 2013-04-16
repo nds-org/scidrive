@@ -46,5 +46,7 @@
         <dependency org="org.apache.lucene" name="lucene-core" rev="4.1.0" conf="compile->default"/>
         <dependency org="org.apache.lucene" name="lucene-queryparser" rev="4.1.0" conf="compile->default"/>
         <dependency org="org.apache.lucene" name="lucene-analyzers-common" rev="4.1.0" conf="compile->default"/>
+
+        <dependency org="org.kamranzafar" name="jtar" rev="2.2" conf="compile->default"/>
     </dependencies>
 </ivy-module>
