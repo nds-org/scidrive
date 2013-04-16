@@ -709,14 +709,9 @@ public class DropboxService {
 
 	@Path("cont_search")
 	@GET
-	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response contSearch(@QueryParam("query") String queryStr) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
-
-
-		if(!(user.getRootContainer()).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
 
 		try {
 			Directory directory = FSDirectory.open(new File(conf.getString("lucene.index")));
@@ -742,6 +737,7 @@ public class DropboxService {
 		      else
 		    	  buf.append("<p>"+hitDoc.get("content")+"</p>");
 		    }
+		    analyzer.close();
 		    ireader.close();
 		    directory.close();
 
