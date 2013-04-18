@@ -75,10 +75,6 @@ public class SwiftStorageManager implements StorageManager {
 	
 	private final int CONNECT_TIMEOUT = 25000;
 	
-	private static final String VO_URI = conf.getString("vospace.uri");
-	
-	private static final SimpleDateFormat swiftDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
-	
 	//HTTP client
 	private static PoolingClientConnectionManager cm = null;
 	private static HttpClient httpClient = null;
@@ -362,18 +358,25 @@ public class SwiftStorageManager implements StorageManager {
 	 */
 	@Override
 	public void remove(NodePath npath) {
+		
+		final int PAGE_SIZE = 1000;
+		
 		try {
 			if (npath.getNodeRelativeStoragePath().isEmpty()) {
-				List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), 100);
+				List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), PAGE_SIZE);
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
-						try { getClient().deleteObject(npath.getContainerName(), obj.getName()); } catch (Exception e) {}
+						try { 
+							removeObjectSegments(npath.getContainerName(), obj.getName());
+							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
+						} catch (Exception e) {}
 					}
-					contContent = getClient().listObjects(npath.getContainerName(), 100);
+					contContent = getClient().listObjects(npath.getContainerName(), PAGE_SIZE);
 				}
 				try { getClient().deleteContainer(npath.getContainerName()); } catch (Exception e) {}
 			} else {
-				List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
+				//List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
+				List<FilesObject> contContent = getClient().listObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null);
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
 						try {
@@ -381,7 +384,8 @@ public class SwiftStorageManager implements StorageManager {
 							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
 						} catch (Exception e) {}
 					}
-					contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
+					//contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
+					contContent = getClient().listObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null);
 				}
 				try {
 					removeObjectSegments(npath.getContainerName(), npath.getNodeRelativeStoragePath());
@@ -504,6 +508,22 @@ public class SwiftStorageManager implements StorageManager {
 			throw new InternalServerErrorException(e);
 		}
 		updateCredentials();
+	}
+
+	public static void main(String[] s) throws IOException, HttpException {
+		//{"username":"","apikey":"","storageurl":","authtoken":""}
+		FilesClient cli = new FilesClient(getHttpClient(), 
+				"jhNn3gnKfs:jhNn3gnKfs",
+				"h1NC_Xcc0nEaPPv",
+				"http://zinc26.pha.jhu.edu:8081/auth/v1.0", null
+				, 1000);
+		cli.login();
+		
+		for(FilesObject fo: cli.listObjectsStartingWith("test", "ccc/", null, -1, null)) {
+			System.out.println(fo.getName());
+			
+		}
+		
 	}
 	
 }

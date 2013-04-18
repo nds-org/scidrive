@@ -25,6 +25,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -398,66 +401,52 @@ public abstract class Node implements Cloneable {
 	 * Move the node to new location
 	 * @param newLocationId
 	 */
+	//TODO move operation with chunked files
 	public void move(VospaceId newLocationId) {
-		copy(newLocationId);
-		remove();
+		if(!isStoredMetadata())
+			throw new NotFoundException("NodeNotFound");
 		
-		QueueConnector.goAMQP("moveNode", new QueueConnector.AMQPWorker<Boolean>() {
+		if(getMetastore().isStored(newLocationId))
+			throw new ForbiddenException("DestinationNodeExists");
+
+		getStorage().copyBytes(getUri().getNodePath(), newLocationId.getNodePath());
+
+		final Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
+		newDataNode.setNode(null);
+		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());
+		newDataNode.getMetastore().storeInfo(newLocationId, newDataNode.getNodeInfo());
+		newDataNode.getMetastore().updateUserProperties(newLocationId, getNodeMeta(PropertyType.property));
+
+		this.markRemoved();
+		
+		QueueConnector.goAMQP("copyNode", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
 			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
 
 				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
+				channel.exchangeDeclare(conf.getString("process.exchange.nodeprocess"), "fanout", true);
 
 				Map<String,Object> nodeData = new HashMap<String,Object>();
-				nodeData.put("uri",getUri().toString());
+				nodeData.put("uri", newDataNode.getUri().toString());
 				nodeData.put("owner",getOwner());
-    			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
+    			nodeData.put("container", newDataNode.getUri().getNodePath().getParentPath().getNodeStoragePath());
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
     			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
+				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
 		    	
+				
+				
+				Map<String,Object> oldNodeData = new HashMap<String,Object>();
+				oldNodeData.put("uri",getUri().toString());
+				oldNodeData.put("owner",getOwner());
+				oldNodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
+
+    			byte[] oldNodejobSer = (new ObjectMapper()).writeValueAsBytes(oldNodeData);
+    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, oldNodejobSer);
 		    	return true;
 			}
 		});
-	}
-
-	/**
-	 * Completely remove the node (To mark the node as removed use markRemoved())
-	 */
-	public void remove() {
-		getStorage().remove(getUri().getNodePath());
-		
-		getMetastore().remove(getUri());
-
-		try {
-			// Update root container size
-			ContainerNode contNode = (ContainerNode)NodeFactory.getInstance().getNode(
-					new VospaceId(new NodePath(getUri().getNodePath().getContainerName())), 
-					this.getOwner());
-			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
-			getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-		} catch (URISyntaxException e) {
-			logger.error("Updating root node size failed: "+e.getMessage());
-		}
-		
-		QueueConnector.goAMQP("removeNode", new QueueConnector.AMQPWorker<Boolean>() {
-			@Override
-			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
-
-				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
-
-				Map<String,Object> nodeData = new HashMap<String,Object>();
-				nodeData.put("uri",getUri().toString());
-				nodeData.put("owner",getOwner());
-    			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
-
-    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
-    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-		    	
-		    	return true;
-			}
-		});
-
 	}
 
 	/**

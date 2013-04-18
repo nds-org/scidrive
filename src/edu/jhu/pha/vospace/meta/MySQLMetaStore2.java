@@ -313,7 +313,10 @@ public class MySQLMetaStore2 implements MetaStore{
 	}
 
 
-
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.MetaStore#markRemoved(edu.jhu.pha.vospace.node.VospaceId)
+	 */
 	@Override
 	public void markRemoved(final VospaceId identifier) {
 		if(identifier.getNodePath().isRoot(false))
@@ -338,7 +341,7 @@ public class MySQLMetaStore2 implements MetaStore{
 
 	/*
 	 * (non-Javadoc)
-	 * @see edu.caltech.vao.vospace.meta.MetaStore#remove(edu.jhu.pha.vospace.node.VospaceId)
+	 * @see edu.jhu.pha.vospace.meta.MetaStore#remove(edu.jhu.pha.vospace.node.VospaceId)
 	 */
 	@Override
 	public void remove(final VospaceId identifier) {
@@ -450,8 +453,6 @@ public class MySQLMetaStore2 implements MetaStore{
                     	String mimeType = "";
                     	if(type == NodeType.DATA_NODE)
                     		mimeType = "application/file";
-                    	
-                    	logger.debug("1"+identifier.getNodePath().getParentPath().getNodeRelativeStoragePath());
                     	
                         stmt.setString(1, identifier.getNodePath().getNodeRelativeStoragePath());
                         stmt.setString(2, type.name());

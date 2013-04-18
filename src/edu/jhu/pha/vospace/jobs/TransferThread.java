@@ -116,7 +116,7 @@ public class TransferThread extends Thread {
 
 		// Check whether endpoint is reserved URI
 		if (direction.toString().endsWith(".null")) {
-			node.remove();
+			node.markRemoved();
 		} else {
 			node.move(direction);
 		}

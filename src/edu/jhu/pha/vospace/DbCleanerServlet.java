@@ -16,6 +16,7 @@
 package edu.jhu.pha.vospace;
 
 import static java.util.concurrent.TimeUnit.*;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,8 +30,10 @@ import javax.servlet.http.HttpServlet;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 
 public class DbCleanerServlet extends HttpServlet {
@@ -41,45 +44,67 @@ public class DbCleanerServlet extends HttpServlet {
 
     private ScheduledFuture<?> cleanerHandle;
     
+    private final int TIME_INTERVAL = 1;
+
+    private static final Logger logger = Logger.getLogger(DbCleanerServlet.class);
+    
     @Override
 	public void init() {
         final Runnable cleaner = new Runnable() {
-            public void run() {
-                DbPoolServlet.goSql("Cleaning DB nodes",
-                		"select identifier, owner from nodes where deleted = 1 and mtime < (NOW() - INTERVAL 5 MINUTE)",
-                        new SqlWorker<Boolean>() {
-                            @Override
-                            public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                                ResultSet resSet = stmt.executeQuery();
-                                while(resSet.next()) {
-                                	String uriStr = resSet.getString(1);
-                                	String username = resSet.getString(2);
-                                	
-                                	try {
-	                                	VospaceId uri = new VospaceId(uriStr);
+            @Override
+			public void run() {
+            	boolean res = true;
+            	while(res) {
+	            	res = DbPoolServlet.goSql("Cleaning DB nodes",
+	                		"select container_name, path, identity from nodes " +
+	                		"JOIN containers ON nodes.container_id = containers.container_id " +
+	                		"JOIN user_identities ON containers.user_id = user_identities.user_id " +
+	                		"where deleted = 1 and mtime < (NOW() - INTERVAL "+TIME_INTERVAL+" MINUTE) order by path limit 1",
+	                        new SqlWorker<Boolean>() {
+	                            @Override
+	                            public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	                                ResultSet resSet = stmt.executeQuery();
+	                                if(resSet.next()) {
+	                                	String username = resSet.getString("identity");
 	                                	
-	                                	Node newNode = NodeFactory.getInstance().getNode(uri, username);
-	                                	newNode.remove();
-                                	} catch(Exception ex) {
-                                		ex.printStackTrace();
-                                	}
-                                }
-                            	return true;
-                            }
-                        }
-                );
+	                                	try {
+		                                	VospaceId uri = new VospaceId(new NodePath(resSet.getString("container_name")+"/"+resSet.getString("path")));
+		                                	
+		                                	logger.debug("Removing "+uri.toString()+"of user "+username);
+		                                	
+		                                	Node newNode = NodeFactory.getNode(uri, username);
+	
+		                    				newNode.getStorage().remove(newNode.getUri().getNodePath());
+	                    					newNode.getMetastore().remove(newNode.getUri());
+	
+		                    				// Update root container size
+	                    					ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
+	                    							new VospaceId(new NodePath(newNode.getUri().getNodePath().getContainerName())), 
+	                    							newNode.getOwner());
+	                    					newNode.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
+	                    					newNode.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
+	                                	} catch(Exception ex) {
+	                                		ex.printStackTrace();
+	                                	}
+		                            	return true;
+	                                }
+	                            	return false;
+	                            }
+	                        }
+	                );
+            	}
             }
         };
 
         cleanerHandle =
-            scheduler.scheduleAtFixedRate(cleaner, 1, 5, MINUTES);
+            scheduler.scheduleAtFixedRate(cleaner, 1, TIME_INTERVAL, MINUTES);
     }
 
     @Override
     public void destroy() {
     	cleanerHandle.cancel(true);
     	scheduler.shutdownNow();
-    	System.out.println("Cleaner is terminating");
+    	logger.info("Cleaner is terminating");
     }
         
 

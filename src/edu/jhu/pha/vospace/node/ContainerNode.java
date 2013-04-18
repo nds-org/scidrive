@@ -74,6 +74,7 @@ public class ContainerNode extends DataNode {
 		super(id, username);
 	}
 	
+	@Override
 	public void copy(VospaceId newLocationId) {
 		if(!isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
@@ -82,19 +83,17 @@ public class ContainerNode extends DataNode {
 			throw new ForbiddenException("DestinationNodeExists");
 		}
 		
-		Node newDataNode = NodeFactory.getInstance().createNode(newLocationId, owner, this.getType());
+		Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
 		newDataNode.setNode(null);
 		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());
 		newDataNode.getMetastore().storeInfo(newLocationId, newDataNode.getNodeInfo());
 		newDataNode.getMetastore().updateUserProperties(newLocationId, getNodeMeta(PropertyType.property));
 		
-		NodeFactory factory = NodeFactory.getInstance();
-		
 		NodesList childrenList = getDirectChildren(false, 0, -1);
 		List<Node> children = childrenList.getNodesList();
 
 		for(Node child: children) {
-			Node childNode = factory.getNode(child.getUri(), owner);
+			Node childNode = NodeFactory.getNode(child.getUri(), owner);
 			String relativePath = childNode.getUri().getNodePath().getParentRelativePath(this.getUri().getNodePath());
 			try {
 				VospaceId newChildId = newLocationId.appendPath(new NodePath(relativePath));
@@ -215,6 +214,7 @@ public class ContainerNode extends DataNode {
 		}
 	}
 
+	@Override
 	public InputStream exportData() {
 		final PipedInputStream pipedIn = new PipedInputStream();
 		PipedOutputStream pipedOut = null;
@@ -224,7 +224,8 @@ public class ContainerNode extends DataNode {
 			//final TarOutputStream tarOut = new TarOutputStream(new GZIPOutputStream(pipedOut));
 			final TarOutputStream tarOut = new TarOutputStream(pipedOut);
     		Runnable runTransfer = new Runnable() {
-    	        public void run() {
+    	        @Override
+				public void run() {
     	        	try {
     		        	tarContainer("", tarOut);
     	        	} catch(IOException ex) {
@@ -305,11 +306,10 @@ public class ContainerNode extends DataNode {
 		return NodeType.CONTAINER_NODE;
 	}
 	
+	@Override
 	public void markRemoved() {
 		if(!isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
-
-		NodeFactory factory = NodeFactory.getInstance();
 
 		NodesList childrenList = getDirectChildren(false, 0, -1);
 		List<Node> children = childrenList.getNodesList();
@@ -337,10 +337,37 @@ public class ContainerNode extends DataNode {
 		});
 	}
 	
+	@Override
 	public void move(VospaceId newLocationId) {
-		copy(newLocationId);
-		remove();
-		QueueConnector.goAMQP("removedNode", new QueueConnector.AMQPWorker<Boolean>() {
+		if(!isStoredMetadata())
+			throw new NotFoundException("NodeNotFound");
+		
+		if(getMetastore().isStored(newLocationId)) {
+			throw new ForbiddenException("DestinationNodeExists");
+		}
+		
+		Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
+		newDataNode.setNode(null);
+		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());
+		newDataNode.getMetastore().storeInfo(newLocationId, newDataNode.getNodeInfo());
+		newDataNode.getMetastore().updateUserProperties(newLocationId, getNodeMeta(PropertyType.property));
+		
+		NodesList childrenList = getDirectChildren(false, 0, -1);
+		List<Node> children = childrenList.getNodesList();
+
+		for(Node child: children) {
+			Node childNode = NodeFactory.getNode(child.getUri(), owner);
+			String relativePath = childNode.getUri().getNodePath().getParentRelativePath(this.getUri().getNodePath());
+			try {
+				VospaceId newChildId = newLocationId.appendPath(new NodePath(relativePath));
+				logger.debug("Moving child "+childNode.getUri()+" with relpath "+relativePath+" to "+newChildId.toString());
+				childNode.move(newChildId);
+			} catch (URISyntaxException e) {
+				logger.error("Error moving child "+childNode.getUri().toString()+": "+e.getMessage());
+			}
+		}
+
+		QueueConnector.goAMQP("movedNode", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
 			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
 

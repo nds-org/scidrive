@@ -559,10 +559,6 @@ public class DropboxService {
 	public Response putFile(@PathParam("root") String root, @PathParam("path") String fullPath, InputStream fileDataInp, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
-		if(!user.isWriteEnabled()) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
@@ -582,12 +578,7 @@ public class DropboxService {
 					//logger.debug("Found conflict in node "+identifier);
 					node = NodeFactory.getNode(identifier, user.getName());
 					
-					if(node.getNodeInfo().isDeleted()) {
-						logger.debug("Node "+node.getUri().toString()+" is deleted. Recreating the node metadata.");
-						node.remove();
-						node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
-						node.setNode(null);
-					} else if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+					if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
 						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
 
 						//TODO fix the revisions
@@ -1146,12 +1137,7 @@ public class DropboxService {
 				if(metastore.isStored(identifier)){
 					node = NodeFactory.getNode(identifier, user.getName());
 					
-					if(node.getNodeInfo().isDeleted()) {
-						logger.debug("Node "+node.getUri().toString()+" is deleted. Recreating the node metadata.");
-						node.remove();
-						node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
-						node.setNode(null);
-					} else if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+					if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
 						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
 						//TODO fix the revisions
 					}
