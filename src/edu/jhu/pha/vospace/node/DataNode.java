@@ -130,18 +130,6 @@ public class DataNode extends Node implements Cloneable {
 		
 		getMetastore().storeInfo(getUri(), getNodeInfo());
 		
-		try {
-			// Update root container size
-			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
-					new VospaceId(new NodePath(getUri().getNodePath().getContainerName())), 
-					this.getOwner());
-			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
-			getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-			//logger.debug("Updated node "+contNode.getUri().toString()+" size to: "+contNode.getNodeInfo().getSize());
-		} catch (URISyntaxException e) {
-			logger.error("Updating root node size failed: "+e.getMessage());
-		}
-		
 		QueueConnector.goAMQP("setData", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
 			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
@@ -180,6 +168,7 @@ public class DataNode extends Node implements Cloneable {
 		// put the node data into storage
 		getStorage().putChunkedBytes(getUri().getNodePath(), uploadId);
 
+		vosyncMeta.deleteNodeChunks(this.getUri());
 		vosyncMeta.mapChunkedToNode(this.getUri(), uploadId);
 		
 		// update node size from storage to metadata
@@ -188,18 +177,6 @@ public class DataNode extends Node implements Cloneable {
 		getNodeInfo().setRevision(getNodeInfo().getRevision()+1);//increase revision version to store in DB
 		
 		getMetastore().storeInfo(getUri(), getNodeInfo());
-		
-		try {
-			// Update root container size
-			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
-					new VospaceId(new NodePath(getUri().getNodePath().getContainerName())), 
-					this.getOwner());
-			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
-			getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-			//logger.debug("Updated node "+contNode.getUri().toString()+" size to: "+contNode.getNodeInfo().getSize());
-		} catch (URISyntaxException e) {
-			logger.error("Updating root node size failed: "+e.getMessage());
-		}
 		
 		QueueConnector.goAMQP("setData", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override

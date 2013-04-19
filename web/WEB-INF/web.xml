@@ -87,11 +87,11 @@
 		<load-on-startup>5</load-on-startup>
 	</servlet-->
 	
-	<!-- servlet>
+	<servlet>
 		<servlet-name>DBCleanerServlet</servlet-name>
 		<servlet-class>edu.jhu.pha.vospace.DbCleanerServlet</servlet-class>
 		<load-on-startup>30</load-on-startup>
-	</servlet-->
+	</servlet>
 	
 	<!--servlet>
 		<servlet-name>SynchronizationServlet</servlet-name>

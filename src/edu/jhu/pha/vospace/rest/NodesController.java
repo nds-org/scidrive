@@ -191,7 +191,7 @@ public class NodesController {
 			String username = user.getName();
 			VospaceId identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 			Node node = NodeFactory.getNode(identifier, username);
-			node.remove();
+			node.markRemoved();
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}

@@ -16,10 +16,8 @@
 package edu.jhu.pha.vospace.jobs;
 
 import java.net.URISyntaxException;
-import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.ConflictException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
@@ -37,7 +35,6 @@ import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 public class TransferThread extends Thread {
 
 	private static final Logger logger = Logger.getLogger(TransferThread.class);
-	private static Configuration conf = SettingsServlet.getConfig();
 	
 	private final JobDescription job;
 	private final JobsProcessor proc;
@@ -61,11 +58,7 @@ public class TransferThread extends Thread {
 			ProtocolHandler handler = null;
 
 			if(job.getDirection().equals(DIRECTION.LOCAL)){ // local job
-				if(job.isKeepBytes()){
-					copyNode(job);
-				} else {
-					moveNode(job);
-				}
+				copyNode(job, job.isKeepBytes());
 				JobsProcessor.modifyJobState(job, STATE.COMPLETED);
 			} else {
 				for(String protocolKey: job.getProtocols().keySet()) {
@@ -100,41 +93,24 @@ public class TransferThread extends Thread {
 		}
 	}
 
-
-	/**
-	 * Move from the specified target to the direction
-	 */
-	private static void moveNode(JobDescription transfer) {
-		logger.debug("Moving data");
-
-		// Request details
-		VospaceId target = transfer.getTargetId();
-		VospaceId direction = transfer.getDirectionTargetId();
-		NodeFactory.getInstance();
-		// Get node
-		Node node = NodeFactory.getNode(target, transfer.getUsername());
-
-		// Check whether endpoint is reserved URI
-		if (direction.toString().endsWith(".null")) {
-			node.remove();
-		} else {
-			node.move(direction);
-		}
-	}
-
 	/**
 	 * Copy from the specified target to the direction
 	 */
-	private static void copyNode(JobDescription transfer) {
+	private static void copyNode(JobDescription transfer, boolean keepBytes) {
 		logger.debug("Copying data");
 		// Request details
 		VospaceId target = transfer.getTargetId();
 		VospaceId direction = transfer.getDirectionTargetId();
-		NodeFactory.getInstance();
 		// Get node
 		Node node = NodeFactory.getNode(target, transfer.getUsername());
 		
-		node.copy(direction);
+		if (direction.toString().endsWith(".null")) {
+			if(!keepBytes)
+				node.markRemoved();
+			// else don't do anything
+		} else {
+			node.copy(direction, keepBytes);
+		}
 	}
 	
 	private static void validateTransfer(JobDescription transfer) {

@@ -30,8 +30,9 @@ public interface StorageManager {
      * in the current backend storage
      * @param oldLocationId The old location of the bytes
      * @param newLocationId The new location of the bytes
+     * @param keepBytes remove the old object
      */
-    public void copyBytes(NodePath oldNodePath, NodePath newNodePath);
+    public void copyBytes(NodePath oldNodePath, NodePath newNodePath, boolean keepBytes);
 
     /**
      * Create a container at the specified location in the current backend storage
@@ -60,14 +61,6 @@ public interface StorageManager {
      * @return
      */
     public String getNodeSyncAddress(String container);
-
-    /**
-     * Move the bytes from the specified old location to the specified new location 
-     * in the current backend storage
-     * @param oldLocationId The old location of the bytes
-     * @param newLocationId The new location of the bytes
-     */
-    public void moveBytes(NodePath oldNodePath, NodePath newNodePath);
 	
 	/**
      * Put the bytes from the specified input stream at the specified location in 
@@ -86,9 +79,10 @@ public interface StorageManager {
 
 	/**
      * Remove the bytes at the specified location in the current backend storage
-     * @param locationId The location of the bytes
-     */
-    public void remove(NodePath nodePath);
+	 * @param nodePath
+	 * @param removeChunks
+	 */
+    public void remove(NodePath nodePath, boolean removeChunks);
     
     public void setNodeSyncTo(String container, String syncTo, String syncKey); 
 

@@ -50,8 +50,10 @@ import org.xml.sax.SAXException;
 import com.rabbitmq.client.QueueingConsumer;
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
@@ -186,6 +188,17 @@ public class NodeProcessor extends Thread {
 			            			}
 
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
+
+				            		// update node's container size metadata
+				            		try {
+				            			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
+				            					new VospaceId(new NodePath(node.getUri().getNodePath().getContainerName())), 
+				            					node.getOwner());
+				            			node.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
+				            			node.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
+				            		} catch (URISyntaxException e) {
+				            			logger.error("Updating root node size failed: "+e.getMessage());
+				            		}
 				            		
 				            		try {
 					        			nodeData.put("container", node.getUri().getNodePath().getParentPath().getNodeStoragePath());

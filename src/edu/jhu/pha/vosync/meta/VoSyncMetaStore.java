@@ -104,4 +104,23 @@ public class VoSyncMetaStore {
         );
 	}
 	
+	public boolean deleteNodeChunks(final VospaceId identifier) {
+        return DbPoolServlet.goSql("Deleting node chunks",
+        		"delete from chunked_uploads where node_id = "+
+        		"(SELECT nodes.node_id FROM nodes "+
+        		"JOIN containers ON nodes.container_id = containers.container_id "+
+        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) ",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, identifier.getNodePath().getContainerName());
+                        stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
+                        stmt.setString(3, owner);
+                        return stmt.execute();
+                    }
+                }
+        );
+	}
+	
 }

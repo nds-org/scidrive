@@ -20,19 +20,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.node.Node;
@@ -201,7 +198,10 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public NodeInfo getNodeInfo(final VospaceId identifier) {
         return DbPoolServlet.goSql("Retrieving node info",
-        		"select rev, deleted, mtime, size, mimetype from nodes JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"select rev, deleted, nodes.mtime, nodes.size, mimetype, chunked_name from nodes " +
+        		"JOIN containers ON nodes.container_id = containers.container_id " +
+        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"LEFT JOIN chunked_uploads ON nodes.node_id = chunked_uploads.node_id "+
                 "WHERE current_rev = 1 and container_name = ? and path = ? and identity = ?",
                 new SqlWorker<NodeInfo>() {
                     @Override
@@ -220,6 +220,7 @@ public class MySQLMetaStore2 implements MetaStore{
                         	info.setMtime(new Date(resSet.getTimestamp("mtime").getTime()));
                         	info.setSize(resSet.getLong("size"));
                         	info.setContentType(resSet.getString("mimetype"));
+                        	info.setChunkedName(resSet.getString("chunked_name"));
                         } else {
                         	throw new NotFoundException("NodeNotFound");
                         }
@@ -313,7 +314,10 @@ public class MySQLMetaStore2 implements MetaStore{
 	}
 
 
-
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.MetaStore#markRemoved(edu.jhu.pha.vospace.node.VospaceId)
+	 */
 	@Override
 	public void markRemoved(final VospaceId identifier) {
 		if(identifier.getNodePath().isRoot(false))
@@ -338,7 +342,7 @@ public class MySQLMetaStore2 implements MetaStore{
 
 	/*
 	 * (non-Javadoc)
-	 * @see edu.caltech.vao.vospace.meta.MetaStore#remove(edu.jhu.pha.vospace.node.VospaceId)
+	 * @see edu.jhu.pha.vospace.meta.MetaStore#remove(edu.jhu.pha.vospace.node.VospaceId)
 	 */
 	@Override
 	public void remove(final VospaceId identifier) {
@@ -450,8 +454,6 @@ public class MySQLMetaStore2 implements MetaStore{
                     	String mimeType = "";
                     	if(type == NodeType.DATA_NODE)
                     		mimeType = "application/file";
-                    	
-                    	logger.debug("1"+identifier.getNodePath().getParentPath().getNodeRelativeStoragePath());
                     	
                         stmt.setString(1, identifier.getNodePath().getNodeRelativeStoragePath());
                         stmt.setString(2, type.name());
