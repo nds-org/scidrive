@@ -15,10 +15,6 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.node;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.UUID;
 import java.util.Vector;
@@ -27,11 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
-import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
-import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
-import edu.jhu.pha.vospace.oauth.DropboxAccessLevel;
 
 public class NodePath {
 
@@ -45,7 +37,7 @@ public class NodePath {
 		}
 
 		System.exit(1);
-		Vector<String> strs = new Vector();
+		Vector<String> strs = new Vector<String>();
 			strs.add("");
 			strs.add("/");
 			strs.add("cont1");
