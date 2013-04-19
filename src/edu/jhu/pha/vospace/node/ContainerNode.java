@@ -75,7 +75,7 @@ public class ContainerNode extends DataNode {
 	}
 	
 	@Override
-	public void copy(VospaceId newLocationId) {
+	public void copy(VospaceId newLocationId, boolean keepBytes) {
 		if(!isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
 		
@@ -98,11 +98,37 @@ public class ContainerNode extends DataNode {
 			try {
 				VospaceId newChildId = newLocationId.appendPath(new NodePath(relativePath));
 				logger.debug("Copying child "+childNode.getUri()+" with relpath "+relativePath+" to "+newChildId.toString());
-				childNode.copy(newChildId);
+				childNode.copy(newChildId, keepBytes);
 			} catch (URISyntaxException e) {
 				logger.error("Error copying child "+childNode.getUri().toString()+": "+e.getMessage());
 			}
 		}
+
+		if(!keepBytes) {
+			getMetastore().remove(this.getUri());
+			
+			if(this.getUri().getNodePath().getNodeStoragePathArray().length == 1) { // moving first-level container to another one
+				getStorage().remove(this.getUri().getNodePath(), false);
+			}
+		}
+		
+		QueueConnector.goAMQP("movedNode", new QueueConnector.AMQPWorker<Boolean>() {
+			@Override
+			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
+
+				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
+
+				Map<String,Object> nodeData = new HashMap<String,Object>();
+				nodeData.put("uri", getUri().toString());
+				nodeData.put("owner",getOwner());
+    			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
+
+    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
+    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
+		    	
+		    	return true;
+			}
+		});
 	}
 
     @Override
@@ -251,7 +277,6 @@ public class ContainerNode extends DataNode {
 	}
 	
 	protected void tarContainer(String parent, TarOutputStream out) throws IOException {
-		BufferedInputStream origin = null;
 		NodesList childrenList = getDirectChildren(false, 0, -1);
 		List<Node> children = childrenList.getNodesList();
 
@@ -336,84 +361,7 @@ public class ContainerNode extends DataNode {
 			}
 		});
 	}
-	
-	@Override
-	public void move(VospaceId newLocationId) {
-		if(!isStoredMetadata())
-			throw new NotFoundException("NodeNotFound");
-		
-		if(getMetastore().isStored(newLocationId)) {
-			throw new ForbiddenException("DestinationNodeExists");
-		}
-		
-		Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
-		newDataNode.setNode(null);
-		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());
-		newDataNode.getMetastore().storeInfo(newLocationId, newDataNode.getNodeInfo());
-		newDataNode.getMetastore().updateUserProperties(newLocationId, getNodeMeta(PropertyType.property));
-		
-		NodesList childrenList = getDirectChildren(false, 0, -1);
-		List<Node> children = childrenList.getNodesList();
 
-		for(Node child: children) {
-			Node childNode = NodeFactory.getNode(child.getUri(), owner);
-			String relativePath = childNode.getUri().getNodePath().getParentRelativePath(this.getUri().getNodePath());
-			try {
-				VospaceId newChildId = newLocationId.appendPath(new NodePath(relativePath));
-				logger.debug("Moving child "+childNode.getUri()+" with relpath "+relativePath+" to "+newChildId.toString());
-				childNode.move(newChildId);
-			} catch (URISyntaxException e) {
-				logger.error("Error moving child "+childNode.getUri().toString()+": "+e.getMessage());
-			}
-		}
-
-		QueueConnector.goAMQP("movedNode", new QueueConnector.AMQPWorker<Boolean>() {
-			@Override
-			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
-
-				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
-
-				Map<String,Object> nodeData = new HashMap<String,Object>();
-				nodeData.put("uri", getUri().toString());
-				nodeData.put("owner",getOwner());
-    			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
-
-    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
-    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-		    	
-		    	return true;
-			}
-		});
-	}
-
-	
-	
-	public void remove() {
-		if(!isStoredMetadata())
-			throw new NotFoundException("NodeNotFound");
-		
-		getStorage().remove(getUri().getNodePath());
-
-		getMetastore().remove(getUri());
-		QueueConnector.goAMQP("remove Container", new QueueConnector.AMQPWorker<Boolean>() {
-			@Override
-			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
-
-				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
-
-				Map<String,Object> nodeData = new HashMap<String,Object>();
-				nodeData.put("uri",getUri().toString());
-				nodeData.put("owner",getOwner());
-    			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
-
-    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
-    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-		    	
-		    	return true;
-			}
-		});
-	}
-	
 	public List<VospaceId> search(String query, int fileLimit, boolean includeDeleted) {
 		return getMetastore().search(getUri(), query, fileLimit, includeDeleted);
     }
@@ -428,7 +376,7 @@ public class ContainerNode extends DataNode {
 			VospaceId newNodeUri = getUri().appendPath(new NodePath(filename));
 			getStorage().putBytes(newNodeUri.getNodePath(), data);
 			if(!getMetastore().isStored(newNodeUri)){
-				DataNode node = (DataNode)NodeFactory.getInstance().createNode(newNodeUri, owner, NodeType.DATA_NODE);
+				DataNode node = (DataNode)NodeFactory.createNode(newNodeUri, owner, NodeType.DATA_NODE);
 				node.setNode(null);
 			}
 		} catch (URISyntaxException e) {

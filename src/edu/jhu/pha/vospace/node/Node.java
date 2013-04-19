@@ -25,10 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
-
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -49,13 +45,13 @@ import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.ForbiddenException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
-import edu.jhu.pha.vospace.jobs.JobsProcessorServlet;
 import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.meta.NodesList;
 import edu.jhu.pha.vospace.rest.TransfersController;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
+import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
 
 public abstract class Node implements Cloneable {
 	public enum Detail {min, max, properties};
@@ -99,20 +95,44 @@ public abstract class Node implements Cloneable {
 		this.id = id;
 	}
 
-	public void copy(VospaceId newLocationId) {
+	public void copy(VospaceId newLocationId, final boolean keepBytes) {
 		if(!isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
 		
 		if(getMetastore().isStored(newLocationId))
 			throw new ForbiddenException("DestinationNodeExists");
 
-		getStorage().copyBytes(getUri().getNodePath(), newLocationId.getNodePath());
+		getStorage().copyBytes(getUri().getNodePath(), newLocationId.getNodePath(), keepBytes);
 
-		final Node newDataNode = NodeFactory.getInstance().createNode(newLocationId, owner, this.getType());
+		if(!keepBytes) {
+    		// update node's container size metadata
+    		try {
+    			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
+    					new VospaceId(new NodePath(getUri().getNodePath().getContainerName())), 
+    					getOwner());
+    			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
+    			getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
+    		} catch (URISyntaxException e) {
+    			logger.error("Updating root node size failed: "+e.getMessage());
+    		}
+		}
+
+		
+		final Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
 		newDataNode.setNode(null);
 		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());
 		newDataNode.getMetastore().storeInfo(newLocationId, newDataNode.getNodeInfo());
 		newDataNode.getMetastore().updateUserProperties(newLocationId, getNodeMeta(PropertyType.property));
+
+		// Update chunks table to point to the new node if the node is chunked
+		// copy with keepBytes=true is prohibited for chunked files by swift storage
+		if(null != this.getNodeInfo().getChunkedName()) {
+			VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(this.owner);
+			vosyncMeta.mapChunkedToNode(newDataNode.getUri(), this.getNodeInfo().getChunkedName());
+		}
+		
+		if(!keepBytes)
+			newDataNode.getMetastore().remove(this.getUri());
 
 		QueueConnector.goAMQP("copyNode", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
@@ -129,17 +149,26 @@ public abstract class Node implements Cloneable {
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
     			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
 				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
-		    	
+
+				if(!keepBytes) {
+					Map<String,Object> oldNodeData = new HashMap<String,Object>();
+					oldNodeData.put("uri",getUri().toString());
+					oldNodeData.put("owner",getOwner());
+					oldNodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
+	
+	    			byte[] oldNodejobSer = (new ObjectMapper()).writeValueAsBytes(oldNodeData);
+	    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, oldNodejobSer);
+				}
 		    	return true;
 			}
 		});
 	}
-
+	
 	public void createParent() {
 		if(!getUri().getNodePath().isRoot(true)) {
 			if(!hasValidParent()) {
 				try {
-					Node parentNode = NodeFactory.getInstance().createNode(getUri().getParent(), owner, NodeType.CONTAINER_NODE);
+					Node parentNode = NodeFactory.createNode(getUri().getParent(), owner, NodeType.CONTAINER_NODE);
 					parentNode.createParent();
 					parentNode.setNode(null);
 				} catch(URISyntaxException ex) {
@@ -294,7 +323,7 @@ public abstract class Node implements Cloneable {
 		switch(type) {
 		case property:
 			if(null == this.properties)
-				this.properties = this.getMetastore().getProperties(this.getUri(), type.property);
+				this.properties = this.getMetastore().getProperties(this.getUri(), PropertyType.property);
 			return this.properties;
 		default:
 			return null;
@@ -312,7 +341,8 @@ public abstract class Node implements Cloneable {
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
-		Node parent = NodeFactory.getInstance().getNode(parentId, owner);
+		NodeFactory.getInstance();
+		Node parent = NodeFactory.getNode(parentId, owner);
 		
 		return parent;
 	}
@@ -397,58 +427,6 @@ public abstract class Node implements Cloneable {
 		});
 	}
 	
-	/**
-	 * Move the node to new location
-	 * @param newLocationId
-	 */
-	//TODO move operation with chunked files
-	public void move(VospaceId newLocationId) {
-		if(!isStoredMetadata())
-			throw new NotFoundException("NodeNotFound");
-		
-		if(getMetastore().isStored(newLocationId))
-			throw new ForbiddenException("DestinationNodeExists");
-
-		getStorage().copyBytes(getUri().getNodePath(), newLocationId.getNodePath());
-
-		final Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
-		newDataNode.setNode(null);
-		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());
-		newDataNode.getMetastore().storeInfo(newLocationId, newDataNode.getNodeInfo());
-		newDataNode.getMetastore().updateUserProperties(newLocationId, getNodeMeta(PropertyType.property));
-
-		this.markRemoved();
-		
-		QueueConnector.goAMQP("copyNode", new QueueConnector.AMQPWorker<Boolean>() {
-			@Override
-			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
-
-				channel.exchangeDeclare(conf.getString("vospace.exchange.nodechanged"), "fanout", false);
-				channel.exchangeDeclare(conf.getString("process.exchange.nodeprocess"), "fanout", true);
-
-				Map<String,Object> nodeData = new HashMap<String,Object>();
-				nodeData.put("uri", newDataNode.getUri().toString());
-				nodeData.put("owner",getOwner());
-    			nodeData.put("container", newDataNode.getUri().getNodePath().getParentPath().getNodeStoragePath());
-
-    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
-    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
-		    	
-				
-				
-				Map<String,Object> oldNodeData = new HashMap<String,Object>();
-				oldNodeData.put("uri",getUri().toString());
-				oldNodeData.put("owner",getOwner());
-				oldNodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
-
-    			byte[] oldNodejobSer = (new ObjectMapper()).writeValueAsBytes(oldNodeData);
-    			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, oldNodejobSer);
-		    	return true;
-			}
-		});
-	}
-
 	/**
 	 * Set node XML metadata and create storage empty node if needed 
 	 */

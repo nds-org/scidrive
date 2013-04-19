@@ -74,7 +74,7 @@ public class DbCleanerServlet extends HttpServlet {
 		                                	
 		                                	Node newNode = NodeFactory.getNode(uri, username);
 	
-		                    				newNode.getStorage().remove(newNode.getUri().getNodePath());
+		                    				newNode.getStorage().remove(newNode.getUri().getNodePath(), true);
 	                    					newNode.getMetastore().remove(newNode.getUri());
 	
 		                    				// Update root container size

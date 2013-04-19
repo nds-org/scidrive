@@ -24,6 +24,7 @@ public class NodeInfo {
 	private Date mtime;
 	private long size;
 	private String contentType;
+	private String chunkedName;
 
 	public String getContentType() {
 		return contentType;
@@ -54,5 +55,11 @@ public class NodeInfo {
 	}
 	public void setSize(long size) {
 		this.size = size;
+	}
+	public String getChunkedName() {
+		return chunkedName;
+	}
+	public void setChunkedName(String chunkedName) {
+		this.chunkedName = chunkedName;
 	}
 }

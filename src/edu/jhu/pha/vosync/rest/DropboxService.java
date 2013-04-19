@@ -120,11 +120,13 @@ public class DropboxService {
 	private static final double GIGABYTE = 1024.0*1024.0*1024.0;
 
 	
-	@Path("fileops/copy")
+	@Path("fileops/{op:copy|move}")
 	@POST
 	@RolesAllowed({"user", "rwshareuser"})
-	public Response copy(@FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
+	public Response copy(@PathParam("op") String operation, @FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		
+		boolean keepBytes = operation.equals("copy");
 		
 		if(null == root || root.isEmpty())
 			throw new BadRequestException("Not found parameter root");
@@ -149,7 +151,12 @@ public class DropboxService {
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(fromId.getNodePath().getNodeStoragePath());
 		}
-		node.copy(toId);
+		
+		try {
+			node.copy(toId, keepBytes);
+		} catch(edu.jhu.pha.vospace.api.exceptions.BadRequestException ex) {
+			throw new BadRequestException(ex.getMessage());
+		}
 		
 		return Response.ok(NodeFactory.getNode(toId, user.getName()).export("json-dropbox",Detail.min)).build();
 	}
@@ -445,44 +452,6 @@ public class DropboxService {
 	    );
 	}
 	
-	@Path("fileops/move")
-	@POST
-	@RolesAllowed({"user", "rwshareuser"})
-	public Response move(@FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
-		
-		if(!user.isWriteEnabled()) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
-		if(null == root || root.isEmpty())
-			throw new BadRequestException("Not found parameter root");
-		
-		if(null == fromPath || fromPath.isEmpty())
-			throw new BadRequestException("Not found parameter fromPath");
-		
-		if(null == toPath || toPath.isEmpty())
-			throw new BadRequestException("Not found parameter toPath");
-		
-		VospaceId fromId, toId;
-		try {
-			fromId = new VospaceId(new NodePath(fromPath, user.getRootContainer()));
-			toId = new VospaceId(new NodePath(toPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
-			throw new BadRequestException("InvalidURI");
-		}
-
-		Node node;
-		try {
-			node = NodeFactory.getNode(fromId, user.getName());
-		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-			throw new NotFoundException(fromId.getNodePath().getNodeStoragePath());
-		}
-		node.move(toId);
-		
-		return Response.ok(NodeFactory.getNode(toId, user.getName()).export("json-dropbox",Detail.min)).build();
-	}
-
 	@POST @Path("files/{root:dropbox|sandbox}/{path:.+}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	/*TODO Test the method */
@@ -663,7 +632,6 @@ public class DropboxService {
 		try {
 			g.writeStartArray();
 
-			int ind = 0;
 			for(VospaceId childNodeId: nodesList) {
 				Node childNode = NodeFactory.getNode(childNodeId, user.getName());
 				JsonNode jnode = (JsonNode)childNode.export("json-dropbox-object", Detail.min); 
@@ -917,8 +885,6 @@ public class DropboxService {
 	@GET
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public byte[] shareGroups() {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
-
 		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
@@ -960,8 +926,6 @@ public class DropboxService {
 	@GET
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public byte[] shareGroupMembers(@PathParam("group_id") final int group_id) {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
-
 		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();

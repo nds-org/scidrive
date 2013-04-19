@@ -23,7 +23,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -180,15 +179,24 @@ public class SwiftStorageManager implements StorageManager {
 	}
 
 	/**
+	 * 
 	 * Copy the bytes from the specified old location to the specified new location
 	 * in the current backend storage
 	 * @param oldLocationId The old location of the bytes
 	 * @param newLocationId The new location of the bytes
 	 */
 	@Override
-	public void copyBytes(NodePath oldNodePath, NodePath newNodePath) {
+	public void copyBytes(NodePath oldNodePath, NodePath newNodePath, boolean keepBytes) {
 		try {
+			FilesObjectMetaData meta = getClient().getObjectMetaData(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
+			// if != null then exists manifest for chunked upload
+			if(null != meta.getManifestPrefix() && keepBytes){
+				throw new BadRequestException("Copying files with segments is not supported.");
+			}
+
 			getClient().copyObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath(), newNodePath.getContainerName(), newNodePath.getNodeRelativeStoragePath());
+			if(!keepBytes)
+				getClient().deleteObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
 		} catch (FilesInvalidNameException e) {
 			throw new NotFoundException("Node Not Found");
 		} catch (HttpException e) {
@@ -312,28 +320,6 @@ public class SwiftStorageManager implements StorageManager {
 	}
 
 	/**
-	 * Move the bytes from the specified old location to the specified new location 
-	 * in the current backend storage
-	 * @param oldLocationId The old location of the bytes
-	 * @param newLocationId The new location of the bytes
-	 */
-	@Override
-	public void moveBytes(NodePath oldNodePath, NodePath newNodePath) {
-
-		try {
-			getClient().copyObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath(), newNodePath.getContainerName(), newNodePath.getNodeRelativeStoragePath());
-			getClient().deleteObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
-		} catch (FilesInvalidNameException e) {
-			throw new NotFoundException("Node Not Found");
-		} catch (HttpException e) {
-			throw new BadRequestException(e);
-		} catch (IOException e) {
-			throw new InternalServerErrorException(e.getMessage());
-		}
-		updateCredentials();
-	}
-
-	/**
 	 * Put the bytes from the specified input stream at the specified location in 
 	 * the current backend storage
 	 * @param location The location for the bytes
@@ -357,7 +343,7 @@ public class SwiftStorageManager implements StorageManager {
 	 * @param locationId The location of the bytes
 	 */
 	@Override
-	public void remove(NodePath npath) {
+	public void remove(NodePath npath, boolean removeChunks) {
 		
 		final int PAGE_SIZE = 1000;
 		
@@ -367,7 +353,7 @@ public class SwiftStorageManager implements StorageManager {
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
 						try { 
-							removeObjectSegments(npath.getContainerName(), obj.getName());
+							if(removeChunks) removeObjectSegments(npath.getContainerName(), obj.getName());
 							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
 						} catch (Exception e) {}
 					}
@@ -380,7 +366,7 @@ public class SwiftStorageManager implements StorageManager {
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
 						try {
-							removeObjectSegments(npath.getContainerName(), obj.getName());
+							if(removeChunks) removeObjectSegments(npath.getContainerName(), obj.getName());
 							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
 						} catch (Exception e) {}
 					}
@@ -388,7 +374,7 @@ public class SwiftStorageManager implements StorageManager {
 					contContent = getClient().listObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null);
 				}
 				try {
-					removeObjectSegments(npath.getContainerName(), npath.getNodeRelativeStoragePath());
+					if(removeChunks) removeObjectSegments(npath.getContainerName(), npath.getNodeRelativeStoragePath());
 					getClient().deleteObject(npath.getContainerName(), npath.getNodeRelativeStoragePath()); 
 				} catch (Exception e) {}
 			}
@@ -492,6 +478,10 @@ public class SwiftStorageManager implements StorageManager {
 		updateCredentials();
 	}
 
+	/**
+	 * Creates the manifest that combines the chunks into single file.
+	 * If the file already exists and points to other chunks, these will be removed.
+	 */
 	@Override
 	public void putChunkedBytes(NodePath nodePath, String chunkedId) {
 		try {
