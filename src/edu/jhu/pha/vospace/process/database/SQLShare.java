@@ -55,7 +55,7 @@ public class SQLShare implements Database {
 		for (int i=0; i<dataTables.size(); i++) {
 			AsciiTable table = dataTables.get(i); 
 			String datasetName = (metadata.get(TikaCoreProperties.SOURCE)).replaceAll("/", Matcher.quoteReplacement("_")) +"_"+table.getTableId();
-			System.out.println(datasetName);
+			log.debug("dataset name: "+datasetName);
 			StringBuilder sb = new StringBuilder();
 			String[] columnNames = table.getColumnNames();
 			for (int j=0; j<columnNames.length; j++) { 
