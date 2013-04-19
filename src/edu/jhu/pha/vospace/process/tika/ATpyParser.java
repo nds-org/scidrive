@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +28,8 @@ import org.python.util.PythonInterpreter;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
+import edu.jhu.pha.vospace.process.database.Database;
+import edu.jhu.pha.vospace.process.database.SQLShare;
 import edu.jhu.pha.vospace.process.sax.AsciiTable;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
 
@@ -111,14 +114,16 @@ public class ATpyParser implements Parser {
 	private ATpyTable parseATpy(String sourceUrl, String pythonHost, int pythonPort) throws TikaException {
 		String parseFromUrl = "\"\"\""
 				+ "import os, tempfile, urllib2, atpy\n"
-				+ "f = tempfile.NamedTemporaryFile(delete=False)\n"
+				+ "h,fname = tempfile.mkstemp()\n"
+				+ "f = os.fdopen(h,'w')\n"
 				+ "try:\n"
 				+ "    u = urllib2.urlopen('"+ sourceUrl + "')\n"
 				+ "    f.write(u.read())\n"
 				+ "    f.close()\n"
-				+ "    tbl = atpy.Table(f.name,type='ascii')\n"
+				+ "    tbl = atpy.Table(fname,type='ascii')\n"
 				+ "finally:\n"
-				+ "    os.unlink(f.name)\n"
+				//+ "    os.close(h)\n"	
+				+ "    os.remove(fname)\n"
 				+ "tableRows = tbl.data.tolist()\n"
 				+ "columnNames = tbl.columns.keys\n"
 				+ "columnTypes = [(tbl.columns[i].dtype.kind,tbl.columns[i].dtype.itemsize) for i in tbl.columns]\n"
@@ -196,10 +201,16 @@ public class ATpyParser implements Parser {
 		Parser parser = new ATpyParser();
 
 		Metadata metadata = new Metadata();
-		metadata.set(TikaCoreProperties.SOURCE,sourceUrl);
-
-		ContentHandler handler = new WriteOutContentHandler(System.out);
+		metadata.set(Metadata.CONTENT_LOCATION,sourceUrl);
+		
+		AsciiTableContentHandler handler = new AsciiTableContentHandler();
 		
 		parser.parse((new URL(sourceUrl)).openStream(), handler, metadata, new ParseContext());
+		
+		metadata.set(TikaCoreProperties.SOURCE,sourceUrl);
+		Database db = new SQLShare();
+		db.setup();
+		db.update(metadata, (ArrayList)handler.getTables());
+		db.close();
 	}
 }
