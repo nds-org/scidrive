@@ -5,7 +5,9 @@
 		<mimetype>image/tiff</mimetype>
 		<mimetype>text/plain</mimetype>
 		<id>fitsprocessor</id>
-		<class>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</class>
+		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>
+		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
+		<config>tika/tika-conf.xml</config>
 	</processor>
 	<processor>
 		<id>docsprocessor</id>

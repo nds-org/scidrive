@@ -25,14 +25,6 @@
         <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.2.3" conf="compile->default"/>
         <dependency org="xmlwriter" name="xmlwriter" rev="2.2.2" conf="compile->default"/>
         <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.12" conf="compile->default"/>
-        <dependency org="org.apache.axis2" name="axis2-kernel" rev="1.6.2" conf="compile->default">
-            <exclude org="javax.servlet" name="servlet-api" /> 
-            <exclude org="javax.servlet" name="jsp-api" />
-        </dependency>
-        <dependency org="org.apache.axis2" name="axis2-adb" rev="1.6.2" conf="compile->default">
-            <exclude org="javax.servlet" name="servlet-api" /> 
-            <exclude org="javax.servlet" name="jsp-api" />
-        </dependency>
         <dependency org="log4j" name="log4j" rev="1.2.17" conf="compile->default"/>
         <dependency org="commons-configuration" name="commons-configuration" rev="1.6" conf="compile->default"/>
         <dependency org="org.apache.tika" name="tika-app" rev="1.3" conf="compile->default"/>
@@ -41,7 +33,27 @@
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.23" conf="compile->default"/>
         <dependency org="org.agmip.thirdparty" name="ximpleware-vtd-xml" rev="2.11" conf="compile->default"/>
         <dependency org="xom" name="xom" rev="1.2.5" conf="compile->default"/>
-        <dependency org="org.apache.sanselan" name="sanselan" rev="0.97-incubator" conf="compile->default"/><!-- FITS parsing -->
+
+        <!-- FITS parsing -->
+        <dependency org="org.apache.sanselan" name="sanselan" rev="0.97-incubator" conf="compile->default"/>
+        <dependency org="org.apache.axis2" name="axis2-kernel" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+        <dependency org="org.apache.axis2" name="axis2-adb" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+        <dependency org="org.apache.axis2" name="axis2-transport-local" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+        <dependency org="org.apache.axis2" name="axis2-transport-http" rev="1.6.2" conf="compile->default">
+            <exclude org="javax.servlet" name="servlet-api" /> 
+            <exclude org="javax.servlet" name="jsp-api" />
+        </dependency>
+        <!-- FITS parsing -->
+
         <dependency org="net.sourceforge.nekohtml" name="nekohtml" rev="1.9.18" conf="compile->default"/>
         <dependency org="org.apache.lucene" name="lucene-core" rev="4.1.0" conf="compile->default"/>
         <dependency org="org.apache.lucene" name="lucene-queryparser" rev="4.1.0" conf="compile->default"/>
