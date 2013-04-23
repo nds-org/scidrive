@@ -316,24 +316,25 @@ public class MySQLMetaStore2 implements MetaStore{
 
 	/*
 	 * (non-Javadoc)
-	 * @see edu.jhu.pha.vospace.meta.MetaStore#markRemoved(edu.jhu.pha.vospace.node.VospaceId)
+	 * @see edu.jhu.pha.vospace.meta.MetaStore#markRemoved(edu.jhu.pha.vospace.node.VospaceId, boolean)
 	 */
 	@Override
-	public void markRemoved(final VospaceId identifier) {
+	public void markRemoved(final VospaceId identifier, final boolean isRemoved) {
 		if(identifier.getNodePath().isRoot(false))
 			return;
         DbPoolServlet.goSql("Marking node as removed",
-        		"update nodes set deleted = 1 "+
+        		"update nodes set deleted = ? "+
         		"WHERE node_id = "+
         		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
         		"ON nodes.container_id = containers.container_id JOIN user_identities "+
-        		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a) AND deleted = 0",
+        		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, identifier.getNodePath().getContainerName());
-                        stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setBoolean(1, isRemoved);
+                        stmt.setString(2, identifier.getNodePath().getContainerName());
+                        stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath());
+                        stmt.setString(4, owner);
                         return stmt.executeUpdate();
                     }
                 }

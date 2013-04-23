@@ -160,7 +160,10 @@ public class NodesController {
 		
 		// Does node already exist?
 		if(newNode.isStoredMetadata()) {
-			throw new ConflictException("A Node already exists with the requested URI."); 
+			if(newNode.getNodeInfo().isDeleted())
+				newNode.markRemoved(false);
+			else
+				throw new ConflictException("A Node already exists with the requested URI."); 
 		}
 
 		newNode.setNode(new String(nodeBytes));
@@ -191,7 +194,7 @@ public class NodesController {
 			String username = user.getName();
 			VospaceId identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 			Node node = NodeFactory.getNode(identifier, username);
-			node.markRemoved();
+			node.markRemoved(true);
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
@@ -223,6 +226,9 @@ public class NodesController {
 		if(!currentNode.isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
 			
+		if(currentNode.getNodeInfo().isDeleted())
+			currentNode.markRemoved(false);
+		
 		currentNode.setNode(new String(nodeBytes));
 		
 		

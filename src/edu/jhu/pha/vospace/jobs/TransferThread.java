@@ -106,7 +106,7 @@ public class TransferThread extends Thread {
 		
 		if (direction.toString().endsWith(".null")) {
 			if(!keepBytes)
-				node.markRemoved();
+				node.markRemoved(true);
 			// else don't do anything
 		} else {
 			node.copy(direction, keepBytes);

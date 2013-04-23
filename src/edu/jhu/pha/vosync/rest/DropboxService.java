@@ -214,7 +214,7 @@ public class DropboxService {
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
-		node.markRemoved();
+		node.markRemoved(true);
 		
 		return Response.ok(NodeFactory.getNode(identifier, user.getName()).export("json-dropbox",Detail.min)).build();
 	}
@@ -589,6 +589,10 @@ public class DropboxService {
 		
 		if(!(node instanceof DataNode)) {
 			throw new NotFoundException("Node is a container");
+		}
+		
+		if(node.getNodeInfo().isDeleted()) {
+			node.markRemoved(false);
 		}
 		
 		((DataNode)node).setData(fileDataInp);

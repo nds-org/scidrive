@@ -332,17 +332,17 @@ public class ContainerNode extends DataNode {
 	}
 	
 	@Override
-	public void markRemoved() {
+	public void markRemoved(boolean isRemoved) {
 		if(!isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
 
 		NodesList childrenList = getDirectChildren(false, 0, -1);
 		List<Node> children = childrenList.getNodesList();
 		for(Node child: children) {
-			child.markRemoved();
+			child.markRemoved(isRemoved);
 		}
 
-		getMetastore().markRemoved(getUri());
+		getMetastore().markRemoved(getUri(), isRemoved);
 		QueueConnector.goAMQP("mark removed Container", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
 			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {

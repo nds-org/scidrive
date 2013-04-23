@@ -74,7 +74,7 @@ public interface MetaStore {
      * Mark the node as removed in metadata database. The node will be physically removed by the internal process later.
      * @param uri
      */
-    public void markRemoved(VospaceId uri);
+    public void markRemoved(VospaceId uri, boolean isRemoved);
 
 	/**
      * Remove the node from metadata database. This method should be only used internally as it's slow.

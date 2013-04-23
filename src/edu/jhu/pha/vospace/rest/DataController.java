@@ -163,6 +163,9 @@ public class DataController {
 			try {
 				DataNode targetNode = (DataNode)NodeFactory.getInstance().getNode(id, job.getUsername());
 				targetNode.setData(fileDataInp);
+				if(targetNode.getNodeInfo().isDeleted()) {
+					targetNode.markRemoved(false);
+				}
 			} catch(InternalServerErrorException ex) {
 				JobsProcessor.modifyJobState(job, STATE.ERROR);
 				throw ex;

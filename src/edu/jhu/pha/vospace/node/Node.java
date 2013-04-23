@@ -402,11 +402,11 @@ public abstract class Node implements Cloneable {
 	/**
 	 * Marks the node as removed in metadata database
 	 */
-	public void markRemoved() {
+	public void markRemoved(boolean isRemoved) {
 		if(!isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");
 		
-		getMetastore().markRemoved(getUri());
+		getMetastore().markRemoved(getUri(), isRemoved);
 
 		QueueConnector.goAMQP("markRemovedNode", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
