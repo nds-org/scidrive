@@ -13,6 +13,7 @@ public class FilesObjectMetaData
     private String contentLength;
     private String eTag;
     private String lastModified;
+    private String manifestPrefix;
     private Map<String, String> metaData = new HashMap<String, String>();
 
     /**
@@ -174,4 +175,12 @@ public class FilesObjectMetaData
     {
         return metaData.containsKey(FilesConstants.X_OBJECT_META.concat(key));
     }
+
+	public String getManifestPrefix() {
+		return manifestPrefix;
+	}
+
+	public void setManifestPrefix(String manifestPrefix) {
+		this.manifestPrefix = manifestPrefix;
+	}
 }

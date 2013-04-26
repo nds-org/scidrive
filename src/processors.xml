@@ -1,5 +1,15 @@
 <fileprocessors>
 	<processor>
+		<mimetype>application/fits</mimetype>
+		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
+		<mimetype>image/tiff</mimetype>
+		<mimetype>text/plain</mimetype>
+		<id>fitsprocessor</id>
+		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>
+		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
+		<config>tika/tika-conf.xml</config>
+	</processor>
+	<processor>
 		<id>docsprocessor</id>
 		<mimetype>application/msword</mimetype>
 		<mimetype>application/vnd.openxmlformats-officedocument.wordprocessingml.document</mimetype>

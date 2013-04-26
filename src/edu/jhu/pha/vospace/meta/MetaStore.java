@@ -46,6 +46,11 @@ public interface MetaStore {
      */
     public NodesList getNodeChildren(VospaceId uri, boolean searchDeep, boolean includeDeleted, int start, int count) ;
 
+    /**
+     * returns the node system metadata
+     * @param uri
+     * @return
+     */
     public NodeInfo getNodeInfo(VospaceId uri);
 
     /**
@@ -65,14 +70,20 @@ public interface MetaStore {
      */
     public boolean isStored(VospaceId identifier);
     
-    public void markRemoved(VospaceId uri);
+    /**
+     * Mark the node as removed in metadata database. The node will be physically removed by the internal process later.
+     * @param uri
+     */
+    public void markRemoved(VospaceId uri, boolean isRemoved);
 
 	/**
-     * Remove the metadata for the specified identifier
+     * Remove the node from metadata database. This method should be only used internally as it's slow.
+	 * Use the markRemoved method when requested by user.
      * @param identifier
      */
     public void remove(VospaceId identifier);
 
+    
 	public List<VospaceId> search(VospaceId identifier, String searchPattern, int fileLimit, boolean includeDeleted);
 
     /**
@@ -83,6 +94,11 @@ public interface MetaStore {
      */
     public void storeData(VospaceId identifier, NodeType type) ;
 
+    /**
+     * Update the node metadata in database from the NodeInfo object
+     * @param identifier
+     * @param info
+     */
 	public void storeInfo(VospaceId identifier, NodeInfo info);
 
 	/**
@@ -105,6 +121,12 @@ public interface MetaStore {
      */
 	String createShare(VospaceId identifier, String groupId, boolean write_perm);
 
+	/**
+	 * Get the node properties
+	 * @param identifier
+	 * @param properties
+	 * @return
+	 */
 	public Map<String, String> getProperties(VospaceId identifier, PropertyType properties);
 
 }

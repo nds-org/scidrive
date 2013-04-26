@@ -30,20 +30,15 @@ public interface StorageManager {
      * in the current backend storage
      * @param oldLocationId The old location of the bytes
      * @param newLocationId The new location of the bytes
+     * @param keepBytes remove the old object
      */
-    public void copyBytes(NodePath oldNodePath, NodePath newNodePath);
+    public void copyBytes(NodePath oldNodePath, NodePath newNodePath, boolean keepBytes);
 
     /**
      * Create a container at the specified location in the current backend storage
      * @param locationId The location of the container
      */
     public void createContainer(NodePath nodePath);
-
-    /**
-     * Create a container at the specified location in the current backend storage
-     * @param locationId The location of the container
-     */
-    //public void createNode(NodePath nodePath);
 
     /**
      * Get the bytes from the specified location in the current backend storage
@@ -66,28 +61,28 @@ public interface StorageManager {
      * @return
      */
     public String getNodeSyncAddress(String container);
-
-    /**
-     * Move the bytes from the specified old location to the specified new location 
-     * in the current backend storage
-     * @param oldLocationId The old location of the bytes
-     * @param newLocationId The new location of the bytes
-     */
-    public void moveBytes(NodePath oldNodePath, NodePath newNodePath);
 	
 	/**
      * Put the bytes from the specified input stream at the specified location in 
      * the current backend storage
-     * @param locationId The location for the bytes
+     * @param nodePath the node path
      * @param stream The stream containing the bytes
      */
     public void putBytes(NodePath nodePath, InputStream stream);
 
 	/**
-     * Remove the bytes at the specified location in the current backend storage
-     * @param locationId The location of the bytes
+     * Create a manifest the uploaded chunks
+     * @param locationId The location for the bytes
+     * @param chunkedId the name of chunks folder
      */
-    public void remove(NodePath nodePath);
+    public void putChunkedBytes(NodePath nodePath, String chunkedId);
+
+	/**
+     * Remove the bytes at the specified location in the current backend storage
+	 * @param nodePath
+	 * @param removeChunks
+	 */
+    public void remove(NodePath nodePath, boolean removeChunks);
     
     public void setNodeSyncTo(String container, String syncTo, String syncKey); 
 

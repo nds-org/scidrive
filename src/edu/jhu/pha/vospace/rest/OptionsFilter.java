@@ -33,7 +33,7 @@ public class OptionsFilter implements ContainerResponseFilter {
 
 		if(request.getMethod().equals("OPTIONS")){
 			response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");
-			response.getHttpHeaders().add("Access-Control-Allow-Headers", "Authorization, X-Requested-With");
+			response.getHttpHeaders().add("Access-Control-Allow-Headers", "Authorization, X-Requested-With, Content-Type");
 			response.getHttpHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT");
 		} else {
 			response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");

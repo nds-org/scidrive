@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
-import java.util.Vector;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,9 +33,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
+import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -52,8 +50,10 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.SecurityContext;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -66,7 +66,6 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
-import org.apache.tika.metadata.TikaCoreProperties;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
@@ -77,7 +76,6 @@ import org.codehaus.jackson.util.TokenBuffer;
 
 import com.sun.jersey.core.header.FormDataContentDisposition;
 import com.sun.jersey.multipart.FormDataParam;
-
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
@@ -91,19 +89,21 @@ import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.node.Node.Detail;
-import edu.jhu.pha.vospace.oauth.DropboxAccessLevel;
 import edu.jhu.pha.vospace.oauth.UserHelper;
+import edu.jhu.pha.vospace.oauth.VoboxUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vosync.exception.BadRequestException;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
 import edu.jhu.pha.vosync.exception.InternalServerErrorException;
-import edu.jhu.pha.vosync.exception.NotAcceptableException;
 import edu.jhu.pha.vosync.exception.NotFoundException;
+import edu.jhu.pha.vosync.meta.Chunk;
+import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
 
 /**
  * @author Dmitry Mishin
@@ -112,9 +112,7 @@ import edu.jhu.pha.vosync.exception.NotFoundException;
 public class DropboxService {
 	
 	private static final Logger logger = Logger.getLogger(DropboxService.class);
-	private @Context ServletContext context;
-	private @Context HttpServletRequest request;
-	private @Context HttpServletResponse response;
+	private @Context SecurityContext security; 
 	private static final Configuration conf = SettingsServlet.getConfig();
 
 	private static final JsonFactory f = new JsonFactory();
@@ -122,14 +120,13 @@ public class DropboxService {
 	private static final double GIGABYTE = 1024.0*1024.0*1024.0;
 
 	
-	@Path("fileops/copy")
+	@Path("fileops/{op:copy|move}")
 	@POST
-	public Response copy(@FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
-		final String username = (String)request.getAttribute("username");
+	@RolesAllowed({"user", "rwshareuser"})
+	public Response copy(@PathParam("op") String operation, @FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
+		boolean keepBytes = operation.equals("copy");
 		
 		if(null == root || root.isEmpty())
 			throw new BadRequestException("Not found parameter root");
@@ -142,32 +139,34 @@ public class DropboxService {
 		
 		VospaceId fromId, toId;
 		try {
-			fromId = new VospaceId(new NodePath(fromPath, (String)request.getAttribute("root_container")));
-			toId = new VospaceId(new NodePath(toPath, (String)request.getAttribute("root_container")));
+			fromId = new VospaceId(new NodePath(fromPath, user.getRootContainer()));
+			toId = new VospaceId(new NodePath(toPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(fromId, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(fromId, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(fromId.getNodePath().getNodeStoragePath());
 		}
-		node.copy(toId);
 		
-		return Response.ok(NodeFactory.getInstance().getNode(toId, username).export("json-dropbox",Detail.min)).build();
+		try {
+			node.copy(toId, keepBytes);
+		} catch(edu.jhu.pha.vospace.api.exceptions.BadRequestException ex) {
+			throw new BadRequestException(ex.getMessage());
+		}
+		
+		return Response.ok(NodeFactory.getNode(toId, user.getName()).export("json-dropbox",Detail.min)).build();
 	}
 
 	@Path("fileops/create_folder")
 	@POST
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response createFolder(@FormParam("root") String root, @FormParam("path") String path) {
 		logger.debug("Creating folder "+path);
-		final String username = (String)request.getAttribute("username");
-		
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
 		if(null == root || root.isEmpty())
 			throw new BadRequestException("Not found parameter root");
@@ -177,12 +176,12 @@ public class DropboxService {
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(path, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(path, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		Node node = NodeFactory.getInstance().createNode(identifier, username, NodeType.CONTAINER_NODE);
+		Node node = NodeFactory.createNode(identifier, user.getName(), NodeType.CONTAINER_NODE);
 		
 		node.createParent();
 		node.setNode(null);
@@ -192,13 +191,10 @@ public class DropboxService {
 
 	@Path("fileops/delete")
 	@POST
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response delete(@FormParam("root") String root, @FormParam("path") String path) {
-		final String username = (String)request.getAttribute("username");
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
 		if(null == root || root.isEmpty())
 			throw new BadRequestException("Not found parameter root");
 		
@@ -207,29 +203,31 @@ public class DropboxService {
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(path, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(path, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
-		node.markRemoved();
+		node.markRemoved(true);
 		
-		return Response.ok(NodeFactory.getInstance().getNode(identifier, username).export("json-dropbox",Detail.min)).build();
+		return Response.ok(NodeFactory.getNode(identifier, user.getName()).export("json-dropbox",Detail.min)).build();
 	}
 
 	@GET @Path("account/info")
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getAccountInfo() {
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		try {
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
 	
-			AccountInfo info = UserHelper.getAccountInfo((String)request.getAttribute("username"));
+			AccountInfo info = UserHelper.getAccountInfo(user.getName());
 			
 			g2.writeStartObject();
 			
@@ -257,15 +255,14 @@ public class DropboxService {
 	}
 	
 	@PUT @Path("account/service")
+	@RolesAllowed({"user"})
 	public Response setAccountService(InputStream serviceCredInpStream) {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode credNode = mapper.readTree(serviceCredInpStream);
-			UserHelper.updateUserService((String)request.getAttribute("username"), credNode);
+			UserHelper.updateUserService(user.getName(), credNode);
 			return Response.ok().build();
 		} catch(IOException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
@@ -273,19 +270,15 @@ public class DropboxService {
 	}
 	
 	@GET @Path("account/service")
+	@RolesAllowed({"user"})
 	public Response getAccountService() {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
-		return Response.ok(UserHelper.getUserServices((String)request.getAttribute("username")).toString()).build();
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		return Response.ok(UserHelper.getUserServices(user.getName()).toString()).build();
 	}
 	
 	@GET @Path("regions/info")
+	@RolesAllowed({"user"})
 	public Response getRegionsInfo() {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
-
 		MetaStore mstore = MetaStoreFactory.getInstance().getMetaStore(null);
 		if(mstore instanceof MetaStoreDistributed) {
 			RegionsInfo regionsInfo = ((MetaStoreDistributed)mstore).getRegionsInfo();
@@ -295,24 +288,23 @@ public class DropboxService {
 	}
 	
 	@GET @Path("files/{root:dropbox|sandbox}/{path:.+}")
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getFile(@PathParam("root") String root, @PathParam("path") String fullPath) {
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
 
-		response.setHeader("Content-Disposition", "attachment; filename="+identifier.getNodePath().getNodeName());
-		response.setHeader("Content-Length", Long.toString(node.getNodeInfo().getSize()));
-		
 		InputStream nodeInputStream;
 		try {
 			nodeInputStream = node.exportData(); 
@@ -325,25 +317,26 @@ public class DropboxService {
 		
 		ResponseBuilder response = Response.ok(nodeInputStream);
 		response.header("x-dropbox-metadata", new String((byte[])(node.export("json-dropbox", Detail.min))));
+		response.header("Content-Disposition", "attachment; filename="+identifier.getNodePath().getNodeName());
+		response.header("Content-Length", Long.toString(node.getNodeInfo().getSize()));
 		
 		return response.build();
 	}
 
 	@GET @Path("regions/{path:.+}")
+	@RolesAllowed({"user"})
 	public Response getFileRegions(@PathParam("path") String fullPath) {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -369,10 +362,12 @@ public class DropboxService {
 	}
 	
 	@GET @Path("metadata/{root:dropbox|sandbox}/{path:.+}")
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getFileMetadata(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("list") @DefaultValue("true") Boolean list, @QueryParam("file_limit") @DefaultValue("25000") int file_limit,  @QueryParam("start") @DefaultValue("0") int start, @QueryParam("count") @DefaultValue("-1") int count) {
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			logger.debug(e.getMessage());
 			throw new BadRequestException("InvalidURI");
@@ -380,7 +375,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -404,16 +399,16 @@ public class DropboxService {
 	}
 
 	@GET @Path("metadata/{root:dropbox|sandbox}")
+	@RolesAllowed({"user", "shareuser", "readonlyshareuser"})
 	public Response getRootMetadata(@PathParam("root") String root, @QueryParam("list") @DefaultValue("true") Boolean list) {
 		return getFileMetadata(root, "", list, 25000, 0, -1);
 	}
 	
 	@GET @Path("transfers/info")
 	@Produces(MediaType.APPLICATION_JSON)
+	@RolesAllowed({"user"})
 	public byte[] getTransfersInfo() {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		return DbPoolServlet.goSql("Get transfers queue",
 	    		"select id, state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ?",
@@ -421,7 +416,7 @@ public class DropboxService {
 	                @Override
 	                public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                	
-	                	stmt.setString(1, (String)request.getAttribute("username"));
+	                	stmt.setString(1, user.getName());
 	                	
 	                	ByteArrayOutputStream byteOut = null;
 	                	try {
@@ -457,61 +452,25 @@ public class DropboxService {
 	    );
 	}
 	
-	@Path("fileops/move")
-	@POST
-	public Response move(@FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
-		final String username = (String)request.getAttribute("username");
-		
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
-		if(null == root || root.isEmpty())
-			throw new BadRequestException("Not found parameter root");
-		
-		if(null == fromPath || fromPath.isEmpty())
-			throw new BadRequestException("Not found parameter fromPath");
-		
-		if(null == toPath || toPath.isEmpty())
-			throw new BadRequestException("Not found parameter toPath");
-		
-		VospaceId fromId, toId;
-		try {
-			fromId = new VospaceId(new NodePath(fromPath, (String)request.getAttribute("root_container")));
-			toId = new VospaceId(new NodePath(toPath, (String)request.getAttribute("root_container")));
-		} catch (URISyntaxException e) {
-			throw new BadRequestException("InvalidURI");
-		}
-
-		Node node;
-		try {
-			node = NodeFactory.getInstance().getNode(fromId, (String)request.getAttribute("username"));
-		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-			throw new NotFoundException(fromId.getNodePath().getNodeStoragePath());
-		}
-		node.move(toId);
-		
-		return Response.ok(NodeFactory.getInstance().getNode(toId, username).export("json-dropbox",Detail.min)).build();
-	}
-
 	@POST @Path("files/{root:dropbox|sandbox}/{path:.+}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	/*TODO Test the method */
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response postFile(@PathParam("root") String root, @PathParam("path") String fullPath, @FormDataParam("file") InputStream fileDataInp, @FormDataParam("file") FormDataContentDisposition fileDetail, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite) {
-		final String username = (String)request.getAttribute("username");
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
-		if(!(Boolean)request.getAttribute("write_permission")) {
+		if(!user.isWriteEnabled()) {
 			throw new ForbiddenException("ReadOnly");
 		}
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(username);
+		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
@@ -533,22 +492,22 @@ public class DropboxService {
 							newId = new VospaceId(currentFile.replaceAll(fileName, fileName+"_"+current_num++));
 						}
 						logger.debug("Node "+newId.toString()+" not exists.");
-						node = (DataNode)NodeFactory.getInstance().createNode(newId, username, NodeType.DATA_NODE);
+						node = (DataNode)NodeFactory.createNode(newId, user.getName(), NodeType.DATA_NODE);
 						node.createParent();
 						node.setNode(null);
 					} catch(URISyntaxException e) {
 						throw new InternalServerErrorException("InvalidURI");
 					}
 				} else {
-					node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
 			} else {
 				try {
-					node = NodeFactory.getInstance().getNode(identifier, username);
+					node = NodeFactory.getNode(identifier, user.getName());
 				} catch(NotFoundException ex) {
-					node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
@@ -565,40 +524,31 @@ public class DropboxService {
 	}
 
 	@PUT @Path("files_put/{root:dropbox|sandbox}/{path:.+}")
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response putFile(@PathParam("root") String root, @PathParam("path") String fullPath, InputStream fileDataInp, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
-		final String username = (String)request.getAttribute("username");
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(username);
+		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
 			throw new NotFoundException("Is a root folder");
 		} else {
-			if(!overwrite) {
+			if(parentRev != null) {
 				if(metastore.isStored(identifier)){
 					//throw new BadRequestException(identifier.toString()+" exists.");
 					//logger.debug("Found conflict in node "+identifier);
+					node = NodeFactory.getNode(identifier, user.getName());
 					
-					node = NodeFactory.getInstance().getNode(identifier, username);
-					
-					if(node.getNodeInfo().isDeleted()) {
-						logger.debug("Node "+node.getUri().toString()+" is deleted. Recreating the node metadata.");
-						node.remove();
-						node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
-						node.setNode(null);
-					} else if(!parentRev.equals(node.getNodeInfo().getRevision())) {
-						throw new BadRequestException("Revision parameter error");
+					if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
 
 						//TODO fix the revisions
 						/*logger.debug("Revisions do not match: "+parentRev+" "+node.getNodeInfo().getCurrentRev());
@@ -614,7 +564,7 @@ public class DropboxService {
 							while(metastore.isStored(newId)){
 								newId = new VospaceId(currentFile.replaceAll(fileName, fileName+"_"+current_num++));
 							}
-							node = (DataNode)NodeFactory.getInstance().getDefaultNode(newId, username);
+							node = (DataNode)NodeFactory.getDefaultNode(newId, username);
 							node.createParent();
 							node.setNode();
 						} catch(URISyntaxException e) {
@@ -622,15 +572,15 @@ public class DropboxService {
 						}*/
 					}
 				} else {
-					node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
 			} else {
 				try {
-					node = NodeFactory.getInstance().getNode(identifier, username);
+					node = NodeFactory.getNode(identifier, user.getName());
 				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-					node = (DataNode)NodeFactory.getInstance().createNode(identifier, username, NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
@@ -638,7 +588,11 @@ public class DropboxService {
 		}
 		
 		if(!(node instanceof DataNode)) {
-			throw new NotFoundException("Is a container");
+			throw new NotFoundException("Node is a container");
+		}
+		
+		if(node.getNodeInfo().isDeleted()) {
+			node.markRemoved(false);
 		}
 		
 		((DataNode)node).setData(fileDataInp);
@@ -648,8 +602,10 @@ public class DropboxService {
 		
 	@Path("search/{root:dropbox|sandbox}/{path:.+}")
 	@GET
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public byte[] search(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("query") String query, @QueryParam("file_limit") @DefaultValue("1000") int fileLimit, @QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {
-		final String username = (String)request.getAttribute("username");
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+
 
 		if(null == query || query.length() < 3){
 			throw new BadRequestException("Wrong query parameter");
@@ -657,14 +613,14 @@ public class DropboxService {
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -680,9 +636,8 @@ public class DropboxService {
 		try {
 			g.writeStartArray();
 
-			int ind = 0;
 			for(VospaceId childNodeId: nodesList) {
-				Node childNode = NodeFactory.getInstance().getNode(childNodeId, username);
+				Node childNode = NodeFactory.getNode(childNodeId, user.getName());
 				JsonNode jnode = (JsonNode)childNode.export("json-dropbox-object", Detail.min); 
 				g.writeTree(jnode);
 
@@ -717,12 +672,9 @@ public class DropboxService {
 
 	@Path("cont_search")
 	@GET
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response contSearch(@QueryParam("query") String queryStr) {
-		final String username = (String)request.getAttribute("username");
-
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		try {
 			Directory directory = FSDirectory.open(new File(conf.getString("lucene.index")));
@@ -732,7 +684,7 @@ public class DropboxService {
 		    
 		    Analyzer analyzer = new EnglishAnalyzer(Version.LUCENE_41);
 		    QueryParser parser = new QueryParser(Version.LUCENE_41, "content", analyzer);
-		    String queryFullStr = "owner:\""+username+"\" AND "+queryStr;
+		    String queryFullStr = "owner:\""+user.getName()+"\" AND "+queryStr;
 		    Query query = parser.parse(queryFullStr);
 		    ScoreDoc[] hits = isearcher.search(query, null, 100).scoreDocs;
 		    
@@ -748,6 +700,7 @@ public class DropboxService {
 		      else
 		    	  buf.append("<p>"+hitDoc.get("content")+"</p>");
 		    }
+		    analyzer.close();
 		    ireader.close();
 		    directory.close();
 
@@ -759,25 +712,20 @@ public class DropboxService {
 	}
 	
 	@PUT @Path("regions_put/{path:.+}")
+	@RolesAllowed({"user"})
 	public Response putFileRegions(@PathParam("path") String fullPath, InputStream regionsInpStream) {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		VospaceId identifier;
-
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
 		
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -828,16 +776,13 @@ public class DropboxService {
 	 * @return
 	 */
 	@PUT @Path("shares/{root:dropbox|sandbox}/{path:.+}")
+	@RolesAllowed({"user"})
 	public byte[] putShares(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("group") String group, @DefaultValue("false") @QueryParam("write_perm") Boolean write_perm) {
-		final String username = (String)request.getAttribute("username");
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
-		if(!(Boolean)request.getAttribute("write_permission")) {
-			throw new ForbiddenException("ReadOnly");
-		}
-		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			logger.debug(e.getMessage());
 			throw new BadRequestException("InvalidURI");
@@ -845,7 +790,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -873,12 +818,9 @@ public class DropboxService {
 	}
 
 	@GET @Path("shares")
+	@RolesAllowed({"user"})
 	public byte[] getShares() {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
-		
-		final String username = (String)request.getAttribute("username");
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		
     	ByteArrayOutputStream byteOut = null;
     	try {
@@ -896,7 +838,7 @@ public class DropboxService {
 	                new SqlWorker<Boolean>() {
 	                    @Override
 	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-	                    	stmt.setString(1, username);
+	                    	stmt.setString(1, user.getName());
 	            			ResultSet rs = stmt.executeQuery();
 	            			while(rs.next()){
 	            				try {
@@ -923,36 +865,30 @@ public class DropboxService {
 	}
 
 	@DELETE @Path("shares/{share_id:.+}")
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response deleteShare(@PathParam("share_id") final String share_id) {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
-		
-		final String username = (String)request.getAttribute("username");
-		
-			DbPoolServlet.goSql("Remove share",
-	        		"delete container_shares from container_shares "+
-	        		"JOIN containers ON container_shares.container_id = containers.container_id "+
-	        		"JOIN user_identities ON containers.user_id = user_identities.user_id WHERE share_id = ? AND identity = ?;",
-	                new SqlWorker<Boolean>() {
-	                    @Override
-	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-	                    	stmt.setString(1, share_id);
-	                    	stmt.setString(2, username);
-	                    	return stmt.execute();
-	                    }
-	                });
-			return Response.ok().build();
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+
+		DbPoolServlet.goSql("Remove share",
+        		"delete container_shares from container_shares "+
+        		"JOIN containers ON container_shares.container_id = containers.container_id "+
+        		"JOIN user_identities ON containers.user_id = user_identities.user_id WHERE share_id = ? AND identity = ?;",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    	stmt.setString(1, share_id);
+                    	stmt.setString(2, user.getName());
+                    	return stmt.execute();
+                    }
+                });
+		return Response.ok().build();
 	}
 	
 
 	@Path("share_groups")
 	@GET
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public byte[] shareGroups() {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
-
 		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
@@ -992,11 +928,8 @@ public class DropboxService {
 	
 	@Path("share_groups/{group_id}")
 	@GET
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public byte[] shareGroupMembers(@PathParam("group_id") final int group_id) {
-		if(!((String)request.getAttribute("root_container")).isEmpty()) { // not root access level
-			throw new ForbiddenException("");
-		}
-
 		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
@@ -1034,12 +967,13 @@ public class DropboxService {
 	
 	@Path("media/{root:dropbox|sandbox}/{path:.+}")
 	@GET
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response media(@PathParam("root") String root, @PathParam("path") String fullPath) {
-		final String username = (String)request.getAttribute("username");
-		
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, (String)request.getAttribute("root_container")));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 		} catch (URISyntaxException e) {
 			logger.debug(e.getMessage());
 			throw new BadRequestException("InvalidURI");
@@ -1047,7 +981,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getInstance().getNode(identifier, (String)request.getAttribute("username"));
+			node = NodeFactory.getNode(identifier, user.getName());
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -1064,13 +998,13 @@ public class DropboxService {
 		job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
 		job.setState(JobDescription.STATE.PENDING);
 		job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
-		job.setUsername(username);
+		job.setUsername(user.getName());
 		
 		
 		Method submitJobMethod;
 		try {
 			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
-			submitJobMethod.invoke(null, username, job);
+			submitJobMethod.invoke(null, user.getName(), job);
 			
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
@@ -1087,6 +1021,141 @@ public class DropboxService {
 		
 			return Response.ok(byteOut.toByteArray()).build();
 		} catch (Exception e) {
+			throw new InternalServerErrorException(e.getMessage());
+		}
+	}
+	
+	@Path("chunked_upload")
+	@PUT
+	@RolesAllowed({"user", "rwshareuser"})
+	public Response chunkedUpload(@QueryParam("upload_id") String uploadId, @QueryParam("offset") long offset, InputStream fileDataInp) {
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		VoSyncMetaStore voMeta = new VoSyncMetaStore(user.getName());
+
+		logger.debug("New chunk: "+uploadId+" "+offset);
+		
+		if(null == uploadId) {
+			uploadId = RandomStringUtils.randomAlphanumeric(15);
+		}
+		
+		Chunk newChunk = voMeta.getLastChunk(uploadId);
+		
+		if(offset != newChunk.getChunkStart()) { // return error with proper offset
+			logger.error("Wrong offset: "+offset+" should be:"+newChunk.getChunkStart());
+			ResponseBuilder errorResp = Response.status(400);
+			errorResp.entity(genChunkResponse(uploadId, newChunk.getChunkStart()));
+			return errorResp.build();
+		}
+
+		VospaceId identifier;
+		try {
+			
+			String chunkNumberString = String.format("%07d", newChunk.getChunkNum());
+			
+			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"/"+chunkNumberString));
+			DataNode node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+
+			node.getStorage().createContainer(new NodePath("/"+conf.getString("chunked_container")));
+			node.getStorage().putBytes(identifier.getNodePath(), fileDataInp);
+			
+			NodeInfo info = new NodeInfo();
+			
+			node.getStorage().updateNodeInfo(identifier.getNodePath(), info);
+			node.setNodeInfo(info);
+			
+			newChunk.setSize(info.getSize());
+			
+			voMeta.putNewChunk(newChunk);
+			
+			byte[] resp = genChunkResponse(uploadId, newChunk.getChunkStart()+newChunk.getSize());
+			
+			return Response.ok(resp).build();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+			throw new InternalServerErrorException(e.getMessage());
+		}
+
+	}
+
+	@Path("commit_chunked_upload/{root:dropbox|sandbox}/{path:.+}")
+	@POST
+	@RolesAllowed({"user", "rwshareuser"})
+	public Response commitChunkedUpload(@PathParam("root") String root, @PathParam("path") String fullPath, @FormParam("upload_id") String uploadId, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
+		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(user.getName());
+		
+		if(null == uploadId || !(vosyncMeta.chunkedExists(uploadId))) {
+			throw new BadRequestException("Parameter upload_id is missing or invalid");
+		}
+		
+		VospaceId identifier;
+		try {
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
+		} catch (URISyntaxException e) {
+			throw new BadRequestException("InvalidURI");
+		}
+
+		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
+		
+		Node node;
+		if(identifier.getNodePath().getParentPath().isRoot(false)){
+			throw new NotFoundException("Is a root folder");
+		} else {
+			if(parentRev != null) {
+				if(metastore.isStored(identifier)){
+					node = NodeFactory.getNode(identifier, user.getName());
+					
+					if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
+						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
+						//TODO fix the revisions
+					}
+				} else {
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node.createParent();
+					node.setNode(null);
+				}
+			} else {
+				try {
+					node = NodeFactory.getNode(identifier, user.getName());
+					if(!overwrite) {
+						throw new BadRequestException("Node exists");
+					}
+				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
+					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node.createParent();
+					node.setNode(null);
+				}
+			}
+		}
+		
+		if(!(node instanceof DataNode)) {
+			throw new NotFoundException("Node is a container");
+		}
+		
+		((DataNode)node).setChunkedData(uploadId);
+		Response resp =Response.ok(node.export("json-dropbox",Detail.max)).build(); 
+		return resp;
+	}
+	
+	private static byte[] genChunkResponse(String uploadId, long offset) {
+		try {
+	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
+	
+			g2.writeStartObject();
+			
+			g2.writeStringField("upload_id", uploadId);
+			g2.writeNumberField("offset", offset);//31337
+			g2.writeStringField("expires", "Tue, 19 Jul 2014 21:55:38 +0000");//"Tue, 19 Jul 2011 21:55:38 +0000"
+			
+			g2.writeEndObject();
+			
+			g2.close();
+			byteOut.close();
+			return byteOut.toByteArray();
+		} catch (JsonGenerationException e) {
+			throw new InternalServerErrorException(e.getMessage());
+		} catch (IOException e) {
 			throw new InternalServerErrorException(e.getMessage());
 		}
 	}
