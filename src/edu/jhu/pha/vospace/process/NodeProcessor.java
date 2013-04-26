@@ -23,6 +23,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -50,6 +52,7 @@ import org.xml.sax.SAXException;
 import com.rabbitmq.client.QueueingConsumer;
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
@@ -57,6 +60,8 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
+import edu.jhu.pha.vospace.rest.JobDescription;
+import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 
 public class NodeProcessor extends Thread {
 
@@ -113,16 +118,42 @@ public class NodeProcessor extends Thread {
 		            	
 		            	switch(node.getType()) {
 			            	case DATA_NODE: {
-			            		Metadata nodeTikaMeta = new Metadata();
-			            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
-			            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
-			            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
-			            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
 
-			            		TikaInputStream inp = null;
+			            		
+			            		
+			            		// Get content URL (HTTP) 
+			            		String owner = (String)nodeData.get("owner");
+			            		String source = node.getUri().toString();
+			                    
+			            		JobDescription job = new JobDescription();
+			            		job.setTarget(source);
+
+			            		job.setDirection(DIRECTION.PULLFROMVOSPACE);
+			            		job.setId(UUID.randomUUID().toString());
+			            		job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+			            		job.setState(JobDescription.STATE.PENDING);
+			            		job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
+			            		job.setUsername(owner);
+			            		
+			            		Method submitJobMethod;
+			            		String simEndpointUrl = null;
 			            		try {
+			            			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
+			            			submitJobMethod.invoke(null, owner, job);
+			            			simEndpointUrl = conf.getString("application.url")+"/data/"+job.getId();
+			            			
+			            		}
+			            		catch (Exception e) {
+			            			logger.error("Could not obtain content URL: "+e.getMessage());
+			            		}
+
+			            		
+			            		TikaInputStream inp = null;
+			            		MediaType type = null;
+			            		try {
+			            			Metadata nodeTikaMeta = new Metadata();
 			            			inp = TikaInputStream.get(node.exportData());
-				                    MediaType type = new DefaultDetector().detect(inp, nodeTikaMeta);
+				                    type = new DefaultDetector().detect(inp, nodeTikaMeta);
 				                    nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 				            		node.getNodeInfo().setContentType(nodeTikaMeta.get(HttpHeaders.CONTENT_TYPE));
 				            		node.getMetastore().storeInfo(node.getUri(), node.getNodeInfo());
@@ -132,11 +163,20 @@ public class NodeProcessor extends Thread {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			String[] processorIds = processorConf.getStringArray("//processor[mimetype='"+nodeTikaMeta.get(Metadata.CONTENT_TYPE)+"']/id");
+			        			String[] processorIds = processorConf.getStringArray("//processor[mimetype='"+type.toString()+"']/id");
 			            		
 			            		try {
 			            			
 			            			for(String processorId: processorIds) {
+					            		Metadata nodeTikaMeta = new Metadata();
+					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
+					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
+					            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
+					            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
+			            				
+					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, simEndpointUrl);
+					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
+			            				
 			            				String conf = processorConf.getString("//processor[id='"+processorId+"']/config");
 			            				AbstractParser parser;
 		            					TikaConfig config = TikaConfig.getDefaultConfig();
