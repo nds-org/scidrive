@@ -51,6 +51,7 @@ public class ATpyParser implements Parser {
 	public void parse(InputStream stream, ContentHandler handler, Metadata metadata,
 			ParseContext context) throws IOException, SAXException, TikaException {
 
+		try {
 		ATpyTable table = parseATpy(metadata.get(Metadata.CONTENT_LOCATION),"127.0.0.1",8888);
 		
         XHTMLContentHandler xhtml = new XHTMLContentHandler(handler, metadata);
@@ -109,6 +110,13 @@ public class ATpyParser implements Parser {
 		xhtml.endDocument();
 		
         metadata.add(TikaCoreProperties.TYPE, "ATpy");
+		}
+		catch (Exception e) {
+			StringWriter sw = new StringWriter();
+			PrintWriter pw = new PrintWriter(sw);
+			e.printStackTrace(pw);
+			throw new TikaException("Error! "+e.getMessage()+"\n"+sw.toString());
+		}
 	}
 
 	private ATpyTable parseATpy(String sourceUrl, String pythonHost, int pythonPort) throws TikaException {

@@ -32,6 +32,7 @@ public class SQLShare implements Database {
 
 	private String userId = "";
 	private String apiKey = "";
+	
 	private final Logger log = Logger.getLogger(this.getClass());
 	
 	public SQLShare() {
