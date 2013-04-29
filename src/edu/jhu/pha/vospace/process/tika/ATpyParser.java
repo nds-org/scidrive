@@ -164,15 +164,15 @@ public class ATpyParser implements Parser {
 				tbl.setAllColumnNames(names);
 				ATpyType[] myTypes = new ATpyType[n];
 				for (int i = 0; i < n; i++) {
-					switch (types[i].get(0).toString()) {
-					case "i":
+					switch (types[i].get(0).toString().charAt(0)) {
+					case 'i':
 						myTypes[i] = new ATpyType(ATpyType.INT,((Integer) types[i].get(1)));
 						break;
-					case "f":
+					case 'f':
 						myTypes[i] = new ATpyType(ATpyType.FLOAT,((Integer) types[i].get(1)));
 						break;
-					case "S":
-					case "a":
+					case 'S':
+					case 'a':
 						myTypes[i] = new ATpyType(ATpyType.STRING,((Integer) types[i].get(1)));
 						break;
 					default:
