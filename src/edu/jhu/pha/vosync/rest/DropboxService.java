@@ -985,33 +985,18 @@ public class DropboxService {
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
-		JobDescription job = new JobDescription();
 
-		try {
-			job.setTarget(node.getUri().toString());
-		} catch (URISyntaxException e) {
-			throw new BadRequestException("InvalidURI");
+		if(!(node instanceof DataNode)) {
+			throw new BadRequestException("Invalid NodeType");
 		}
-
-		job.setDirection(DIRECTION.PULLFROMVOSPACE);
-		job.setId(UUID.randomUUID().toString());
-		job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
-		job.setState(JobDescription.STATE.PENDING);
-		job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
-		job.setUsername(user.getName());
 		
-		
-		Method submitJobMethod;
 		try {
-			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
-			submitJobMethod.invoke(null, user.getName(), job);
-			
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
 	
 			g2.writeStartObject();
 			
-			g2.writeStringField("url", conf.getString("application.url")+"/data/"+job.getId());
+			g2.writeStringField("url", ((DataNode)node).getHttpDownloadLink().toASCIIString());
 			g2.writeStringField("expires", "never (yet)");
 			
 			g2.writeEndObject();

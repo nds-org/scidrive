@@ -18,9 +18,15 @@ package edu.jhu.pha.vospace.node;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
+import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonGenerationException;
@@ -33,7 +39,10 @@ import org.codehaus.jackson.util.TokenBuffer;
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
+import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.jobs.JobsProcessorServlet;
+import edu.jhu.pha.vospace.rest.JobDescription;
+import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
 
 public class DataNode extends Node implements Cloneable {
@@ -158,6 +167,39 @@ public class DataNode extends Node implements Cloneable {
 	}
 
 
+	public URI getHttpDownloadLink() {
+		try {
+			JobDescription job = new JobDescription();
+			job.setTarget(this.getUri().toString());
+	
+			job.setDirection(DIRECTION.PULLFROMVOSPACE);
+			job.setId(UUID.randomUUID().toString());
+			job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+			job.setState(JobDescription.STATE.PENDING);
+			job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
+			job.setUsername(getOwner());
+			
+			Method submitJobMethod;
+			String endpointUrl = null;
+			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
+			submitJobMethod.invoke(null, owner, job);
+			endpointUrl = conf.getString("application.url")+"/data/"+job.getId();
+			return new URI(endpointUrl);
+		} catch(URISyntaxException ex) {
+			throw new InternalServerErrorException(ex.getMessage());
+		} catch (SecurityException e) {
+			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
+		} catch (NoSuchMethodException e) {
+			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
+		} catch (IllegalArgumentException e) {
+			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
+		} catch (IllegalAccessException e) {
+			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
+		} catch (InvocationTargetException e) {
+			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
+		}
+	}
+	
 	public void setChunkedData(String uploadId) {
 		if(!getMetastore().isStored(getUri()))
 			throw new NotFoundException("NodeNotFound");

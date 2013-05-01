@@ -54,6 +54,7 @@ import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.ContainerNode;
+import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
@@ -121,31 +122,6 @@ public class NodeProcessor extends Thread {
 
 			            		
 			            		
-			            		// Get content URL (HTTP) 
-			            		String owner = (String)nodeData.get("owner");
-			            		String source = node.getUri().toString();
-			                    
-			            		JobDescription job = new JobDescription();
-			            		job.setTarget(source);
-
-			            		job.setDirection(DIRECTION.PULLFROMVOSPACE);
-			            		job.setId(UUID.randomUUID().toString());
-			            		job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
-			            		job.setState(JobDescription.STATE.PENDING);
-			            		job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
-			            		job.setUsername(owner);
-			            		
-			            		Method submitJobMethod;
-			            		String simEndpointUrl = null;
-			            		try {
-			            			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
-			            			submitJobMethod.invoke(null, owner, job);
-			            			simEndpointUrl = conf.getString("application.url")+"/data/"+job.getId();
-			            			
-			            		}
-			            		catch (Exception e) {
-			            			logger.error("Could not obtain content URL: "+e.getMessage());
-			            		}
 
 			            		
 			            		TikaInputStream inp = null;
@@ -174,7 +150,7 @@ public class NodeProcessor extends Thread {
 					            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
 					            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
 			            				
-					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, simEndpointUrl);
+					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
 					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 			            				
 			            				String conf = processorConf.getString("//processor[id='"+processorId+"']/config");
