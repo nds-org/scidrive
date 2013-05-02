@@ -83,6 +83,10 @@ public class ContainerNode extends DataNode {
 			throw new ForbiddenException("DestinationNodeExists");
 		}
 		
+		if(newLocationId.getNodePath().isParent(this.getUri().getNodePath())) {
+			throw new ForbiddenException("Forbidden to copy into itself");
+		}
+
 		Node newDataNode = NodeFactory.createNode(newLocationId, owner, this.getType());
 		newDataNode.setNode(null);
 		newDataNode.getStorage().updateNodeInfo(newLocationId.getNodePath(), newDataNode.getNodeInfo());

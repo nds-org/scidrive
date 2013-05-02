@@ -213,6 +213,23 @@ public class NodePath {
 	}
 	
 	/**
+	 * Checks if the path in parameter is parent of current path
+	 * @param checkPath the path to check
+	 * @return true if current path starts with checkPath
+	 */
+	public boolean isParent(NodePath checkPath) {
+		if(checkPath.pathTokens.length > this.pathTokens.length)
+			return false;
+		
+		for(int i=0; i< checkPath.pathTokens.length; i++){
+			if(!this.pathTokens[i].equals(checkPath.pathTokens[i]))
+				return false;
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * Replace the .auto path element with random-generated segment
 	 * @return
 	 */
