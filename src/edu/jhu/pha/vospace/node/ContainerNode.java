@@ -132,11 +132,11 @@ public class ContainerNode extends DataNode {
 	}
 
     @Override
-	public Object export(String format, Detail detail) {
-    	return export(format, detail, 0, -1);
+	public Object export(String format, Detail detail, boolean includeDeleted) {
+    	return export(format, detail, 0, -1, includeDeleted);
     }
     
-	public Object export(String format, Detail detail, int start, int count) {
+	public Object export(String format, Detail detail, int start, int count, boolean includeDeleted) {
 		if(format.equals("json-dropbox") || format.equals("json-dropbox-object")){
 
 	    	TokenBuffer g = new TokenBuffer(null);
@@ -151,11 +151,13 @@ public class ContainerNode extends DataNode {
 				g.writeStringField("modified", dropboxDateFormat.format(getNodeInfo().getMtime()));
 				g.writeStringField("path", getUri().getNodePath().getNodeOuterPath());
 				g.writeBooleanField("is_dir", true);
+				if(includeDeleted)
+					g.writeBooleanField("is_deleted", getNodeInfo().isDeleted());
 				g.writeStringField("icon", "folder_public");
 				g.writeStringField("root", (getUri().getNodePath().isEnableAppContainer()?"sandbox":"dropbox"));
 
 				if(detail == Detail.max) {
-					NodesList childrenList = getDirectChildren(false, start, count);
+					NodesList childrenList = getDirectChildren(includeDeleted, start, count);
 					List<Node> childNodesList = childrenList.getNodesList();
 
 					g.writeNumberField("items", childrenList.getNodesCount());
@@ -164,7 +166,7 @@ public class ContainerNode extends DataNode {
 					g.writeArrayFieldStart("contents");
 
 					for(Node childNode: childNodesList){
-						JsonNode node = (JsonNode)childNode.export("json-dropbox-object", Detail.min); 
+						JsonNode node = (JsonNode)childNode.export("json-dropbox-object", Detail.min, includeDeleted); 
 						g.writeTree(node);
 					}
 					

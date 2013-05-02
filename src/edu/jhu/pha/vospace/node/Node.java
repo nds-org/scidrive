@@ -228,7 +228,11 @@ public abstract class Node implements Cloneable {
 		return dataEndpoint;
 	}
 	
-	public abstract Object export(String format, Detail detail);
+	public Object export(String format, Detail detail) {
+		return export(format, detail, false);
+	}
+
+	public abstract Object export(String format, Detail detail, boolean includeDeleted);
 	
 	public InputStream exportData() {
 		return getStorage().getBytes(this.getUri().getNodePath());

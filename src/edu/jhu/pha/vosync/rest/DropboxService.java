@@ -363,7 +363,14 @@ public class DropboxService {
 	
 	@GET @Path("metadata/{root:dropbox|sandbox}/{path:.+}")
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
-	public Response getFileMetadata(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("list") @DefaultValue("true") Boolean list, @QueryParam("file_limit") @DefaultValue("25000") int file_limit,  @QueryParam("start") @DefaultValue("0") int start, @QueryParam("count") @DefaultValue("-1") int count) {
+	public Response getFileMetadata(@PathParam("root") String root, 
+			@PathParam("path") String fullPath, 
+			@QueryParam("list") @DefaultValue("true") Boolean list, 
+			@QueryParam("file_limit") @DefaultValue("25000") int file_limit,  
+			@QueryParam("start") @DefaultValue("0") int start, 
+			@QueryParam("count") @DefaultValue("-1") int count,
+			@QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {
+		logger.debug(includeDeleted);
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
@@ -386,7 +393,7 @@ public class DropboxService {
 		byte[] nodeExport;
 		try {
 			if(node.getType() == NodeType.CONTAINER_NODE) {
-				nodeExport = (byte[])(((ContainerNode)node).export("json-dropbox", detailLevel, start, count));
+				nodeExport = (byte[])(((ContainerNode)node).export("json-dropbox", detailLevel, start, count, includeDeleted));
 			} else {
 				nodeExport = (byte[])(node.export("json-dropbox", detailLevel));
 			}
@@ -400,8 +407,10 @@ public class DropboxService {
 
 	@GET @Path("metadata/{root:dropbox|sandbox}")
 	@RolesAllowed({"user", "shareuser", "readonlyshareuser"})
-	public Response getRootMetadata(@PathParam("root") String root, @QueryParam("list") @DefaultValue("true") Boolean list) {
-		return getFileMetadata(root, "", list, 25000, 0, -1);
+	public Response getRootMetadata(@PathParam("root") String root, 
+			@QueryParam("list") @DefaultValue("true") Boolean list,
+			@QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {
+		return getFileMetadata(root, "", list, 25000, 0, -1, includeDeleted);
 	}
 	
 	@GET @Path("transfers/info")

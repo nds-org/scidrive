@@ -44,7 +44,8 @@ public class DbCleanerServlet extends HttpServlet {
 
     private ScheduledFuture<?> cleanerHandle;
     
-    private final int TIME_INTERVAL = 1;
+    private final int NODE_EXPIRY_INTERVAL = SettingsServlet.getConfig().getInt("node_expiry", 10);
+    private final int RUN_PERIOD = SettingsServlet.getConfig().getInt("cleaner_period", 1);
 
     private static final Logger logger = Logger.getLogger(DbCleanerServlet.class);
     
@@ -59,7 +60,7 @@ public class DbCleanerServlet extends HttpServlet {
 	                		"select container_name, path, identity from nodes " +
 	                		"JOIN containers ON nodes.container_id = containers.container_id " +
 	                		"JOIN user_identities ON containers.user_id = user_identities.user_id " +
-	                		"where deleted = 1 and mtime < (NOW() - INTERVAL "+TIME_INTERVAL+" MINUTE) order by path limit 1",
+	                		"where deleted = 1 and mtime < (NOW() - INTERVAL "+NODE_EXPIRY_INTERVAL+" MINUTE) order by path limit 1",
 	                        new SqlWorker<Boolean>() {
 	                            @Override
 	                            public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -97,7 +98,7 @@ public class DbCleanerServlet extends HttpServlet {
         };
 
         cleanerHandle =
-            scheduler.scheduleAtFixedRate(cleaner, 1, TIME_INTERVAL, MINUTES);
+            scheduler.scheduleAtFixedRate(cleaner, 1, RUN_PERIOD, MINUTES);
     }
 
     @Override

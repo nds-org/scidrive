@@ -87,10 +87,11 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public NodesList getNodeChildren(final VospaceId identifier, final boolean searchDeep /*always false*/, final boolean includeDeleted /*not used*/, final int start, final int count) {
         if(identifier.getNodePath().isRoot(false)) {
+        	String deletedCondition = includeDeleted?"":"nodes.`deleted` = 0 AND ";
     		return DbPoolServlet.goSql("GetNodeChildren root request",
     				"SELECT SQL_CALC_FOUND_ROWS containers.container_name as container, nodes.rev, nodes.deleted, nodes.mtime, nodes.size, nodes.mimetype, nodes.type "+
             		"FROM nodes JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
-            		"WHERE `deleted` = 0 AND `path` = '' AND `identity` = ? AND `container_name` <> '' order by container "+((count > 0)?" limit ?, ?":""),
+            		"WHERE "+deletedCondition+"`path` = '' AND `identity` = ? AND `container_name` <> '' order by container "+((count > 0)?" limit ?, ?":""),
                     new SqlWorker<NodesList>() {
                         @Override
                         public NodesList go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -117,7 +118,7 @@ public class MySQLMetaStore2 implements MetaStore{
                                 	info.setSize(rs.getLong("size"));
                                 	info.setContentType(rs.getString("mimetype"));
 
-        			    			Node newNode = NodeFactory.getInstance().createNode(id, owner, NodeType.valueOf(rs.getString("type")));
+        			    			Node newNode = NodeFactory.createNode(id, owner, NodeType.valueOf(rs.getString("type")));
         			    			newNode.setNodeInfo(info);
                                 	
     								result.add(newNode);
@@ -135,11 +136,12 @@ public class MySQLMetaStore2 implements MetaStore{
                     }
             );
         } else {
+        	String deletedCondition = includeDeleted?"":"nodes.`deleted` = 0 AND ";
 			String request = "SELECT SQL_CALC_FOUND_ROWS containers.container_name as container, nodes.path, nodes.rev, nodes.deleted, nodes.mtime, nodes.size, nodes.mimetype, nodes.type "+
 	        		"FROM nodes JOIN containers ON nodes.container_id = containers.container_id "+
 					"JOIN user_identities ON containers.user_id = user_identities.user_id "+
 	        		"JOIN nodes b ON nodes.parent_node_id = b.node_id "+
-	        		"WHERE nodes.`deleted` = 0 AND containers.container_name = ? AND b.`path` = ? AND `identity` = ? order by path "+((count > 0)?" limit ?, ?":"");
+	        		"WHERE "+deletedCondition+"containers.container_name = ? AND b.`path` = ? AND `identity` = ? order by path "+((count > 0)?" limit ?, ?":"");
 	        
 			return DbPoolServlet.goSql("GetNodeChildren request",
 	        		request,

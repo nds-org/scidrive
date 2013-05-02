@@ -54,7 +54,7 @@ public class DataNode extends Node implements Cloneable {
 	}
 	
 	@Override
-	public Object export(String format, Detail detail) {
+	public Object export(String format, Detail detail, boolean includeDeleted) {
 		if(format.equals("json-dropbox") || format.equals("json-dropbox-object")){
 			TokenBuffer g = new TokenBuffer(null);
 			try {
@@ -67,6 +67,8 @@ public class DataNode extends Node implements Cloneable {
 				g.writeStringField("modified", dropboxDateFormat.format(getNodeInfo().getMtime()));
 				g.writeStringField("path", getUri().getNodePath().getNodeOuterPath());
 				g.writeBooleanField("is_dir", false);
+				if(includeDeleted)
+					g.writeBooleanField("is_deleted", getNodeInfo().isDeleted());
 				g.writeStringField("icon", "file");
 				g.writeStringField("root", (getUri().getNodePath().isEnableAppContainer()?"sandbox":"dropbox"));
 				g.writeStringField("mime_type", getNodeInfo().getContentType());
