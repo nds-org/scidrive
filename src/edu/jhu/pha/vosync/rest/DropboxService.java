@@ -420,7 +420,7 @@ public class DropboxService {
 		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		return DbPoolServlet.goSql("Get transfers queue",
-	    		"select id, state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ?",
+	    		"select id, state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ? order by starttime DESC",
 	            new SqlWorker<byte[]>() {
 	                @Override
 	                public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -459,6 +459,25 @@ public class DropboxService {
 	                }
 	            }
 	    );
+	}
+
+	/**
+	 * Returns the transfer error representation
+	 * @param jobId Job identifier
+	 * @return transfer representation
+	 */
+	@GET @Path("transfers/{jobid}/error")
+	@Produces(MediaType.TEXT_PLAIN)
+	@RolesAllowed({"user"})
+	public String getTransferErrorDetails(@PathParam("jobid") String jobId) {
+		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
+
+		StringBuffer errorDescr = new StringBuffer();
+		if(null == job)
+			errorDescr.append("The job "+jobId+" is not found.\n");
+		else
+			errorDescr.append(job.getNote());
+		return errorDescr.toString();
 	}
 	
 	@POST @Path("files/{root:dropbox|sandbox}/{path:.+}")
