@@ -1131,6 +1131,10 @@ public class DropboxService {
 		if(!(node instanceof DataNode)) {
 			throw new NotFoundException("Node is a container");
 		}
+
+		if(node.getNodeInfo().isDeleted()) {
+			node.markRemoved(false);
+		}
 		
 		((DataNode)node).setChunkedData(uploadId);
 		Response resp =Response.ok(node.export("json-dropbox",Detail.max)).build(); 
