@@ -72,7 +72,7 @@ public class SwiftStorageManager implements StorageManager {
 	
 	private final String username;
 	
-	private final int CONNECT_TIMEOUT = 25000;
+	private final int CONNECT_TIMEOUT = 600000;
 	
 	//HTTP client
 	private static PoolingClientConnectionManager cm = null;
