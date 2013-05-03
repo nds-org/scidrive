@@ -40,7 +40,8 @@ public class SimulationDetector implements Detector {
 	private static final long serialVersionUID = 4245177957258498279L;
 
 	private static final String MAGIC = "InitialCycleNumber";
-    public MediaType detect(InputStream input, Metadata metadata)
+    
+	public MediaType detect(InputStream input, Metadata metadata)
             throws IOException {
 
         if (input == null) {

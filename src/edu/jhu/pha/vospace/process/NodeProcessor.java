@@ -131,6 +131,7 @@ public class NodeProcessor extends Thread {
 			            			//MediaType type = new DefaultDetector().detect(inp, nodeTikaMeta);
 			            			List<Detector> list = new ArrayList<Detector>();
 			            			list.add(new SimulationDetector());
+			            			list.add(new DefaultDetector());
 			            			Detector detector = new CompositeDetector(list);
 			            			MediaType type = detector.detect(inp, nodeTikaMeta);
 			            			
