@@ -19,6 +19,8 @@
 	<processor>
 		<id>simprocessor</id>
 		<mimetype>application/enzoparameterfile</mimetype>
+		<mimetype>application/enzosimulation</mimetype>
 		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
+		<config>tika/tika-simulation.xml</config>
 	</processor>
 </fileprocessors>

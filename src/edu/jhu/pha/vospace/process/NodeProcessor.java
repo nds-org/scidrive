@@ -20,7 +20,9 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import org.apache.commons.configuration.Configuration;
@@ -29,7 +31,9 @@ import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.apache.log4j.Logger;
 import org.apache.tika.config.TikaConfig;
+import org.apache.tika.detect.CompositeDetector;
 import org.apache.tika.detect.DefaultDetector;
+import org.apache.tika.detect.Detector;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.HttpHeaders;
@@ -39,6 +43,7 @@ import org.apache.tika.mime.MediaType;
 import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.pkg.SimulationDetector;
 import org.apache.tika.sax.BodyContentHandler;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
@@ -122,8 +127,14 @@ public class NodeProcessor extends Thread {
 			            		TikaInputStream inp = null;
 			            		try {
 			            			inp = TikaInputStream.get(node.exportData());
-				                    MediaType type = new DefaultDetector().detect(inp, nodeTikaMeta);
-				                    nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
+				                    
+			            			//MediaType type = new DefaultDetector().detect(inp, nodeTikaMeta);
+			            			List<Detector> list = new ArrayList<Detector>();
+			            			list.add(new SimulationDetector());
+			            			Detector detector = new CompositeDetector(list);
+			            			MediaType type = detector.detect(inp, nodeTikaMeta);
+			            			
+			            			nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 				            		node.getNodeInfo().setContentType(nodeTikaMeta.get(HttpHeaders.CONTENT_TYPE));
 				            		node.getMetastore().storeInfo(node.getUri(), node.getNodeInfo());
 			            		} catch(Exception ex) {
