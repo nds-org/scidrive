@@ -154,7 +154,10 @@
       <path refid="compile.classpath"/>
     </copy>
 
-
+    <copy  todir="${build.home}/WEB-INF/lib/Lib">
+      <fileset dir="${lib.home}/Lib"/>
+    </copy>
+	
   </target>
 
 

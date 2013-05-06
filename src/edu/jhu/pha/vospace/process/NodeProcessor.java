@@ -25,6 +25,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -55,13 +57,17 @@ import org.xml.sax.SAXException;
 import com.rabbitmq.client.QueueingConsumer;
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.ContainerNode;
+import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
+import edu.jhu.pha.vospace.rest.JobDescription;
+import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 
 public class NodeProcessor extends Thread {
 
@@ -118,22 +124,17 @@ public class NodeProcessor extends Thread {
 		            	
 		            	switch(node.getType()) {
 			            	case DATA_NODE: {
-			            		Metadata nodeTikaMeta = new Metadata();
-			            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
-			            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
-			            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
-			            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
-
 			            		TikaInputStream inp = null;
+			            		MediaType type = null;
 			            		try {
+			            			Metadata nodeTikaMeta = new Metadata();
 			            			inp = TikaInputStream.get(node.exportData());
-				                    
 			            			//MediaType type = new DefaultDetector().detect(inp, nodeTikaMeta);
 			            			List<Detector> list = new ArrayList<Detector>();
 			            			list.add(new SimulationDetector());
 			            			list.add(new DefaultDetector());
 			            			Detector detector = new CompositeDetector(list);
-			            			MediaType type = detector.detect(inp, nodeTikaMeta);
+			            			type = detector.detect(inp, nodeTikaMeta);
 			            			
 			            			nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 				            		node.getNodeInfo().setContentType(nodeTikaMeta.get(HttpHeaders.CONTENT_TYPE));
@@ -144,11 +145,20 @@ public class NodeProcessor extends Thread {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			String[] processorIds = processorConf.getStringArray("//processor[mimetype='"+nodeTikaMeta.get(Metadata.CONTENT_TYPE)+"']/id");
+			        			String[] processorIds = processorConf.getStringArray("//processor[mimetype='"+type.toString()+"']/id");
 			            		
 			            		try {
 			            			
 			            			for(String processorId: processorIds) {
+					            		Metadata nodeTikaMeta = new Metadata();
+					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
+					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
+					            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
+					            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
+			            				
+					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
+					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
+			            				
 			            				String conf = processorConf.getString("//processor[id='"+processorId+"']/config");
 			            				AbstractParser parser;
 		            					TikaConfig config = TikaConfig.getDefaultConfig();
