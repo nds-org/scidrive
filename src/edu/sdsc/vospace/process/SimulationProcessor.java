@@ -15,15 +15,17 @@
  ******************************************************************************/
 package edu.sdsc.vospace.process;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.codehaus.jackson.JsonNode;
-import edu.jhu.pha.vospace.SettingsServlet;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.VospaceId;
@@ -32,7 +34,6 @@ import edu.jhu.pha.vospace.process.tika.SimulationParser;
 
 public class SimulationProcessor {
 
-	private static Configuration conf = SettingsServlet.getConfig();
 	private static Logger logger = Logger.getLogger(SimulationProcessor.class);
 	private final static String SIM_EXCHANGE = "sdsc.vobox.simulation";
     
@@ -51,28 +52,28 @@ public class SimulationProcessor {
         		StringUtils.join(metadata.getValues(SimulationParser.METADATA_DATASET_UUID), " "));
         node.getMetastore().updateUserProperties(node.getUri(), properties);
         
-//		try {
-//			final String simEndpointUrl = node.downloadNode();
-//			
-//			QueueConnector.goAMQP("submit new simulation", new QueueConnector.AMQPWorker<Boolean>() {
-//				@Override
-//				public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
-//					Map<String,Object> jobData = new HashMap<String,Object>();
-//					jobData.put("url",simEndpointUrl);
-//
-//	    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(jobData);
-//
-//					channel.exchangeDeclare(SIM_EXCHANGE, "topic", true);
-//					channel.basicPublish(SIM_EXCHANGE, "new_sim", null, jobSer);
-//			    	
-//			    	return true;
-//				}
-//			});				
-//			
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			logger.error("Error creating simulation endpoint: "+e.getMessage());
-//		}
+		try {
+			final String simEndpointUrl = node.getHttpDownloadLink().toASCIIString();
+			
+			QueueConnector.goAMQP("submit new simulation", new QueueConnector.AMQPWorker<Boolean>() {
+				@Override
+				public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
+					Map<String,Object> jobData = new HashMap<String,Object>();
+					jobData.put("url",simEndpointUrl);
+
+	    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(jobData);
+
+					channel.exchangeDeclare(SIM_EXCHANGE, "topic", true);
+					channel.basicPublish(SIM_EXCHANGE, "new_sim", null, jobSer);
+			    	
+			    	return true;
+				}
+			});				
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("Error creating simulation endpoint: "+e.getMessage());
+		}
   	}
 
 }
