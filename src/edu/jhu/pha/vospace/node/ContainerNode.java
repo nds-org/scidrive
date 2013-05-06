@@ -15,7 +15,6 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.node;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,11 +24,8 @@ import java.net.URISyntaxException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.GZIPOutputStream;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonGenerationException;
@@ -46,14 +42,9 @@ import org.kamranzafar.jtar.TarOutputStream;
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.api.exceptions.ForbiddenException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
-import edu.jhu.pha.vospace.api.exceptions.NotAcceptableException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.MetaStoreDistributed;
-import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.NodesList;
-import edu.jhu.pha.vospace.meta.RegionsInfo;
-import edu.jhu.pha.vospace.node.Node.PropertyType;
-import edu.jhu.pha.vospace.storage.StorageManager;
 
 
 public class ContainerNode extends DataNode {

@@ -178,56 +178,6 @@ public abstract class Node implements Cloneable {
 		}
 	}
 	
-	/**
-	 * @return Node download transfer endpoint
-	 */
-	public String downloadNode() {
-		StringWriter jobWriter = new StringWriter();
-		SimpleXmlWriter xw = new SimpleXmlWriter(jobWriter);
-		try {
-			xw.setDefaultNamespace("vos");
-			xw.writeEntity("transfer");
-			xw.writeAttribute("xmlns:vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
-			
-			xw.writeEntityWithText("target",this.getUri());
-			xw.writeEntityWithText("direction","pullFromVoSpace");
-			xw.writeEntityWithText("view","ivo://ivoa.net/vospace/core#defaultview");
-			xw.writeEntity("protocol").writeAttribute("uri", "ivo://ivoa.net/vospace/core#httpget").endEntity();
-			
-			xw.endEntity();
-			xw.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException(e);
-		}
-		
-		UUID jobId = TransfersController.submitJob(jobWriter.toString(), owner);
-		
-		String jobUrl = SettingsServlet.getConfig().getString("application.url")+"/transfers/"+jobId.toString();
-		
-		String dataEndpoint = null;
-		
-		VTDGen vg = new VTDGen();
-		vg.parseHttpUrl(jobUrl,true);
-		
-		AutoPilot ap = new AutoPilot();
-		ap.declareXPathNameSpace("vos", "http://www.ivoa.net/xml/VOSpace/v2.0");
-		ap.declareXPathNameSpace("uws", "http://www.ivoa.net/xml/UWS/v1.0");
-
-		VTDNav vn = vg.getNav();
-		ap.bind(vn);
-		
-		try {
-			ap.selectXPath("//vos:protocol[@uri='ivo://ivoa.net/vospace/core#httpget']/vos:protocolEndpoint");
-			dataEndpoint = ap.evalXPathToString();
-			ap.resetXPath();
-		} catch(XPathParseException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException(e);
-		}
-		return dataEndpoint;
-	}
-	
 	public Object export(String format, Detail detail) {
 		return export(format, detail, false);
 	}

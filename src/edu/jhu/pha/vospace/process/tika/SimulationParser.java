@@ -35,8 +35,8 @@ public class SimulationParser implements Parser {
 	private static final long serialVersionUID = -8295762527714045871L;
 	
 	private static final String MAGIC = "InitialCycleNumber";
-	private static final String METADATA_SIMULATION_UUID = "MetaDataSimulationUUID";
-	private static final String METADATA_DATASET_UUID = "MetaDataDatasetUUID";
+	public static final String METADATA_SIMULATION_UUID = "MetaDataSimulationUUID";
+	public static final String METADATA_DATASET_UUID = "MetaDataDatasetUUID";
 	
 	private static Logger logger = Logger.getLogger(SimulationParser.class);
 	
