@@ -96,6 +96,8 @@ import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.node.Node.Detail;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.oauth.VoboxUser;
+import edu.jhu.pha.vospace.process.NodeProcessor;
+import edu.jhu.pha.vospace.process.NodeProcessor.ProcessorConfig;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vosync.exception.BadRequestException;
@@ -244,7 +246,14 @@ public class DropboxService {
 			g2.writeNumberField("normal",info.getBytesUsed()/GIGABYTE);
 			
 			g2.writeEndObject();
-			
+
+			g2.writeObjectFieldStart("services");
+			JsonNode servicesCredentials = UserHelper.getUserServices(user.getName());
+			for(ProcessorConfig proc: NodeProcessor.processors.values()) {
+				g2.writeBooleanField(proc.getId(), null != servicesCredentials.get(proc.getId()));
+			}
+			g2.writeEndObject();
+
 			g2.close();
 			byteOut.close();
 	

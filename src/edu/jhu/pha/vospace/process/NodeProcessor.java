@@ -22,10 +22,12 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.Vector;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -77,14 +79,20 @@ public class NodeProcessor extends Thread {
 
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     
-	public static XMLConfiguration processorConf;
+	public static Hashtable<String, ProcessorConfig> processors;
 	
 	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
 		try	{
-			processorConf = new XMLConfiguration("processors.xml");
+			XMLConfiguration processorConf = new XMLConfiguration("processors.xml");
 			processorConf.setExpressionEngine(new XPathExpressionEngine());
+
+			
+			processors = new Hashtable<String, ProcessorConfig>();
+			for(String processorId: processorConf.getStringArray("//processor/id")) {
+				processors.put(processorId, new ProcessorConfig(processorConf, processorId));
+			}
 		} catch(ConfigurationException ex) {
 		    logger.error("Error reading the nodes processor configuration file processors.xml." + ex.getMessage());
 		}
@@ -145,11 +153,16 @@ public class NodeProcessor extends Thread {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			String[] processorIds = processorConf.getStringArray("//processor[mimetype='"+type.toString()+"']/id");
+			        			Vector<ProcessorConfig> curProcessors = new Vector();
+			        			for(String checkProcId: processors.keySet()){
+			        				ProcessorConfig procConf = processors.get(checkProcId);
+			        				if(procConf.getMimeTypes().contains(type.toString()))
+			        					curProcessors.add(procConf);
+			        			}
 			            		
 			            		try {
 			            			
-			            			for(String processorId: processorIds) {
+			            			for(ProcessorConfig processor: curProcessors) {
 					            		Metadata nodeTikaMeta = new Metadata();
 					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
 					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
@@ -159,19 +172,17 @@ public class NodeProcessor extends Thread {
 					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
 					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 			            				
-			            				String conf = processorConf.getString("//processor[id='"+processorId+"']/config");
 			            				AbstractParser parser;
 		            					TikaConfig config = TikaConfig.getDefaultConfig();
-			            				if(conf != null) {
-			            					config = new TikaConfig(getClass().getResourceAsStream(conf));
+			            				if(processor.getConfig() != null) {
+			            					config = new TikaConfig(getClass().getResourceAsStream(processor.getConfig()));
 			            				}
 			            				
 										parser = new CompositeParser(config.getMediaTypeRegistry(), config.getParser());
 			            			
-			            				String handlerName =processorConf.getString("//processor[id='"+processorId+"']/handler"); 
 			            				ContentHandler handler;
-			            				if(null != handlerName)
-			            					handler = (ContentHandler) Class.forName(handlerName).getConstructor().newInstance();
+			            				if(null != processor.getHandler())
+			            					handler = (ContentHandler) Class.forName(processor.getHandler()).getConstructor().newInstance();
 			            				else
 			            					handler = new BodyContentHandler();
 			            				
@@ -187,13 +198,12 @@ public class NodeProcessor extends Thread {
 					            		}				            			
 			            				
 					            		// now do out-of-tika processing of results
-			            				String processorName =processorConf.getString("//processor[id='"+processorId+"']/processor"); 
-					        			if(null != processorName) {
+					        			if(null != processor.getProcessor()) {
 					        				try {
-					        					Class handlerClass = Class.forName(processorName);
+					        					Class handlerClass = Class.forName(processor.getProcessor());
 					        					Method processMetaMethod = handlerClass.getMethod("processNodeMeta", Metadata.class, Object.class, JsonNode.class);
 					        					
-					        					JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processorId);
+					        					JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processor.getId());
 					        					if(credentialsNode != null) {
 					        						processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
 						        					logger.debug("Processing of "+node.getUri().toString()+" is finished.");
@@ -295,6 +305,40 @@ public class NodeProcessor extends Thread {
 			}
 		});
 
+    }
+    
+    public static class ProcessorConfig {
+    	private String id;
+    	private Vector<String> mimeTypes = new Vector<String>();
+    	private String config;
+    	private String processor;
+    	private String handler;
+
+    	public ProcessorConfig(XMLConfiguration conf, String processorId) {
+			this.id = processorId;
+			for(String mimeType: conf.getStringArray("//processor[id='"+processorId+"']/mimetype")){
+				mimeTypes.add(mimeType);
+			}
+			this.config = conf.getString("//processor[id='"+processorId+"']/config");
+			this.processor = conf.getString("//processor[id='"+processorId+"']/processor");
+			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
+    	}
+    	
+    	public String getId() {
+			return id;
+		}
+		public Vector<String> getMimeTypes() {
+			return mimeTypes;
+		}
+		public String getConfig() {
+			return config;
+		}
+		public String getProcessor() {
+			return processor;
+		}
+		public String getHandler() {
+			return handler;
+		}
     }
     
 }
