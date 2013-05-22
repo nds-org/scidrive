@@ -247,12 +247,15 @@ public class DropboxService {
 			
 			g2.writeEndObject();
 
-			g2.writeObjectFieldStart("services");
+			g2.writeArrayFieldStart("services");
 			JsonNode servicesCredentials = UserHelper.getUserServices(user.getName());
 			for(ProcessorConfig proc: NodeProcessor.processors.values()) {
-				g2.writeBooleanField(proc.getId(), null != servicesCredentials.get(proc.getId()));
+				g2.writeStartObject();
+				g2.writeStringField("id", proc.getId());
+				g2.writeBooleanField("enabled", null != servicesCredentials.get(proc.getId()));
+				g2.writeEndObject();
 			}
-			g2.writeEndObject();
+			g2.writeEndArray();
 
 			g2.close();
 			byteOut.close();
@@ -278,11 +281,21 @@ public class DropboxService {
 		}
 	}
 	
-	@GET @Path("account/service")
+	@GET @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})
-	public Response getAccountService() {
+	public Response getAccountService(@PathParam("processor") String processor) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
-		return Response.ok(UserHelper.getUserServices(user.getName()).toString()).build();
+		JsonNode node = UserHelper.getUserServices(user.getName());
+		return Response.ok(node.get(processor).toString()).build();
+	}
+	
+	@GET @Path("account/service_schema/{processor:.+}")
+	public Response getAccountServiceSchema(@PathParam("processor") String processor) {
+		ProcessorConfig config = NodeProcessor.processors.get(processor);
+		if(config == null)
+			throw new NotFoundException("Processor not found");
+		
+		return Response.ok(config.getSchema().toString()).build();
 	}
 	
 	@GET @Path("regions/info")

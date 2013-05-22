@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -49,6 +50,7 @@ import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.pkg.SimulationDetector;
 import org.apache.tika.sax.BodyContentHandler;
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -313,6 +315,7 @@ public class NodeProcessor extends Thread {
     	private String config;
     	private String processor;
     	private String handler;
+    	private CredentialsSchema schema;
 
     	public ProcessorConfig(XMLConfiguration conf, String processorId) {
 			this.id = processorId;
@@ -322,6 +325,19 @@ public class NodeProcessor extends Thread {
 			this.config = conf.getString("//processor[id='"+processorId+"']/config");
 			this.processor = conf.getString("//processor[id='"+processorId+"']/processor");
 			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
+			
+			List<String> list = conf.getList("//processor[id='"+processorId+"']/schema/field/@name");
+			CredentialsSchema schema = new CredentialsSchema();
+			if(list != null && list.size() > 0){
+				for(Iterator<String> it = list.listIterator(); it.hasNext();) {
+					CredentialsSchemaField field = new CredentialsSchemaField();
+					field.setName(it.next());
+					field.setRequired(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@required"));
+					field.setDefaultValue(conf.getString("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@default"));
+					schema.addField(field);
+				}
+			}
+			this.schema = schema;
     	}
     	
     	public String getId() {
@@ -339,6 +355,57 @@ public class NodeProcessor extends Thread {
 		public String getHandler() {
 			return handler;
 		}
+		public CredentialsSchema getSchema() {
+			return schema;
+		}
+    }
+    
+    public static class CredentialsSchema {
+    	private Vector<CredentialsSchemaField> properties = new Vector<CredentialsSchemaField>();
+    	public void addField(CredentialsSchemaField field) {
+    		this.properties.add(field);
+    	}
+    	public Vector<CredentialsSchemaField> getFields() {
+    		return properties;
+    	}
+    	@Override
+		public String toString() {
+			ObjectMapper mapper = new ObjectMapper();
+			try {
+				return mapper.writeValueAsString(this);
+			} catch (Exception e) {
+				e.printStackTrace();
+				return "{}";
+			}
+    	}
+    }
+    
+    public static class CredentialsSchemaField {
+    	private String name;
+    	private boolean required;
+    	private String defaultValue = "";
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public boolean isRequired() {
+			return required;
+		}
+		public void setRequired(boolean required) {
+			this.required = required;
+		}
+		public String getDefaultValue() {
+			return defaultValue;
+		}
+		public void setDefaultValue(String defaultValue) {
+			this.defaultValue = (null == defaultValue)?"":defaultValue;
+		}
+    }
+    
+    public static void main(String[] s) {
+    	Configuration conf = NodeProcessor.conf;
     }
     
 }
