@@ -200,17 +200,23 @@ public class NodeProcessor extends Thread {
 					        					} else {
 						        					logger.debug("User doesn't have credentials setup for processing of "+node.getUri().toString());
 					        					}
-					        					
+
 					        				} catch (Exception e) {
 					        					logger.error("Error processing the node. "+e.getMessage());
 					        					e.printStackTrace();
 					        				}
 					        			}
-
+					            		//Testing EXTERNAL_LINKS...
+			        					String[] externalLinks = nodeTikaMeta.getValues("EXTERNAL_LINKS");
+			        					if (externalLinks!=null) {
+			        						for (int i=0; i<externalLinks.length; i++) {
+			        							logger.debug("EXTERNAL_LINKS "+i+" of "+externalLinks.length+": "+externalLinks[i]);
+			        						}
+			        					}
 			            			}
 
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
-
+		        					
 				            		// update node's container size metadata
 				            		try {
 				            			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(

@@ -35,12 +35,14 @@ import edu.jhu.pha.vospace.process.sax.AsciiTable;
 
 public class MyDB implements Database {
 
+	private String endpoint = null;
+	
 	private final Logger log = Logger.getLogger(this.getClass());
 	
 	private static final DatabaseFormat databaseFormat = new SQLServerFormat();
 	
 	private static final String CONFIG_FILE_NAME = "casjobs.config";
-	
+
 	private static final String RESOURCES_TABLE_NAME = "ExtrnResources";
 	private static final String KEY_VALUE_TABLE_NAME = "ExtrnKeyValue";
 	private static final String IMAGES_TABLE_NAME = "ExtrnImages";
@@ -136,11 +138,12 @@ public class MyDB implements Database {
 	public void close() throws DatabaseException {};
 	
 	public MyDB(JsonNode credentials) throws DatabaseException {
+		
 		this.wsid = Long.parseLong(credentials.path("wsid").getTextValue());
 		this.password = credentials.path("password").getTextValue();
-		
+		this.endpoint = credentials.path("endpoint").getTextValue();
 		try {
-			this.stub = new JobsStub(credentials.path("endpoint").getTextValue());
+			this.stub = new JobsStub(endpoint+"/services/jobs.asmx");
 		}
 		catch (AxisFault e) {
 			throw new DatabaseException("Could not instantiate CasJobs service stub",e);
@@ -550,6 +553,7 @@ public class MyDB implements Database {
 					throw new DatabaseException("Table update failed "+databaseFormat.formatObjectName(tableName),e);
 				}
 			}
+			metadata.add("EXTERNAL_LINKS", endpoint+"/MyDB.aspx?ObjName="+tableName+"&ObjType=TABLE&context=MyDB&type=normal");
 		}
 	}
 	
