@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -31,6 +32,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.detect.CompositeDetector;
@@ -66,6 +68,7 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
+import edu.jhu.pha.vospace.process.tika.SimulationParser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 
@@ -78,6 +81,8 @@ public class NodeProcessor extends Thread {
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     
 	public static XMLConfiguration processorConf;
+	
+	private final static String EXTERNAL_LINK_PROPERTY = "ivo://ivoa.net/vospace/core#external_link";
 	
 	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -206,15 +211,15 @@ public class NodeProcessor extends Thread {
 					        					e.printStackTrace();
 					        				}
 					        			}
-					            		//Testing EXTERNAL_LINKS...
+					        			
 			        					String[] externalLinks = nodeTikaMeta.getValues("EXTERNAL_LINKS");
-			        					if (externalLinks!=null) {
-			        						for (int i=0; i<externalLinks.length; i++) {
-			        							logger.debug("EXTERNAL_LINKS "+i+" of "+externalLinks.length+": "+externalLinks[i]);
-			        						}
+			        					if(null != externalLinks && externalLinks.length > 0) {
+				        			        Map<String, String> properties = new HashMap<String, String>();
+				        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
+				        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
 			        					}
 			            			}
-
+			            			
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
 		        					
 				            		// update node's container size metadata
