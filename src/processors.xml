@@ -21,6 +21,11 @@
 		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>
 		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
 		<config>tika/tika-conf.xml</config>
+		<schema>
+			<field name="endpoint" required="true" default="http://skyserver.sdss3.org/CasJobs"/>
+			<field name="wsid" required="true"/>
+			<field name="password" required="true"/>
+		</schema>
 	</processor>
 	<processor>
 		<id>sqlshareprocessor</id>

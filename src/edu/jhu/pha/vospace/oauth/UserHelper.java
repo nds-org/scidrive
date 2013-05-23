@@ -31,6 +31,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.ws.rs.PathParam;
+
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonNode;
@@ -325,7 +327,7 @@ public class UserHelper {
         );
     }
     
-    public static boolean updateUserService(final String username, JsonNode updateNode) {
+    public static boolean updateUserService(final String username, final String processorId, JsonNode updateNode) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<byte[]>() {
@@ -343,16 +345,16 @@ public class UserHelper {
                     }
                 }
         );
+		ObjectMapper mapper = new ObjectMapper();
     	final JsonNode mainNode;
 		try {
-			ObjectMapper mapper = new ObjectMapper();
 			mainNode = mapper.readTree(curNode);
 		} catch (Exception e) {
             throw new IllegalStateException("Error parsing user's credentials");
 		}
-        	
-        merge(mainNode, updateNode);
 
+		((org.codehaus.jackson.node.ObjectNode)mainNode).put(processorId, updateNode);
+		
         return DbPoolServlet.goSql("Updating user's service credentials from db",
             "update users set service_credentials = ? where user_id = (select user_id from user_identities where identity = ?)",
             new SqlWorker<Boolean>() {
@@ -366,27 +368,6 @@ public class UserHelper {
         );
     
     }
-
-	public static void merge(JsonNode mainNode, JsonNode updateNode) {
-	
-	    Iterator<String> fieldNames = updateNode.getFieldNames();
-	    while (fieldNames.hasNext()) {
-	
-	        String fieldName = fieldNames.next();
-	        JsonNode jsonNode = mainNode.get(fieldName);
-	        // if field doesn't exist or is an embedded object
-	        if (jsonNode != null && jsonNode.isObject()) {
-	            merge(jsonNode, updateNode.get(fieldName));
-	        }
-	        else {
-	            if (mainNode instanceof ObjectNode) {
-	                // Overwrite field
-	                JsonNode value = updateNode.get(fieldName);
-	                ((ObjectNode) mainNode).put(fieldName, value);
-	            }
-	        }
-	    }
-	}
 
 	public static JsonNode getUserServices(final String username) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",

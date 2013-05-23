@@ -266,15 +266,15 @@ public class DropboxService {
 		}
 	}
 	
-	@PUT @Path("account/service")
+	@PUT @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})
-	public Response setAccountService(InputStream serviceCredInpStream) {
+	public Response setAccountService(InputStream serviceCredInpStream, @PathParam("processor") String processor) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode credNode = mapper.readTree(serviceCredInpStream);
-			UserHelper.updateUserService(user.getName(), credNode);
+			UserHelper.updateUserService(user.getName(), processor, credNode);
 			return Response.ok().build();
 		} catch(IOException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
@@ -286,7 +286,8 @@ public class DropboxService {
 	public Response getAccountService(@PathParam("processor") String processor) {
 		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
 		JsonNode node = UserHelper.getUserServices(user.getName());
-		return Response.ok(node.get(processor).toString()).build();
+		String cred = (node.get(processor) == null)?"{}":node.get(processor).toString();
+		return Response.ok(cred).build();
 	}
 	
 	@GET @Path("account/service_schema/{processor:.+}")
