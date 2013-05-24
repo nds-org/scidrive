@@ -24,7 +24,7 @@
 		<schema>
 			<field name="endpoint" required="true" default="http://skyserver.sdss3.org/CasJobs"/>
 			<field name="wsid" required="true"/>
-			<field name="password" required="true"/>
+			<field name="password" required="true" ispassword="true"/>
 		</schema>
 	</processor>
 	<processor>

@@ -325,7 +325,7 @@ public class NodeProcessor extends Thread {
 			this.config = conf.getString("//processor[id='"+processorId+"']/config");
 			this.processor = conf.getString("//processor[id='"+processorId+"']/processor");
 			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
-			
+
 			List<String> list = conf.getList("//processor[id='"+processorId+"']/schema/field/@name");
 			CredentialsSchema schema = new CredentialsSchema();
 			if(list != null && list.size() > 0){
@@ -334,6 +334,7 @@ public class NodeProcessor extends Thread {
 					field.setName(it.next());
 					field.setRequired(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@required"));
 					field.setDefaultValue(conf.getString("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@default"));
+					field.setPassword(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@ispassword", false));
 					schema.addField(field);
 				}
 			}
@@ -384,6 +385,7 @@ public class NodeProcessor extends Thread {
     	private String name;
     	private boolean required;
     	private String defaultValue = "";
+    	private boolean isPassword = false;
 		public String getName() {
 			return name;
 		}
@@ -401,6 +403,12 @@ public class NodeProcessor extends Thread {
 		}
 		public void setDefaultValue(String defaultValue) {
 			this.defaultValue = (null == defaultValue)?"":defaultValue;
+		}
+		public boolean isPassword() {
+			return isPassword;
+		}
+		public void setPassword(boolean isPassword) {
+			this.isPassword = isPassword;
 		}
     }
     
