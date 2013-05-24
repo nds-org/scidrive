@@ -16,11 +16,6 @@
 		<mimetype>application/enzosimulation</mimetype>
 		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
 		<config>tika/tika-simulation.xml</config>
-		<schema>
-			<field name="endpoint" required="true" default="http://skyserver.sdss3.org/CasJobs"/>
-			<field name="wsid" required="true"/>
-			<field name="password" required="true" ispassword="true"/>
-		</schema>
 	</processor>
 	<processor>
 		<id>fitsprocessor</id>
