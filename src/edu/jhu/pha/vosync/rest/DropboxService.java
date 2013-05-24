@@ -252,6 +252,7 @@ public class DropboxService {
 			for(ProcessorConfig proc: NodeProcessor.processors.values()) {
 				g2.writeStartObject();
 				g2.writeStringField("id", proc.getId());
+				g2.writeStringField("title", proc.getTitle());
 				g2.writeBooleanField("enabled", null != servicesCredentials.get(proc.getId()));
 				g2.writeEndObject();
 			}
@@ -279,6 +280,14 @@ public class DropboxService {
 		} catch(IOException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
 		}
+	}
+	
+	@DELETE @Path("account/service/{processor:.+}")
+	@RolesAllowed({"user"})
+	public Response disableAccountService(@PathParam("processor") String processor) {
+		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		UserHelper.updateUserService(user.getName(), processor, null);
+		return Response.ok().build();
 	}
 	
 	@GET @Path("account/service/{processor:.+}")

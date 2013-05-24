@@ -315,6 +315,7 @@ public class NodeProcessor extends Thread {
     	private String config;
     	private String processor;
     	private String handler;
+    	private String title;
     	private CredentialsSchema schema;
 
     	public ProcessorConfig(XMLConfiguration conf, String processorId) {
@@ -325,9 +326,12 @@ public class NodeProcessor extends Thread {
 			this.config = conf.getString("//processor[id='"+processorId+"']/config");
 			this.processor = conf.getString("//processor[id='"+processorId+"']/processor");
 			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
+			this.title = conf.getString("//processor[id='"+processorId+"']/title", processorId);
 
 			List<String> list = conf.getList("//processor[id='"+processorId+"']/schema/field/@name");
 			CredentialsSchema schema = new CredentialsSchema();
+			schema.description = conf.getString("//processor[id='"+processorId+"']/description", "");
+
 			if(list != null && list.size() > 0){
 				for(Iterator<String> it = list.listIterator(); it.hasNext();) {
 					CredentialsSchemaField field = new CredentialsSchemaField();
@@ -359,10 +363,14 @@ public class NodeProcessor extends Thread {
 		public CredentialsSchema getSchema() {
 			return schema;
 		}
+		public String getTitle() {
+			return title;
+		}
     }
     
     public static class CredentialsSchema {
     	private Vector<CredentialsSchemaField> properties = new Vector<CredentialsSchemaField>();
+    	private String description;
     	public void addField(CredentialsSchemaField field) {
     		this.properties.add(field);
     	}
@@ -379,6 +387,9 @@ public class NodeProcessor extends Thread {
 				return "{}";
 			}
     	}
+		public String getDescription() {
+			return description;
+		}
     }
     
     public static class CredentialsSchemaField {

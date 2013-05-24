@@ -1,6 +1,8 @@
 <fileprocessors>
 	<processor>
 		<id>docsprocessor</id>
+		<title>Full-text search</title>
+		<description>Extracts the text from Word and plain text documents and adds it to the Lucene index. Allows searching the user documents by keywords.</description>
 		<mimetype>application/msword</mimetype>
 		<mimetype>application/vnd.openxmlformats-officedocument.wordprocessingml.document</mimetype>
 		<mimetype>text/plain</mimetype>
@@ -8,13 +10,22 @@
 	</processor>
 	<processor>
 		<id>simprocessor</id>
+		<title>Simulations parser</title>
+		<description>Extracts the simulation ID and simulation datasets ID from ENZO simulations and stores these in file metadata.</description>
 		<mimetype>application/enzoparameterfile</mimetype>
 		<mimetype>application/enzosimulation</mimetype>
 		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
 		<config>tika/tika-simulation.xml</config>
+		<schema>
+			<field name="endpoint" required="true" default="http://skyserver.sdss3.org/CasJobs"/>
+			<field name="wsid" required="true"/>
+			<field name="password" required="true" ispassword="true"/>
+		</schema>
 	</processor>
 	<processor>
 		<id>fitsprocessor</id>
+		<title>Tables extractor</title>
+		<description>Extracts tabular data from fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database.</description>
 		<mimetype>application/fits</mimetype>
 		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
 		<mimetype>image/tiff</mimetype>
@@ -29,6 +40,8 @@
 	</processor>
 	<processor>
 		<id>sqlshareprocessor</id>
+		<title>Tables extractor (SQLShare)</title>
+		<description>Extracts tabular data from plain text files using NumPY library and stores it in connected &lt;a href=&quot;sqlshare&quot;&gt;SQLShare&lt;/a&gt; database.</description>
 		<mimetype>text/plain</mimetype>
 		<processor>edu.jhu.pha.vospace.process.FileToSQLShareProcessor</processor>
 		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>

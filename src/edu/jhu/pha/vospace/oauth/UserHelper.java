@@ -327,6 +327,13 @@ public class UserHelper {
         );
     }
     
+    /**
+     * Modifies the user credentials for metadata extractors.
+     * @param username The user ID
+     * @param processorId processor ID (from processors.xml/processor/id)
+     * @param updateNode The processor credentials in JSON format. If null, the processor will be disabled
+     * @return true if success
+     */
     public static boolean updateUserService(final String username, final String processorId, JsonNode updateNode) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
@@ -353,7 +360,11 @@ public class UserHelper {
             throw new IllegalStateException("Error parsing user's credentials");
 		}
 
-		((org.codehaus.jackson.node.ObjectNode)mainNode).put(processorId, updateNode);
+		if(null != updateNode) {
+			((org.codehaus.jackson.node.ObjectNode)mainNode).put(processorId, updateNode);
+		} else {
+			((org.codehaus.jackson.node.ObjectNode)mainNode).remove(processorId);
+		}
 		
         return DbPoolServlet.goSql("Updating user's service credentials from db",
             "update users set service_credentials = ? where user_id = (select user_id from user_identities where identity = ?)",
