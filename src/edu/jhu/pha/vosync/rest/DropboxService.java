@@ -637,22 +637,20 @@ public class DropboxService {
 					node.setNode(null);
 				}
 			} else {
-				try {
-					node = NodeFactory.getNode(identifier, user.getName());
-				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
-					node.createParent();
-					node.setNode(null);
+				if(metastore.isStored(identifier)){
+					Node tmpNode = NodeFactory.getNode(identifier, user.getName());
+					tmpNode.getStorage().remove(tmpNode.getUri().getNodePath(), true);
+					tmpNode.getMetastore().remove(tmpNode.getUri());
 				}
+				
+				node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+				node.createParent();
+				node.setNode(null);
 			}
 		}
 		
 		if(!(node instanceof DataNode)) {
 			throw new NotFoundException("Node is a container");
-		}
-		
-		if(node.getNodeInfo().isDeleted()) {
-			node.markRemoved(false);
 		}
 		
 		((DataNode)node).setData(fileDataInp);
