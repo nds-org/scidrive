@@ -22,17 +22,18 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.Vector;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.detect.CompositeDetector;
@@ -49,6 +50,7 @@ import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.pkg.SimulationDetector;
 import org.apache.tika.sax.BodyContentHandler;
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -68,7 +70,6 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
-import edu.jhu.pha.vospace.process.tika.SimulationParser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 
@@ -80,16 +81,20 @@ public class NodeProcessor extends Thread {
 
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     
-	public static XMLConfiguration processorConf;
-	
-	private final static String EXTERNAL_LINK_PROPERTY = "ivo://ivoa.net/vospace/core#external_link";
+	public static Hashtable<String, ProcessorConfig> processors;
 	
 	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
 		try	{
-			processorConf = new XMLConfiguration("processors.xml");
+			XMLConfiguration processorConf = new XMLConfiguration("processors.xml");
 			processorConf.setExpressionEngine(new XPathExpressionEngine());
+
+			
+			processors = new Hashtable<String, ProcessorConfig>();
+			for(String processorId: processorConf.getStringArray("//processor/id")) {
+				processors.put(processorId, new ProcessorConfig(processorConf, processorId));
+			}
 		} catch(ConfigurationException ex) {
 		    logger.error("Error reading the nodes processor configuration file processors.xml." + ex.getMessage());
 		}
@@ -150,11 +155,16 @@ public class NodeProcessor extends Thread {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			String[] processorIds = processorConf.getStringArray("//processor[mimetype='"+type.toString()+"']/id");
+			        			Vector<ProcessorConfig> curProcessors = new Vector();
+			        			for(String checkProcId: processors.keySet()){
+			        				ProcessorConfig procConf = processors.get(checkProcId);
+			        				if(procConf.getMimeTypes().contains(type.toString()))
+			        					curProcessors.add(procConf);
+			        			}
 			            		
 			            		try {
 			            			
-			            			for(String processorId: processorIds) {
+			            			for(ProcessorConfig processor: curProcessors) {
 					            		Metadata nodeTikaMeta = new Metadata();
 					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
 					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
@@ -164,19 +174,17 @@ public class NodeProcessor extends Thread {
 					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
 					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 			            				
-			            				String conf = processorConf.getString("//processor[id='"+processorId+"']/config");
 			            				AbstractParser parser;
 		            					TikaConfig config = TikaConfig.getDefaultConfig();
-			            				if(conf != null) {
-			            					config = new TikaConfig(getClass().getResourceAsStream(conf));
+			            				if(processor.getConfig() != null) {
+			            					config = new TikaConfig(getClass().getResourceAsStream(processor.getConfig()));
 			            				}
 			            				
 										parser = new CompositeParser(config.getMediaTypeRegistry(), config.getParser());
 			            			
-			            				String handlerName =processorConf.getString("//processor[id='"+processorId+"']/handler"); 
 			            				ContentHandler handler;
-			            				if(null != handlerName)
-			            					handler = (ContentHandler) Class.forName(handlerName).getConstructor().newInstance();
+			            				if(null != processor.getHandler())
+			            					handler = (ContentHandler) Class.forName(processor.getHandler()).getConstructor().newInstance();
 			            				else
 			            					handler = new BodyContentHandler();
 			            				
@@ -192,36 +200,29 @@ public class NodeProcessor extends Thread {
 					            		}				            			
 			            				
 					            		// now do out-of-tika processing of results
-			            				String processorName =processorConf.getString("//processor[id='"+processorId+"']/processor"); 
-					        			if(null != processorName) {
+					        			if(null != processor.getProcessor()) {
 					        				try {
-					        					Class handlerClass = Class.forName(processorName);
+					        					Class handlerClass = Class.forName(processor.getProcessor());
 					        					Method processMetaMethod = handlerClass.getMethod("processNodeMeta", Metadata.class, Object.class, JsonNode.class);
 					        					
-					        					JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processorId);
+					        					JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processor.getId());
 					        					if(credentialsNode != null) {
 					        						processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
 						        					logger.debug("Processing of "+node.getUri().toString()+" is finished.");
 					        					} else {
 						        					logger.debug("User doesn't have credentials setup for processing of "+node.getUri().toString());
 					        					}
-
+					        					
 					        				} catch (Exception e) {
 					        					logger.error("Error processing the node. "+e.getMessage());
 					        					e.printStackTrace();
 					        				}
 					        			}
-					        			
-			        					String[] externalLinks = nodeTikaMeta.getValues("EXTERNAL_LINKS");
-			        					if(null != externalLinks && externalLinks.length > 0) {
-				        			        Map<String, String> properties = new HashMap<String, String>();
-				        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
-				        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
-			        					}
+
 			            			}
-			            			
+
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
-		        					
+
 				            		// update node's container size metadata
 				            		try {
 				            			ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
@@ -306,6 +307,124 @@ public class NodeProcessor extends Thread {
 			}
 		});
 
+    }
+    
+    public static class ProcessorConfig {
+    	private String id;
+    	private Vector<String> mimeTypes = new Vector<String>();
+    	private String config;
+    	private String processor;
+    	private String handler;
+    	private String title;
+    	private CredentialsSchema schema;
+
+    	public ProcessorConfig(XMLConfiguration conf, String processorId) {
+			this.id = processorId;
+			for(String mimeType: conf.getStringArray("//processor[id='"+processorId+"']/mimetype")){
+				mimeTypes.add(mimeType);
+			}
+			this.config = conf.getString("//processor[id='"+processorId+"']/config");
+			this.processor = conf.getString("//processor[id='"+processorId+"']/processor");
+			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
+			this.title = conf.getString("//processor[id='"+processorId+"']/title", processorId);
+
+			List<String> list = conf.getList("//processor[id='"+processorId+"']/schema/field/@name");
+			CredentialsSchema schema = new CredentialsSchema();
+			schema.description = conf.getString("//processor[id='"+processorId+"']/description", "");
+
+			if(list != null && list.size() > 0){
+				for(Iterator<String> it = list.listIterator(); it.hasNext();) {
+					CredentialsSchemaField field = new CredentialsSchemaField();
+					field.setName(it.next());
+					field.setRequired(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@required"));
+					field.setDefaultValue(conf.getString("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@default"));
+					field.setPassword(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@ispassword", false));
+					schema.addField(field);
+				}
+			}
+			this.schema = schema;
+    	}
+    	
+    	public String getId() {
+			return id;
+		}
+		public Vector<String> getMimeTypes() {
+			return mimeTypes;
+		}
+		public String getConfig() {
+			return config;
+		}
+		public String getProcessor() {
+			return processor;
+		}
+		public String getHandler() {
+			return handler;
+		}
+		public CredentialsSchema getSchema() {
+			return schema;
+		}
+		public String getTitle() {
+			return title;
+		}
+    }
+    
+    public static class CredentialsSchema {
+    	private Vector<CredentialsSchemaField> properties = new Vector<CredentialsSchemaField>();
+    	private String description;
+    	public void addField(CredentialsSchemaField field) {
+    		this.properties.add(field);
+    	}
+    	public Vector<CredentialsSchemaField> getFields() {
+    		return properties;
+    	}
+    	@Override
+		public String toString() {
+			ObjectMapper mapper = new ObjectMapper();
+			try {
+				return mapper.writeValueAsString(this);
+			} catch (Exception e) {
+				e.printStackTrace();
+				return "{}";
+			}
+    	}
+		public String getDescription() {
+			return description;
+		}
+    }
+    
+    public static class CredentialsSchemaField {
+    	private String name;
+    	private boolean required;
+    	private String defaultValue = "";
+    	private boolean isPassword = false;
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public boolean isRequired() {
+			return required;
+		}
+		public void setRequired(boolean required) {
+			this.required = required;
+		}
+		public String getDefaultValue() {
+			return defaultValue;
+		}
+		public void setDefaultValue(String defaultValue) {
+			this.defaultValue = (null == defaultValue)?"":defaultValue;
+		}
+		public boolean isPassword() {
+			return isPassword;
+		}
+		public void setPassword(boolean isPassword) {
+			this.isPassword = isPassword;
+		}
+    }
+    
+    public static void main(String[] s) {
+    	Configuration conf = NodeProcessor.conf;
     }
     
 }
