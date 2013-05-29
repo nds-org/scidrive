@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -72,10 +73,12 @@ import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
+import org.apache.commons.lang.StringUtils;
 
 public class NodeProcessor extends Thread {
 
 	private static final Logger logger = Logger.getLogger(NodeProcessor.class);
+	private final static String EXTERNAL_LINK_PROPERTY = "ivo://ivoa.net/vospace/core#external_link";
 
     static Configuration conf = SettingsServlet.getConfig();
 
@@ -219,6 +222,12 @@ public class NodeProcessor extends Thread {
 					        				}
 					        			}
 
+			        					String[] externalLinks = nodeTikaMeta.getValues("EXTERNAL_LINKS");
+			        					if(null != externalLinks && externalLinks.length > 0) {
+				        			        Map<String, String> properties = new HashMap<String, String>();
+				        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
+				        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
+			        					}
 			            			}
 
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
