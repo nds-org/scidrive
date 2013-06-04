@@ -198,7 +198,7 @@ public class NodesController {
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
-		return Response.ok().build();
+		return Response.noContent().build();
     }
 
 	/**

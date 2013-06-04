@@ -189,21 +189,28 @@ public class SwiftStorageManager implements StorageManager {
 	public void copyBytes(NodePath oldNodePath, NodePath newNodePath, boolean keepBytes) {
 		try {
 			FilesObjectMetaData meta = getClient().getObjectMetaData(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
-			// if != null then exists manifest for chunked upload
-			if(null != meta.getManifestPrefix() && keepBytes){
-				throw new BadRequestException("Copying files with segments is not supported.");
-			}
+			try {
+				// if != null then exists manifest for chunked upload
+				if(null != meta.getManifestPrefix() && keepBytes){
+					throw new BadRequestException("Copying files with segments is not supported.");
+				}
 
-			getClient().copyObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath(), newNodePath.getContainerName(), newNodePath.getNodeRelativeStoragePath());
-			if(!keepBytes)
-				getClient().deleteObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
-		} catch (FilesInvalidNameException e) {
-			throw new NotFoundException("Node Not Found");
-		} catch (HttpException e) {
-			throw new BadRequestException(e);
-		} catch (IOException e) {
-			throw new InternalServerErrorException(e.getMessage());
+				getClient().copyObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath(), newNodePath.getContainerName(), newNodePath.getNodeRelativeStoragePath());
+				if(!keepBytes)
+					getClient().deleteObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
+			} catch (FilesInvalidNameException e) {
+				throw new NotFoundException("Node Not Found");
+			} catch (HttpException e) {
+				throw new BadRequestException(e);
+			} catch (IOException e) {
+				throw new InternalServerErrorException(e.getMessage());
+			}
+		} catch(FilesNotFoundException ex) {
+			// file does not exist: just exit (can be just empty file in metadata)
+		} catch(Exception ex) {
+			throw new InternalServerErrorException(ex.getMessage());
 		}
+		
 		updateCredentials();
 	}
 	
