@@ -438,7 +438,7 @@ public class DropboxService {
 	}
 
 	@GET @Path("metadata/{root:dropbox|sandbox}")
-	@RolesAllowed({"user", "shareuser", "readonlyshareuser"})
+	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getRootMetadata(@PathParam("root") String root, 
 			@QueryParam("list") @DefaultValue("true") Boolean list,
 			@QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {

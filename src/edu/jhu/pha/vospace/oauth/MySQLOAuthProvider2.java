@@ -41,6 +41,7 @@ import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.Token.USER_ROLES;
 import edu.jhu.pha.vospace.rest.VoboxOAuthProvider.Consumer;
 
 /**
@@ -97,7 +98,7 @@ public class MySQLOAuthProvider2 {
 	
     public static synchronized Token getAccessToken(final String tokenStr) {
     	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
-        		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission "+
+        		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission, is_share_token "+
         				"from oauth_accessors "+
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
@@ -113,9 +114,15 @@ public class MySQLOAuthProvider2 {
                         ResultSet rs = stmt.executeQuery();
             			if(rs.next()){
             				
-            				Set<String> rolesSet = new HashSet<String>();
-            				rolesSet.add("user");
-            				
+            				Set<USER_ROLES> rolesSet = new HashSet<USER_ROLES>();
+            				if(!rs.getBoolean("is_share_token")) {
+            					rolesSet.add(USER_ROLES.user);
+            				} else {
+            					if(rs.getBoolean("accessor_write_permission"))
+                					rolesSet.add(USER_ROLES.rwshareuser);
+            					else
+                					rolesSet.add(USER_ROLES.roshareuser);
+            				}
             	            token = new Token(
             	                    rs.getString("access_token"), 
             	                    rs.getString("token_secret"), 
@@ -224,8 +231,8 @@ public class MySQLOAuthProvider2 {
 	        );
         } else {
 	        DbPoolServlet.goSql("Insert new request token",
-	        		"insert into oauth_accessors (request_token, token_secret, consumer_id, container_id, created, accessor_write_permission) "+
-	        				"select ?, ?, consumer_id , container_id, ?, share_write_permission from oauth_consumers, container_shares "+
+	        		"insert into oauth_accessors (request_token, token_secret, consumer_id, container_id, created, accessor_write_permission, is_share_token) "+
+	        				"select ?, ?, consumer_id , container_id, ?, share_write_permission, 1 from oauth_consumers, container_shares "+
 	        				"where consumer_key = ? and share_id = ?",
 	                new SqlWorker<Boolean>() {
 	                    @Override

@@ -17,11 +17,12 @@ public class Token implements OAuthToken {
    private final String consumerKey;
    private final String callbackUrl;
    private final Principal principal;
-   private final Set<String> roles;
+   private final Set<USER_ROLES> roles;
    private final MultivaluedMap<String, String> attribs;
+   public enum USER_ROLES {user, rwshareuser, roshareuser};
 
    protected Token(String token, String secret, String consumerKey, String callbackUrl,
-           Principal principal, Set<String> roles, MultivaluedMap<String, String> attributes) {
+           Principal principal, Set<USER_ROLES> roles, MultivaluedMap<String, String> attributes) {
        this.token = token;
        this.secret = secret;
        this.consumerKey = consumerKey;
@@ -37,7 +38,7 @@ public class Token implements OAuthToken {
    }
 
    public Token(String token, String secret, String consumerKey, String callbackUrl, MultivaluedMap<String, String> attributes) {
-       this(token, secret, consumerKey, callbackUrl, null, Collections.<String>emptySet(), attributes);
+       this(token, secret, consumerKey, callbackUrl, null, Collections.<USER_ROLES>emptySet(), attributes);
    }
 
    @Override
@@ -66,8 +67,13 @@ public class Token implements OAuthToken {
    }
 
    @Override
-   public boolean isInRole(String role) {
-       return roles.contains(role);
+   public boolean isInRole(String roleStr) {
+	   try {
+		   USER_ROLES role = Enum.valueOf(USER_ROLES.class, roleStr);
+		   return roles.contains(role);
+	   } catch (Exception ex) {
+		   return false;
+	   }
    }
 
    /** Returns callback URL for this token (applicable just to request tokens)
