@@ -1,7 +1,7 @@
 VOBox - scientific cloud storage
 ================================
 
-VOBox is a REST-service supporting [VOSpace 2.0](http://www.ivoa.net/documents/VOSpace/) and [Dropbox](https://www.dropbox.com/)
+VOBox is a REST-service supporting [VOSpace 2.0](http://www.ivoa.net/documents/VOSpace/) and [Dropbox](https://www.dropbox.com/developers/core/docs)
 protocols to access the data. The primary data storage platform is [OpenStack SWIFT](http://docs.openstack.org/developer/swift/).
 
 The project is based on Jersey REST framework and provides the REST service allowing to store the data in a cloud storage.
