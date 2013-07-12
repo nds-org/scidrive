@@ -62,8 +62,8 @@ public class SimulationParser implements Parser {
 		}
 
 		try {
-	    	CompressorInputStream cis = new CompressorStreamFactory().createCompressorInputStream(is);
-	    	//BufferedInputStream bis = new BufferedInputStream(cis);
+	    	BufferedInputStream bis = new BufferedInputStream(is);
+	    	CompressorInputStream cis = new CompressorStreamFactory().createCompressorInputStream(bis);
 	    	ArchiveInputStream input = new ArchiveStreamFactory().createArchiveInputStream(cis);
 	    	ArchiveEntry entry = null;
 	    	int k = 0;
