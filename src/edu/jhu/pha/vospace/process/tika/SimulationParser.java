@@ -62,9 +62,9 @@ public class SimulationParser implements Parser {
 		}
 
 		try {
-	    	BufferedInputStream bis = new BufferedInputStream(is);
-	    	CompressorInputStream cis = new CompressorStreamFactory().createCompressorInputStream(bis);
-	    	ArchiveInputStream input = new ArchiveStreamFactory().createArchiveInputStream(cis);
+	    	CompressorInputStream cis = new CompressorStreamFactory().createCompressorInputStream(is);
+	    	BufferedInputStream bis = new BufferedInputStream(cis);
+	    	ArchiveInputStream input = new ArchiveStreamFactory().createArchiveInputStream(bis);
 	    	ArchiveEntry entry = null;
 	    	int k = 0;
 	    	do {
@@ -116,7 +116,6 @@ public class SimulationParser implements Parser {
 	    			}
 	    		}
 	    	} while ((entry != null) /*&& (k < 3)*/);
-	    	input.close();
 	    	logger.debug("Simulation UUID: "+metadata.get(METADATA_SIMULATION_UUID)+"; No. of datasets: "+metadata.getValues(METADATA_DATASET_UUID).length);
 		}
 		catch (Exception e) {
@@ -124,6 +123,8 @@ public class SimulationParser implements Parser {
 			PrintWriter pw = new PrintWriter(sw);
 			e.printStackTrace(pw);
 			throw new TikaException("Error! "+e.getMessage()+"\n"+sw.toString());
+		} finally {
+	    	try {is.close();} catch(Exception ex) {}
 		}
 	}
 	
