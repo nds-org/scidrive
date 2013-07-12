@@ -22,7 +22,8 @@
         <dependency org="com.sun.jersey.contribs.jersey-oauth" name="oauth-signature" rev="1.17.1" conf="compile->default"/>
         
         <dependency org="org.openid4java" name="openid4java" rev="0.9.7" conf="compile->default"/>
-        <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.2.3" conf="compile->default"/>
+        <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.2.5" conf="compile->default"/>
+        <dependency org="org.apache.httpcomponents" name="httpmime" rev="4.2.5" conf="compile->default"/>
         <dependency org="xmlwriter" name="xmlwriter" rev="2.2.2" conf="compile->default"/>
         <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.12" conf="compile->default"/>
         <dependency org="log4j" name="log4j" rev="1.2.17" conf="compile->default"/>

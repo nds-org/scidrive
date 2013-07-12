@@ -18,6 +18,7 @@ import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
@@ -66,7 +67,6 @@ public class SimulationParser implements Parser {
 	    	BufferedInputStream bis = new BufferedInputStream(cis);
 	    	ArchiveInputStream input = new ArchiveStreamFactory().createArchiveInputStream(bis);
 	    	ArchiveEntry entry = null;
-	    	int k = 0;
 	    	do {
 	    		entry = input.getNextEntry();
 	    		if (entry != null && !entry.isDirectory()) {
@@ -87,16 +87,8 @@ public class SimulationParser implements Parser {
 	    			if (MAGIC.equals(s)) {
 	    				//System.out.println(entry.getName());
 	    				logger.debug("Parsing: "+entry.getName());
-	    				byte[] content = new byte[(int)entry.getSize()];
-	    				int offset = 0;
-	    				int length = content.length;
-	    				while (length > 0) {
-	    					int n = input.read(content, offset, length);
-	    					offset += n;
-	    					length -= n;
-	    				}
-	    				ByteArrayInputStream contentStream = new ByteArrayInputStream(content);
-	    				BufferedReader reader = new BufferedReader(new InputStreamReader(contentStream));
+	    				BoundedInputStream inp = new BoundedInputStream(input, entry.getSize());
+	    				BufferedReader reader = new BufferedReader(new InputStreamReader(inp));
 	    				String line = null;
 	    				while ((line = reader.readLine()) != null) {
 	    					String[] keyValue = line.split("=");
@@ -111,12 +103,9 @@ public class SimulationParser implements Parser {
 	    						}
 	    					}
 	    				}
-	    				reader.close();
-	    				k++;
 	    			}
 	    		}
 	    	} while ((entry != null) /*&& (k < 3)*/);
-	    	input.close();
 	    	logger.debug("Simulation UUID: "+metadata.get(METADATA_SIMULATION_UUID)+"; No. of datasets: "+metadata.getValues(METADATA_DATASET_UUID).length);
 		}
 		catch (Exception e) {
@@ -124,6 +113,8 @@ public class SimulationParser implements Parser {
 			PrintWriter pw = new PrintWriter(sw);
 			e.printStackTrace(pw);
 			throw new TikaException("Error! "+e.getMessage()+"\n"+sw.toString());
+		} finally {
+	    	try {is.close();} catch(Exception ex) {}
 		}
 	}
 	
