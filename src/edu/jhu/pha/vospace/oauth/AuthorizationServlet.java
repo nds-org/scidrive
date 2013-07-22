@@ -264,6 +264,8 @@ public class AuthorizationServlet extends BaseServlet {
 		
 		try {
 			Token reqToken = MySQLOAuthProvider2.getRequestToken(token);
+			if(null == reqToken)
+    			throw new PermissionDeniedException("401 Unauthorized");
             if(null != reqToken.getAttributes().getFirst("root_container")){ // pre-shared container accessor
             	if(shareId != null) {//already created the share - user bound sharing
 	        		Vector<String> groupUserLogins = MySQLOAuthProvider2.getShareUsers(shareId);
