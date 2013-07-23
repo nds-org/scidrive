@@ -75,7 +75,7 @@ public class DataNode extends Node implements Cloneable {
 				g.writeStringField("modified", dropboxDateFormat.format(getNodeInfo().getMtime()));
 				g.writeStringField("path", getUri().getNodePath().getNodeOuterPath());
 				g.writeBooleanField("is_dir", false);
-				if(includeDeleted)
+				if(includeDeleted || getNodeInfo().isDeleted())
 					g.writeBooleanField("is_deleted", getNodeInfo().isDeleted());
 				g.writeStringField("icon", "file");
 				g.writeStringField("root", (getUri().getNodePath().isEnableAppContainer()?"sandbox":"dropbox"));
