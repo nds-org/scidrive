@@ -91,7 +91,7 @@ public class MySQLMetaStore2 implements MetaStore{
     		return DbPoolServlet.goSql("GetNodeChildren root request",
     				"SELECT SQL_CALC_FOUND_ROWS containers.container_name as container, nodes.rev, nodes.deleted, nodes.mtime, nodes.size, nodes.mimetype, nodes.type "+
             		"FROM nodes JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
-            		"WHERE "+deletedCondition+"`path` = '' AND `identity` = ? AND `container_name` <> '' order by container "+((count > 0)?" limit ?, ?":""),
+            		"WHERE "+deletedCondition+"`parent_node_id` is NULL AND `identity` = ? AND `container_name` <> '' order by container "+((count > 0)?" limit ?, ?":""),
                     new SqlWorker<NodesList>() {
                         @Override
                         public NodesList go(Connection conn, PreparedStatement stmt) throws SQLException {
