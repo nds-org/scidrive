@@ -78,13 +78,15 @@ public class DbCleanerServlet extends HttpServlet {
 		                    				newNode.getStorage().remove(newNode.getUri().getNodePath(), true);
 	                    					newNode.getMetastore().remove(newNode.getUri());
 	
-		                    				// Update root container size
-	                    					ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
-	                    							new VospaceId(new NodePath(newNode.getUri().getNodePath().getContainerName())), 
-	                    							newNode.getOwner());
-	                    					newNode.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
-	                    					newNode.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-	                                	} catch(Exception ex) {
+	                    					if(!newNode.getUri().getNodePath().isRoot(false)) {
+			                    				// Update root container size
+		                    					ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
+		                    							new VospaceId(new NodePath(newNode.getUri().getNodePath().getContainerName())), 
+		                    							newNode.getOwner());
+		                    					newNode.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
+		                    					newNode.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
+	                    					}
+	                    				} catch(Exception ex) {
 	                                		ex.printStackTrace();
 	                                	}
 		                            	return true;
