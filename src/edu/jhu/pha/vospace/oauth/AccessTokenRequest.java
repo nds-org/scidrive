@@ -127,7 +127,7 @@ public class AccessTokenRequest {
             OAuthToken at = provider.newAccessToken(rt, params.getVerifier());
             
             if(at == null) {
-                throw new OAuthException(Response.Status.BAD_REQUEST, null);
+                throw new OAuthException(Response.Status.UNAUTHORIZED, null);
             }
 
             // Preparing the response.

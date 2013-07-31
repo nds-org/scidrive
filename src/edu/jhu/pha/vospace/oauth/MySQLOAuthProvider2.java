@@ -267,19 +267,23 @@ public class MySQLOAuthProvider2 {
         final String token = DigestUtils.md5Hex(token_data);
         // first remove the accessor from cache
         
-        DbPoolServlet.goSql("Insert new access token",
-        		"update oauth_accessors set request_token = NULL, access_token = ?, created = ? where request_token = ?",
-                new SqlWorker<Boolean>() {
+        int numChanged = DbPoolServlet.goSql("Insert new access token",
+        		"update oauth_accessors set request_token = NULL, access_token = ?, created = ? where request_token = ? and authorized = 1",
+                new SqlWorker<Integer>() {
                     @Override
-                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
             			stmt.setString(1, token);
             			stmt.setString(2, dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
             			stmt.setString(3, requestToken.getToken());
-                        return stmt.execute();
+                        return stmt.executeUpdate();
                     }
                 }
         );
 
+        if(numChanged == 0) {
+        	return null;
+        }
+        
         return new Token(token, 
         		requestToken.getSecret(), 
         		requestToken.getConsumer().getKey(), 
