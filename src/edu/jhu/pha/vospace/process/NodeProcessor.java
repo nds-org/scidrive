@@ -168,6 +168,12 @@ public class NodeProcessor extends Thread {
 			            		try {
 			            			
 			            			for(ProcessorConfig processor: curProcessors) {
+			            				JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processor.getId());
+			        					if(credentialsNode == null) {
+			        						logger.debug("User doesn't have credentials setup for processing of "+node.getUri().toString());
+			        						continue;
+			        					}
+			        					
 					            		Metadata nodeTikaMeta = new Metadata();
 					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
 					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
@@ -208,13 +214,8 @@ public class NodeProcessor extends Thread {
 					        					Class handlerClass = Class.forName(processor.getProcessor());
 					        					Method processMetaMethod = handlerClass.getMethod("processNodeMeta", Metadata.class, Object.class, JsonNode.class);
 					        					
-					        					JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processor.getId());
-					        					if(credentialsNode != null) {
-					        						processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
-						        					logger.debug("Processing of "+node.getUri().toString()+" is finished.");
-					        					} else {
-						        					logger.debug("User doesn't have credentials setup for processing of "+node.getUri().toString());
-					        					}
+					        					processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
+						        				logger.debug("Processing of "+node.getUri().toString()+" is finished.");
 					        					
 					        				} catch (Exception e) {
 					        					logger.error("Error processing the node. "+e.getMessage());
