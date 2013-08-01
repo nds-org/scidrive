@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -32,12 +32,6 @@ import javax.xml.stream.XMLStreamWriter;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
-
-import com.generationjava.io.xml.SimpleXmlWriter;
-import com.ximpleware.AutoPilot;
-import com.ximpleware.VTDGen;
-import com.ximpleware.VTDNav;
-import com.ximpleware.XPathParseException;
 
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
@@ -48,7 +42,6 @@ import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.meta.NodesList;
-import edu.jhu.pha.vospace.rest.TransfersController;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
@@ -190,7 +183,7 @@ public abstract class Node implements Cloneable {
 	
 	public MetaStore getMetastore() {
 		if(null == this._metastore)
-			this._metastore = MetaStoreFactory.getInstance().getMetaStore(owner);
+			this._metastore = MetaStoreFactory.getMetaStore(owner);
 		return _metastore;
 	}
 
@@ -295,7 +288,6 @@ public abstract class Node implements Cloneable {
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}
-		NodeFactory.getInstance();
 		Node parent = NodeFactory.getNode(parentId, owner);
 		
 		return parent;
@@ -303,7 +295,7 @@ public abstract class Node implements Cloneable {
 
 	public StorageManager getStorage() {
 		if(null == this._storage)
-			this._storage = StorageManagerFactory.getInstance().getStorageManager(owner);
+			this._storage = StorageManagerFactory.getStorageManager(owner);
 		return _storage;
 	}
 

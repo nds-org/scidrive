@@ -38,8 +38,10 @@ import javax.ws.rs.core.SecurityContext;
 
 import nu.xom.Builder;
 import nu.xom.Serializer;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
+
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.ConflictException;

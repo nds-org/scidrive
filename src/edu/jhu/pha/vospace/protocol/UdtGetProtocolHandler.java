@@ -24,7 +24,6 @@ import java.net.InetAddress;
 import org.apache.log4j.Logger;
 
 import udt.UDTClient;
-
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.SizeLimitInputStream;
 import edu.jhu.pha.vospace.jobs.JobException;
@@ -56,7 +55,7 @@ public class UdtGetProtocolHandler implements ProtocolHandler {
     public void invoke(JobDescription job) throws IOException, JobException{
 		logger.debug("UDT Get job invoked "+job.getId());
 		
-		StorageManager backend = StorageManagerFactory.getInstance().getStorageManager(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
 
 		InputStream inp = null;
 		

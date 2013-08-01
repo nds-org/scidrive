@@ -15,24 +15,21 @@
  ******************************************************************************/
 package edu.jhu.pha.vosync.rest;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.UUID;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Method;
 import java.net.URISyntaxException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.Consumes;
@@ -76,30 +73,30 @@ import org.codehaus.jackson.util.TokenBuffer;
 
 import com.sun.jersey.core.header.FormDataContentDisposition;
 import com.sun.jersey.multipart.FormDataParam;
+
 import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
-import edu.jhu.pha.vospace.meta.MetaStoreDistributed;
 import edu.jhu.pha.vospace.meta.MetaStore;
+import edu.jhu.pha.vospace.meta.MetaStoreDistributed;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.meta.RegionsInfo;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
+import edu.jhu.pha.vospace.node.Node.Detail;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
-import edu.jhu.pha.vospace.node.Node.Detail;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.oauth.VoboxUser;
 import edu.jhu.pha.vospace.process.NodeProcessor;
 import edu.jhu.pha.vospace.process.NodeProcessor.ProcessorConfig;
 import edu.jhu.pha.vospace.rest.JobDescription;
-import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vosync.exception.BadRequestException;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
 import edu.jhu.pha.vosync.exception.InternalServerErrorException;
@@ -311,7 +308,7 @@ public class DropboxService {
 	@GET @Path("regions/info")
 	@RolesAllowed({"user"})
 	public Response getRegionsInfo() {
-		MetaStore mstore = MetaStoreFactory.getInstance().getMetaStore(null);
+		MetaStore mstore = MetaStoreFactory.getMetaStore(null);
 		if(mstore instanceof MetaStoreDistributed) {
 			RegionsInfo regionsInfo = ((MetaStoreDistributed)mstore).getRegionsInfo();
 			return Response.ok(regionsInfo.toJson()).build();
@@ -530,7 +527,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
+		MetaStore metastore = MetaStoreFactory.getMetaStore(user.getName());
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
@@ -595,7 +592,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
+		MetaStore metastore = MetaStoreFactory.getMetaStore(user.getName());
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
@@ -1138,7 +1135,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(user.getName());
+		MetaStore metastore = MetaStoreFactory.getMetaStore(user.getName());
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){

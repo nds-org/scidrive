@@ -16,6 +16,7 @@
 package edu.jhu.pha.vospace.storage;
 
 import java.io.InputStream;
+
 import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 
@@ -23,8 +24,6 @@ import edu.jhu.pha.vospace.node.NodePath;
  * Interface for communicating with backend storage
  */
 public interface StorageManager {
-
-
     /**
      * Copy the bytes from the specified old location to the specified new location
      * in the current backend storage

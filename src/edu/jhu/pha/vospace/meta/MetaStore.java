@@ -15,11 +15,9 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.meta;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.Node.PropertyType;
 import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodeType;

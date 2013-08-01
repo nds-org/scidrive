@@ -15,34 +15,22 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.meta;
 
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.log4j.Logger;
 
-import com.mysql.jdbc.Statement;
-
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.SettingsServlet;
-import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
-import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.RegionsInfo.RegionDescription;
-import edu.jhu.pha.vospace.node.Node;
-import edu.jhu.pha.vospace.node.NodeFactory;
-import edu.jhu.pha.vospace.node.NodeInfo;
-import edu.jhu.pha.vospace.node.NodePath;
-import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 
 /**

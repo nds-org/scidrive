@@ -25,32 +25,22 @@ import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 /** 
  * A factory for creating nodes
  */
-public class NodeFactory {
-	private static NodeFactory ref;
+public class NodeFactory <T extends Node> {
 	private static final Logger logger = Logger.getLogger(NodeFactory.class);
 	private NodeFactory() {}
 
-	/*
-	 * Get a NodeFactory
-	 */
-	public static NodeFactory getInstance() {
-		if (null == ref) ref = new NodeFactory();
-		return ref;
-	}
-	
-	public static Node createNode(VospaceId uri, String username, NodeType type) {
-		Node node = null;
+	public static <T extends Node> T createNode(VospaceId uri, String username, NodeType nodeType) {
+		T node;
 		try {
-			Class nodeClass = type.getNodeClass();
-			node = (Node) nodeClass.getConstructor(VospaceId.class, String.class).newInstance(uri, username);
+			node = (T)nodeType.getNodeClass().getConstructor(VospaceId.class, String.class).newInstance(uri, username);
 		} catch (Exception e) {
 			throw new InternalServerErrorException("InternalFault");
 		}
 		return node;
 	}
 	
-	public static Node getNode(VospaceId uri, String username) {
-		MetaStore metastore = MetaStoreFactory.getInstance().getMetaStore(username);
+	public static <T extends Node> T getNode(VospaceId uri, String username) {
+		MetaStore metastore = MetaStoreFactory.getMetaStore(username);
 		if(null == uri)
 			throw new NotFoundException("NodeNotFound");
 		NodeType type = metastore.getType(uri);

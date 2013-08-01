@@ -15,7 +15,8 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MINUTES;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,7 +30,6 @@ import javax.servlet.http.HttpServlet;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
-import edu.jhu.pha.vospace.meta.MySQLMetaStoreDist;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
@@ -70,7 +70,7 @@ public class SynchronizationServlet extends HttpServlet {
                                 	try {
                                 		NodePath path = new NodePath(containerName);
 	                                	VospaceId uri = new VospaceId(path);
-	                                	Node newNode = NodeFactory.getInstance().getNode(uri, username);
+	                                	Node newNode = NodeFactory.getNode(uri, username);
 	                                	
 	                                	pstmt.setString(1, newNode.getStorage().getStorageUrl()+"/"+containerName);
 	                                	pstmt.setString(2, containerName);
@@ -105,7 +105,7 @@ public class SynchronizationServlet extends HttpServlet {
                                 	try {
                                 		NodePath path = new NodePath(containerName);
 	                                	VospaceId uri = new VospaceId(path);
-	                                	Node newNode = NodeFactory.getInstance().getNode(uri, username);
+	                                	Node newNode = NodeFactory.getNode(uri, username);
 	                                	if(null != syncUrl && !syncUrl.equals(((ContainerNode)newNode).getNodeSyncTo())) {
 	                                		logger.debug("Adding sync region: "+syncRegion+" to "+containerName+" of "+username);
 	                                		((ContainerNode)newNode).setNodeSyncTo(syncUrl, syncKey);

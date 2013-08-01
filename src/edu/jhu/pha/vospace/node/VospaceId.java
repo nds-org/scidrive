@@ -15,13 +15,14 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.node;
 
-import java.text.ParseException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.text.ParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 

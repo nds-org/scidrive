@@ -21,13 +21,11 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.text.NumberFormat;
 
-import org.apache.http.entity.InputStreamEntity;
 import org.apache.log4j.Logger;
 
 import udt.UDTClient;
 import udt.UDTOutputStream;
 import udt.util.Util;
-
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.jobs.JobException;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
@@ -63,7 +61,7 @@ public class UdtPutProtocolHandler implements ProtocolHandler {
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException {
 		logger.debug("UDT Put job invoked "+job.getId());
-		StorageManager backend = StorageManagerFactory.getInstance().getStorageManager(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
 
 		InputStream inp = null;
 		UDTOutputStream outp = null;
@@ -83,7 +81,7 @@ public class UdtPutProtocolHandler implements ProtocolHandler {
 			outp.flush();
 			logger.debug("Sent the job id");
 
-			Node node = NodeFactory.getInstance().getNode(job.getTargetId(), job.getUsername());
+			Node node = NodeFactory.getNode(job.getTargetId(), job.getUsername());
 			long size = node.getNodeInfo().getSize();
 			
 			outp.write(encode(size));

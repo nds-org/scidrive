@@ -40,27 +40,29 @@
 
 package edu.jhu.pha.vospace.oauth;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
+
 import com.sun.jersey.api.core.HttpContext;
 import com.sun.jersey.api.representation.Form;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
-import com.sun.jersey.oauth.signature.OAuthParameters;
-import com.sun.jersey.oauth.signature.OAuthSecrets;
-import com.sun.jersey.oauth.signature.OAuthSignature;
-import com.sun.jersey.oauth.signature.OAuthSignatureException;
 import com.sun.jersey.oauth.server.OAuthException;
 import com.sun.jersey.oauth.server.OAuthServerRequest;
 import com.sun.jersey.oauth.server.spi.OAuthConsumer;
 import com.sun.jersey.oauth.server.spi.OAuthProvider;
 import com.sun.jersey.oauth.server.spi.OAuthToken;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.Path;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
+import com.sun.jersey.oauth.signature.OAuthParameters;
+import com.sun.jersey.oauth.signature.OAuthSecrets;
+import com.sun.jersey.oauth.signature.OAuthSignature;
+import com.sun.jersey.oauth.signature.OAuthSignatureException;
 
 /**
  * Resource handling request token requests.

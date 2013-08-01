@@ -28,27 +28,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
-import javax.ws.rs.PathParam;
-
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
-
-import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.AccountInfo;
-import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
 import edu.jhu.pha.vospace.node.ContainerNode;
@@ -59,6 +47,7 @@ import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
+import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
 
 public class UserHelper {
 	private static final Logger logger = Logger.getLogger(UserHelper.class);
@@ -267,10 +256,10 @@ public class UserHelper {
 
 		try {
 			VospaceId identifier = new VospaceId(new NodePath("/"));
-			Node node = NodeFactory.getInstance().createNode(identifier, username, NodeType.CONTAINER_NODE);
+			Node node = NodeFactory.createNode(identifier, username, NodeType.CONTAINER_NODE);
 			if(!node.isStoredMetadata()){
 				node.setNode(null);
-				ContainerNode firstNode = (ContainerNode)NodeFactory.getInstance().createNode(identifier.appendPath(new NodePath("/first_container")), username, NodeType.CONTAINER_NODE);
+				ContainerNode firstNode = (ContainerNode)NodeFactory.createNode(identifier.appendPath(new NodePath("/first_container")), username, NodeType.CONTAINER_NODE);
 				firstNode.setNode(null);
 			}
 		} catch(URISyntaxException ex) {
@@ -303,7 +292,7 @@ public class UserHelper {
                 }
         );
 
-		StorageManager storage = StorageManagerFactory.getInstance().getStorageManager(username); 
+		StorageManager storage = StorageManagerFactory.getStorageManager(username); 
 		info.setBytesUsed(storage.getBytesUsed());
 		
 		return info;

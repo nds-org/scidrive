@@ -22,7 +22,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.SettingsServlet;
-import edu.jhu.pha.vospace.node.Node;
 
 /**
  * The servlet runs a jobs processor according to the jobsprocessor.class setting

@@ -21,7 +21,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
@@ -33,7 +32,9 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import com.sun.jersey.oauth.server.OAuthException;
 import com.sun.jersey.oauth.server.spi.OAuthConsumer;
+
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.node.Node;

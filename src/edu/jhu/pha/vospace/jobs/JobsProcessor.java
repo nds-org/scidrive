@@ -26,6 +26,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.TimeZone;
 import java.util.UUID;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonParseException;
@@ -33,10 +34,9 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
-import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.protocol.ProtocolHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
@@ -58,10 +58,10 @@ public abstract class JobsProcessor implements Runnable  {
 		initProtocolHandlers();
 	}
 		
-	public static Class getImplClass() {
-		Class jobsClass;
+	public static Class<? extends JobsProcessor> getImplClass() {
+		Class<? extends JobsProcessor> jobsClass;
 		try {
-			jobsClass = Class.forName(conf.getString("jobsprocessor.class"));
+			jobsClass = (Class<? extends JobsProcessor>) Class.forName(conf.getString("jobsprocessor.class"));
 			return jobsClass;
 		} catch (ClassNotFoundException e) {
 			logger.error("Error in configuration: can't find the jobs processor class");
@@ -141,7 +141,7 @@ public abstract class JobsProcessor implements Runnable  {
 	 * Adds the new job to the SQL database
 	 * @param job The job description object
 	 */
-	public static void submitJob(final String login, final JobDescription job) {
+	protected static void submitJob(final String login, final JobDescription job) {
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 		

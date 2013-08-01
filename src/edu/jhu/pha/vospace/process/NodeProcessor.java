@@ -28,13 +28,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.UUID;
 import java.util.Vector;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.detect.CompositeDetector;
@@ -51,7 +51,6 @@ import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.pkg.SimulationDetector;
 import org.apache.tika.sax.BodyContentHandler;
-import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -60,9 +59,9 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
 import com.rabbitmq.client.QueueingConsumer;
+
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
-import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
@@ -70,10 +69,6 @@ import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
-import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
-import edu.jhu.pha.vospace.rest.JobDescription;
-import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
-import org.apache.commons.lang.StringUtils;
 
 public class NodeProcessor extends Thread {
 

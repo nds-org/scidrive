@@ -173,7 +173,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	                            	info.setSize(rs.getLong("size"));
 	                            	info.setContentType(rs.getString("mimetype"));
 	
-	    			    			Node newNode = NodeFactory.getInstance().createNode(id, owner, NodeType.valueOf(rs.getString("type")));
+	    			    			Node newNode = NodeFactory.createNode(id, owner, NodeType.valueOf(rs.getString("type")));
 	    			    			newNode.setNodeInfo(info);
 	                            	
 									result.add(newNode);

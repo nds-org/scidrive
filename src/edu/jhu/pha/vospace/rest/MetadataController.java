@@ -34,10 +34,9 @@ import org.apache.log4j.Logger;
 import com.generationjava.io.xml.SimpleXmlWriter;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
-import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 
 /**
  * Provides the REST service for / path: the functions for manipulating the observatory capabilities and metadata

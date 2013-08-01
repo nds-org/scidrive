@@ -21,9 +21,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import sun.io.ByteToCharASCII;
-import sun.io.ByteToCharConverter;
-
 import com.ximpleware.AutoPilot;
 import com.ximpleware.VTDGen;
 import com.ximpleware.VTDNav;

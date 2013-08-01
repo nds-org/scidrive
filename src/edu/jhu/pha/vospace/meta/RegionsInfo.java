@@ -16,7 +16,6 @@
 package edu.jhu.pha.vospace.meta;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 
 import org.codehaus.jackson.JsonGenerationException;

@@ -17,18 +17,13 @@ package edu.jhu.pha.vospace.process.sax;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
-
-import edu.jhu.pha.vospace.process.database.DatabaseFormat;
-import edu.jhu.pha.vospace.process.tika.FITSColumnTypes;
 
 public class AsciiTableContentHandler implements ContentHandler {
 

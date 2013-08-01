@@ -38,6 +38,7 @@ import org.openid4java.discovery.DiscoveryInformation;
 import org.openid4java.message.AuthRequest;
 import org.openid4java.message.ParameterList;
 import org.openid4java.message.ax.FetchRequest;
+
 import edu.jhu.pha.vospace.BaseServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;

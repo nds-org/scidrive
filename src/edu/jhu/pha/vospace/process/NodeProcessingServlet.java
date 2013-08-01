@@ -15,29 +15,13 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.process;
 
-import static java.util.concurrent.TimeUnit.*;
-
-import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServlet;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.ConsumerCancelledException;
-import com.rabbitmq.client.QueueingConsumer;
-import com.rabbitmq.client.ShutdownSignalException;
 
 import edu.jhu.pha.vospace.SettingsServlet;
 

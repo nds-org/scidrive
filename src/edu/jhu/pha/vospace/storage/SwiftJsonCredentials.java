@@ -15,8 +15,6 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.storage;
 
-import java.io.IOException;
-
 import org.codehaus.jackson.map.ObjectMapper;
 
 public class SwiftJsonCredentials {

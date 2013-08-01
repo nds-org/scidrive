@@ -16,6 +16,7 @@
 package edu.jhu.pha.vospace.jobs;
 
 import java.net.URISyntaxException;
+
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
@@ -116,7 +117,7 @@ public class TransferThread extends Thread {
 	private static void validateTransfer(JobDescription transfer) {
 		/*TODO Check the whole method */
 
-		MetaStore store = MetaStoreFactory.getInstance().getMetaStore(transfer.getUsername());
+		MetaStore store = MetaStoreFactory.getMetaStore(transfer.getUsername());
 
 		// Check transfer details
 		VospaceId target = transfer.getTargetId();
@@ -127,7 +128,6 @@ public class TransferThread extends Thread {
 		try {
 			// Parent node
 			if (!external) {
-				NodeFactory.getInstance();
 				Node directionParentNode = NodeFactory.getNode(direction.getParent(), transfer.getUsername());
 				if(!directionParentNode.isStoredMetadata() || !(directionParentNode.getType() == NodeType.CONTAINER_NODE)) 
 					throw new BadRequestException("The parent node is not valid.");
@@ -139,7 +139,6 @@ public class TransferThread extends Thread {
 		// Existence
 		if (store.isStored(target)) {
 			if (transfer.getDirection().equals(DIRECTION.PUSHTOVOSPACE) || transfer.getDirection().equals(DIRECTION.PULLTOVOSPACE)) {
-				NodeFactory.getInstance();
 				// Container
 				Node targetNode = NodeFactory.getNode(target, transfer.getUsername());
 				if (targetNode.getType().equals(NodeType.CONTAINER_NODE)) 
@@ -147,13 +146,11 @@ public class TransferThread extends Thread {
 			}
 		} else {
 			if (!external) throw new ConflictException("A Node does not exist with the requested URI");
-			NodeFactory.getInstance();
 			Node newNode = NodeFactory.createNode(target, transfer.getUsername(), NodeType.DATA_NODE);
 			newNode.setNode(null);
 			
 		}
 		if (!external && store.isStored(direction)) {
-			NodeFactory.getInstance();
 			Node directionNode = NodeFactory.getNode(direction, transfer.getUsername());
 			 if(!directionNode.getType().equals(NodeType.CONTAINER_NODE))
 					 throw new ConflictException("A Node already exists with the requested URI");		

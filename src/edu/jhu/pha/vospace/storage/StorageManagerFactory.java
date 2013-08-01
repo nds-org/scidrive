@@ -15,13 +15,8 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.storage;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import org.apache.commons.configuration.Configuration;
-
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 
 /** 
@@ -29,91 +24,33 @@ import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
  */
 public class StorageManagerFactory {
 
-	private static StorageManagerFactory ref;
-	private static Configuration conf = SettingsServlet.getConfig();
-	private final String className = conf.getString("filestore.class");
-	private Constructor constr;
+	private static Class<? extends StorageManager> storageClass = SwiftStorageManager.class;
 	
-	/* 
-	 * Construct a basic StorageManagerFactory: load the properties file 
-	 */
 	private StorageManagerFactory()  {
-		try {
-			constr = Class.forName(className).getConstructor(String.class);
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/*
-	 * Get a StorageManagerFactory
-	 */
-	public static StorageManagerFactory getInstance() {
-		if (ref == null) ref = new StorageManagerFactory();
-		return ref;
 	}
 
 	/*
 	 * Get a StorageManager
 	 */
-	public StorageManager getStorageManager(String username) {
+	public static StorageManager getStorageManager(String username) {
 		try {
-			return (StorageManager) constr.newInstance(username);
-		} catch (IllegalArgumentException e) {
+			return storageClass.getConstructor(String.class).newInstance(username);
+		} catch (Exception e) {
 			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (SecurityException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (InvocationTargetException e) {
-			e.getCause().printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getCause().getMessage());
+			throw new InternalServerErrorException("Error initialising class "+e.getMessage());
 		}
 	}
 
 	public static String generateRandomCredentials(String username) {
-		String className = conf.getString("filestore.class");
 		try {
-			Method genMethod =Class.forName(className).getMethod("generateRandomCredentials", String.class); 
+			Method genMethod =storageClass.getMethod("generateRandomCredentials", String.class); 
 			if(null != genMethod){
 				return (String)genMethod.invoke(null, username);
 			}
 			return null;
-		} catch (ClassNotFoundException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (SecurityException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getMessage());
-		} catch (InvocationTargetException e) {
-			e.getCause().printStackTrace();
-			throw new InternalServerErrorException("Error initialising class "+className+": "+e.getCause().getMessage());
+			throw new InternalServerErrorException("Error initialising class "+e.getMessage());
 		}
-	}
-	
-	/*
-	 * Prevent cloning
-	 */
-	public Object clone() throws CloneNotSupportedException {
-		throw new CloneNotSupportedException();
 	}
 }

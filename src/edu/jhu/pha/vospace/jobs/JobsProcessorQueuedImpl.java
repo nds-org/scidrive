@@ -17,13 +17,12 @@ package edu.jhu.pha.vospace.jobs;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -31,7 +30,6 @@ import com.rabbitmq.client.QueueingConsumer;
 
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
-import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.protocol.ProtocolHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;

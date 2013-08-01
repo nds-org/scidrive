@@ -18,7 +18,7 @@ package edu.jhu.pha.vospace.node;
 /**
  * The possible types of node
  */
-public enum NodeType {
+public enum NodeType  {
     NODE ("Node", Node.class), 
     DATA_NODE ("DataNode", DataNode.class), 
     LINK_NODE ("LinkNode", LinkNode.class), 
@@ -27,9 +27,9 @@ public enum NodeType {
     STRUCTURED_DATA_NODE ("StructuredDataNode", StructuredDataNode.class);
     
     private String typeName;
-    private Class nodeClass;
+    private Class<? extends Node> nodeClass;
 
-    NodeType(String text, Class nodeClass) {
+    NodeType(String text, Class<? extends Node> nodeClass) {
       this.typeName = text;
       this.nodeClass = nodeClass;
     }
@@ -38,7 +38,7 @@ public enum NodeType {
       return this.typeName;
     }
     
-    public Class getNodeClass() {
+    public Class<? extends Node> getNodeClass() {
     	return nodeClass;
     }
 

@@ -22,7 +22,6 @@ import java.net.URISyntaxException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.SettingsServlet;
@@ -58,7 +57,7 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
     public void invoke(JobDescription job) throws IOException, JobException, URISyntaxException{
 		String getFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpget"));
 		
-		StorageManager backend = StorageManagerFactory.getInstance().getStorageManager(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
 
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		
@@ -73,7 +72,7 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 				fileInp = response.getEntity().getContent();
 				
 				//TODO make also for container
-				DataNode targetNode = (DataNode)NodeFactory.getInstance().getNode(job.getTargetId(), job.getUsername());
+				DataNode targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), job.getUsername());
 				targetNode.setData(fileInp);
 			} else {
 				logger.error("Error processing job "+job.getId()+": "+response.getStatusLine().getStatusCode()+" "+response.getStatusLine().getReasonPhrase());

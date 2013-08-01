@@ -4,17 +4,16 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.Provider;
 
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.oauth.server.spi.OAuthConsumer;
 import com.sun.jersey.oauth.server.spi.OAuthProvider;
 import com.sun.jersey.oauth.server.spi.OAuthToken;
 
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 import edu.jhu.pha.vospace.oauth.MySQLOAuthProvider2;
 import edu.jhu.pha.vospace.oauth.Token;
-
-import javax.ws.rs.core.MultivaluedMap;
 
 @Provider
 public class VoboxOAuthProvider implements OAuthProvider {

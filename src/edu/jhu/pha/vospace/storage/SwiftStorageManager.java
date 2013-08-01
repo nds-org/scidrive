@@ -52,8 +52,8 @@ import com.rackspacecloud.client.cloudfiles.FilesObject;
 import com.rackspacecloud.client.cloudfiles.FilesObjectMetaData;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;

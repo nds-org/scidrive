@@ -15,10 +15,8 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.meta;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 
 /** 
@@ -26,52 +24,19 @@ import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
  */
 public class MetaStoreFactory {
 
-	private static MetaStoreFactory ref;
-	private static Configuration conf;
 	private static final Logger logger = Logger.getLogger(MetaStoreFactory.class);
 	
-	private static Class metaStoreClass; 
+	private final static Class<? extends MetaStore> metaStoreClass = MySQLMetaStore2.class; 
 
-	/* 
-	 * Construct a basic MetaStoreFactory: load the properties file and
-	 * initialize the db
-	 */
-	private MetaStoreFactory(Configuration conf)  {
-		this.conf = conf;
-		try {
-			metaStoreClass = Class.forName(conf.getString("metastore.class"));
-		} catch (ClassNotFoundException e) {
-			logger.error("Error instantiating metadata store: "+e.getMessage());
-			throw new InternalServerErrorException("InternalServerError");
-		}
+	private MetaStoreFactory()  {
 	}
 
-	/*
-	 * Get a MetaStoreFactory
-	 */
-	public static MetaStoreFactory getInstance() {
-		if(null == conf)
-			conf = SettingsServlet.getConfig();
-		if (ref == null) ref = new MetaStoreFactory(conf);
-		return ref;
-	}
-
-	/*
-	 * Get a MetaStore
-	 */
-	public MetaStore getMetaStore(String username) {
+	public static MetaStore getMetaStore(String username) {
 		try {
-			return (MetaStore)metaStoreClass.getConstructor(String.class).newInstance(username);
+			return metaStoreClass.getConstructor(String.class).newInstance(username);
 		} catch (Exception e) {
 			logger.error("Error instantiating metadata store: "+e.getMessage());
 			throw new InternalServerErrorException("InternalServerError");
 		}
-	}
-
-	/*
-	 * Prevent cloning
-	 */
-	public Object clone() throws CloneNotSupportedException {
-		throw new CloneNotSupportedException();
 	}
 }

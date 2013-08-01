@@ -22,7 +22,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.SettingsServlet;
@@ -57,14 +56,14 @@ public class HttpPutProtocolHandler implements ProtocolHandler {
     public void invoke(JobDescription job) throws IOException {
 		String putFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpput"));
 		
-		StorageManager backend = StorageManagerFactory.getInstance().getStorageManager(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
 
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		InputStream fileInp = backend.getBytes(job.getTargetId().getNodePath());
 
 		HttpPut put = new HttpPut(putFileUrl);
 		
-		Node node = NodeFactory.getInstance().getNode(job.getTargetId(), job.getUsername());
+		Node node = NodeFactory.getNode(job.getTargetId(), job.getUsername());
 		
         put.setEntity(new InputStreamEntity(fileInp, node.getNodeInfo().getSize()));
 

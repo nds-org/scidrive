@@ -40,28 +40,30 @@
 
 package edu.jhu.pha.vospace.oauth;
 
-import com.sun.jersey.oauth.server.spi.OAuthToken;
-import com.sun.jersey.oauth.server.spi.OAuthProvider;
-import com.sun.jersey.spi.container.ContainerRequest;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
+
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
+
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.oauth.server.NonceManager;
 import com.sun.jersey.oauth.server.OAuthException;
 import com.sun.jersey.oauth.server.OAuthSecurityContext;
 import com.sun.jersey.oauth.server.OAuthServerRequest;
 import com.sun.jersey.oauth.server.spi.OAuthConsumer;
+import com.sun.jersey.oauth.server.spi.OAuthProvider;
+import com.sun.jersey.oauth.server.spi.OAuthToken;
 import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.oauth.signature.OAuthSecrets;
 import com.sun.jersey.oauth.signature.OAuthSignature;
 import com.sun.jersey.oauth.signature.OAuthSignatureException;
+import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
-import java.util.Collections;
-import java.util.Set;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.Provider;
 
 /** OAuth request filter that filters all requests indicating in the Authorization
  * header they use OAuth. Checks if the incoming requests are properly authenticated

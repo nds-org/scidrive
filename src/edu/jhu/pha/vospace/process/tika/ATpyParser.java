@@ -11,16 +11,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
-import org.apache.tika.parser.AutoDetectParser;
-import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
-import org.apache.tika.sax.WriteOutContentHandler;
 import org.apache.tika.sax.XHTMLContentHandler;
 import org.python.core.PyList;
 import org.python.core.PyTuple;
@@ -30,7 +26,6 @@ import org.xml.sax.SAXException;
 
 import edu.jhu.pha.vospace.process.database.Database;
 import edu.jhu.pha.vospace.process.database.SQLShare;
-import edu.jhu.pha.vospace.process.sax.AsciiTable;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
 
 

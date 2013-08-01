@@ -27,6 +27,12 @@ import javax.servlet.http.HttpServlet;
 
 import org.apache.log4j.Logger;
 
+import udt.UDTInputStream;
+import udt.UDTOutputStream;
+import udt.UDTReceiver;
+import udt.UDTServerSocket;
+import udt.UDTSocket;
+import udt.util.Util;
 import edu.jhu.pha.vospace.api.SizeLimitInputStream;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
@@ -38,13 +44,6 @@ import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
-
-import udt.UDTInputStream;
-import udt.UDTOutputStream;
-import udt.UDTReceiver;
-import udt.UDTServerSocket;
-import udt.UDTSocket;
-import udt.util.Util;
 
 public class UdtServlet extends HttpServlet implements Runnable {
 	
@@ -133,12 +132,12 @@ public class UdtServlet extends HttpServlet implements Runnable {
 					
 					logger.debug("Sending node through UDT: "+job.getTarget());
 					
-					StorageManager backend = StorageManagerFactory.getInstance().getStorageManager(job.getUsername());
+					StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
 
 					InputStream dataInp = backend.getBytes(job.getTargetId().getNodePath());
 					
 					try {
-						Node node = NodeFactory.getInstance().getNode(job.getTargetId(), job.getUsername());
+						Node node = NodeFactory.getNode(job.getTargetId(), job.getUsername());
 						//long size = Long.parseLong(backend.getNodeSize(job.getTargetId().getNodePath()));
 						long size = node.getNodeInfo().getSize();
 						
@@ -180,7 +179,7 @@ public class UdtServlet extends HttpServlet implements Runnable {
 					
 					logger.debug("Receiving node through UDT: "+job.getTarget());
 					
-					StorageManager backend = StorageManagerFactory.getInstance().getStorageManager(job.getUsername());
+					StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
 
 					try {
 

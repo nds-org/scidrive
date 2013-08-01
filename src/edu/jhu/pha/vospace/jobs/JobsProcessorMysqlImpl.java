@@ -33,7 +33,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
-import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.protocol.ProtocolHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 

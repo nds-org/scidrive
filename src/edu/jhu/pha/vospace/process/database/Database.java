@@ -16,6 +16,7 @@
 package edu.jhu.pha.vospace.process.database;
 
 import java.util.ArrayList;
+
 import org.apache.tika.metadata.Metadata;
 
 import edu.jhu.pha.vospace.process.sax.AsciiTable;

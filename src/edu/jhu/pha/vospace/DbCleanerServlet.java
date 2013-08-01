@@ -15,7 +15,7 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

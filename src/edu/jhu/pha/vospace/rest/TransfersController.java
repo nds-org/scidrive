@@ -20,7 +20,6 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -34,7 +33,6 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -45,7 +43,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -57,8 +54,8 @@ import org.jdom.input.SAXBuilder;
 import com.generationjava.io.xml.SimpleXmlWriter;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
@@ -66,7 +63,6 @@ import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.oauth.VoboxUser;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
-import edu.jhu.pha.vosync.exception.ForbiddenException;
 
 /**
  * Provides the REST service for /transfers/ path: the functions for manipulating the transfer jobs
