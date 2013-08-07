@@ -17,6 +17,7 @@ package edu.jhu.pha.vospace.oauth;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
@@ -38,6 +39,8 @@ import org.openid4java.discovery.DiscoveryInformation;
 import org.openid4java.message.AuthRequest;
 import org.openid4java.message.ParameterList;
 import org.openid4java.message.ax.FetchRequest;
+
+import com.sun.jersey.api.uri.UriBuilderImpl;
 
 import edu.jhu.pha.vospace.BaseServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
@@ -279,6 +282,10 @@ public class AuthorizationServlet extends BaseServlet {
             MySQLOAuthProvider2.markAsAuthorized(reqToken, username);
 
             if(null != callbackUrl && !callbackUrl.isEmpty()){
+            	if(callbackUrl.indexOf('?')<=0)
+            		callbackUrl += "?"+"oauth_token="+reqToken.getToken();
+            	else
+            		callbackUrl += "&"+"oauth_token="+reqToken.getToken();
             	logger.debug("Redirecting user to "+callbackUrl);
             	response.sendRedirect(callbackUrl);
             } else {
