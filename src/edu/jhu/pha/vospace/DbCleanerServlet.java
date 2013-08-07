@@ -68,12 +68,13 @@ public class DbCleanerServlet extends HttpServlet {
 	                                if(resSet.next()) {
 	                                	String username = resSet.getString("identity");
 	                                	
+	                                	Node newNode = null;
 	                                	try {
 		                                	VospaceId uri = new VospaceId(new NodePath(resSet.getString("container_name")+"/"+resSet.getString("path")));
 		                                	
 		                                	logger.debug("Removing "+uri.toString()+"of user "+username);
 		                                	
-		                                	Node newNode = NodeFactory.getNode(uri, username);
+		                                	newNode = NodeFactory.getNode(uri, username);
 	
 		                    				newNode.getStorage().remove(newNode.getUri().getNodePath(), true);
 	                    					newNode.getMetastore().remove(newNode.getUri());
@@ -88,6 +89,10 @@ public class DbCleanerServlet extends HttpServlet {
 	                    					}
 	                    				} catch(Exception ex) {
 	                                		ex.printStackTrace();
+	                                		if(null != newNode) {
+	                                			newNode.markRemoved(false);
+	                                			logger.error("Error removing the node "+newNode.getUri()+" : "+ex.getMessage());
+	                                		}
 	                                	}
 		                            	return true;
 	                                }

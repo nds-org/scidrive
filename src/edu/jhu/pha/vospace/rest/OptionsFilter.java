@@ -43,6 +43,8 @@ public class OptionsFilter implements ContainerResponseFilter {
 			response.getHttpHeaders().add("WWW-Authenticate", "OAuth realm=\""+request.getBaseUri().getScheme()+"://"+request.getBaseUri().getHost()+"\"");
 		}
 		
+		response.getHttpHeaders().add("Cache-Control", "no-cache");
+		response.getHttpHeaders().add("Expires", "-1");
 		return response;
 	}
 }
