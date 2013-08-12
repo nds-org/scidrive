@@ -125,6 +125,6 @@ public interface MetaStore {
 	 * @param properties
 	 * @return
 	 */
-	public Map<String, String> getProperties(VospaceId identifier, PropertyType properties);
+	public Map<String, String> getProperties(VospaceId identifier);
 
 }

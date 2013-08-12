@@ -20,6 +20,8 @@ import javax.ws.rs.core.Response.Status;
 
 public class NotFoundException extends DropboxException {
 
+	private static final long serialVersionUID = 1593101138408712823L;
+
 	public NotFoundException(String message) {
 		super(Response.status(Status.NOT_FOUND).entity(DropboxException.constructBody(message)).type("application/json").build());
 	}

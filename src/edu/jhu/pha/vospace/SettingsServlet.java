@@ -20,7 +20,7 @@ import javax.servlet.http.HttpServlet;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.ConfigurationFactory;
+import org.apache.commons.configuration.DefaultConfigurationBuilder;
 import org.apache.log4j.Logger;
 
 /**
@@ -36,8 +36,8 @@ public class SettingsServlet extends HttpServlet {
 	
 	@Override
 	public void init() throws ServletException {
-		ConfigurationFactory factory = new ConfigurationFactory(getServletConfig().getInitParameter("settingsFileName"));
 		try {
+			DefaultConfigurationBuilder factory = new DefaultConfigurationBuilder(getServletConfig().getInitParameter("settingsFileName"));
 			Configuration config = factory.getConfiguration();
 			getServletContext().setAttribute("configuration", config);
 			SettingsServlet.config = config;

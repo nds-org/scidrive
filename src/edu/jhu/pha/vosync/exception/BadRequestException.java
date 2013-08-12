@@ -20,6 +20,8 @@ import javax.ws.rs.core.Response.Status;
 
 public class BadRequestException extends DropboxException {
 
+	private static final long serialVersionUID = 2851558733145784283L;
+
 	public BadRequestException(String message) {
 		super(Response.status(Status.BAD_REQUEST).entity(DropboxException.constructBody(message)).type("application/json").build());
 	}

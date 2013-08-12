@@ -30,8 +30,6 @@ import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.rest.JobDescription;
-import edu.jhu.pha.vospace.storage.StorageManager;
-import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 
 /**
  * This class handles the implementation details for the HTTP 1.1 GET protocol
@@ -42,7 +40,7 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 	
 	/*
 	 * (non-Javadoc)
-	 * @see edu.caltech.vao.vospace.protocol.ProtocolHandler#getUri()
+	 * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#getUri()
 	 */
 	@Override
 	public String getUri() {
@@ -51,14 +49,12 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 
     /*
      * (non-Javadoc)
-     * @see edu.caltech.vao.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
+     * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
      */
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException, URISyntaxException{
 		String getFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpget"));
 		
-		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
-
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		
 		HttpGet get = new HttpGet(getFileUrl);

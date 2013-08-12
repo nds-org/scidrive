@@ -15,8 +15,6 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.node;
 
-import org.apache.log4j.Logger;
-
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.MetaStore;
@@ -25,8 +23,7 @@ import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 /** 
  * A factory for creating nodes
  */
-public class NodeFactory <T extends Node> {
-	private static final Logger logger = Logger.getLogger(NodeFactory.class);
+public class NodeFactory {
 	private NodeFactory() {}
 
 	public static <T extends Node> T createNode(VospaceId uri, String username, NodeType nodeType) {

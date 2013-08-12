@@ -523,7 +523,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public void updateUserProperties(final VospaceId identifier, final Map<String, String> properties)  {
         DbPoolServlet.goSql("Updating properties",
-        		"INSERT IGNORE INTO properties (property_uri, property_type) VALUES (?, 'property')",
+        		"INSERT IGNORE INTO properties (property_uri) VALUES (?)",
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -622,7 +622,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	}
 
 	@Override
-	public Map<String, String> getProperties(final VospaceId identifier, final PropertyType type) {
+	public Map<String, String> getProperties(final VospaceId identifier) {
 		return DbPoolServlet.goSql("Get node properties",
         		"select property_uri, property_value from node_properties "+
         		"JOIN properties ON node_properties.property_id = properties.property_id "+
@@ -634,12 +634,10 @@ public class MySQLMetaStore2 implements MetaStore{
                     @Override
                     public Map<String, String> go(Connection conn, PreparedStatement stmt) throws SQLException {
                     	
-                    	Map<String, String> map = new HashMap();
-                    	logger.debug(type.name());
+                    	Map<String, String> map = new HashMap<String, String>();
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
                         stmt.setString(3, owner);
-                        stmt.setString(4, type.name());
                         ResultSet resSet = stmt.executeQuery();
                         while(resSet.next()) {
                         	map.put(resSet.getString("property_uri"), resSet.getString("property_value"));

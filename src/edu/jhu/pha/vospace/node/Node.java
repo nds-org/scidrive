@@ -51,6 +51,10 @@ public abstract class Node implements Cloneable {
 	public enum PropertyType {property, accepts, provides, contains};
 	private final String VOS_NAMESPACE = "http://www.ivoa.net/xml/VOSpace/v2.0";
 	private final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
+
+	private static final String DATE_PROPERTY = "ivo://ivoa.net/vospace/core#date";
+	private static final String LENGTH_PROPERTY = "ivo://ivoa.net/vospace/core#length";
+	private static final String CONTENTTYPE_PROPERTY = "ivo://ivoa.net/vospace/core#contenttype";
 	
 	MetaStore _metastore = null;
 	StorageManager _storage = null;
@@ -213,11 +217,11 @@ public abstract class Node implements Cloneable {
 
 			if(detail == Detail.max) {
 			    xsw.writeStartElement("properties");
-					Map<String, String> properties = this.getMetastore().getProperties(this.getUri(), PropertyType.property);
-					properties.put(conf.getString("core.property.length"), Long.toString(getNodeInfo().getSize()));
-					properties.put(conf.getString("core.property.date"), dropboxDateFormat.format(getNodeInfo().getMtime()));
+					Map<String, String> properties = this.getMetastore().getProperties(this.getUri());
+					properties.put(LENGTH_PROPERTY, Long.toString(getNodeInfo().getSize()));
+					properties.put(DATE_PROPERTY, dropboxDateFormat.format(getNodeInfo().getMtime()));
 					if(this.getType() == NodeType.DATA_NODE) {
-						properties.put(conf.getString("core.property.contenttype"), getNodeInfo().getContentType());
+						properties.put(CONTENTTYPE_PROPERTY, getNodeInfo().getContentType());
 					}
 					
 					for(String propUri: properties.keySet()) {
@@ -270,7 +274,7 @@ public abstract class Node implements Cloneable {
 		switch(type) {
 		case property:
 			if(null == this.properties)
-				this.properties = this.getMetastore().getProperties(this.getUri(), PropertyType.property);
+				this.properties = this.getMetastore().getProperties(this.getUri());
 			return this.properties;
 		default:
 			return null;

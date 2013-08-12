@@ -40,7 +40,7 @@ public class UdtGetProtocolHandler implements ProtocolHandler {
 	
 	/*
 	 * (non-Javadoc)
-	 * @see edu.caltech.vao.vospace.protocol.ProtocolHandler#getUri()
+	 * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#getUri()
 	 */
 	@Override
 	public String getUri() {
@@ -49,7 +49,7 @@ public class UdtGetProtocolHandler implements ProtocolHandler {
 
     /*
      * (non-Javadoc)
-     * @see edu.caltech.vao.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
+     * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
      */
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException{

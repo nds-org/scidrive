@@ -21,8 +21,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -47,6 +45,14 @@ public class MetadataController {
 	private static final Logger logger = Logger.getLogger(MetadataController.class);
 	private static Configuration conf = SettingsServlet.getConfig();;
 	
+	private static final String VIEW_ANY = "ivo://ivoa.net/vospace/core#anyview";
+	private static final String VIEW_DEFAULT = "ivo://ivoa.net/vospace/core#defaultview";
+	private static final String VIEW_DATA = "ivo://edu.jhu/vospace/views#data";
+	private static final String VIEW_JSON = "ivo://edu.jhu/vospace/views#json";
+	
+	private static final String[] ACCEPTS_VIEW = {VIEW_ANY};
+	private static final String[] PROVIDES_VIEW = {VIEW_DEFAULT, VIEW_DATA, VIEW_JSON};
+
 	/**
 	 * Returns the observatory supported protocols
 	 * @return The supported protocols in VOSpace xml format
@@ -60,13 +66,13 @@ public class MetadataController {
 			xw.writeEntity("protocols");
 			
 			xw.writeEntity("accepts");
-			for(String protocol: (List<String>)conf.getList("transfers.protocols.accepts")){
+			for(String protocol: conf.getStringArray("transfers.protocols.accepts")){
 				xw.writeEntity("protocol").writeAttribute("uri", protocol).endEntity();
 			}
 			xw.endEntity();
 			
 			xw.writeEntity("provides");
-			for(String protocol: (List<String>)conf.getList("transfers.protocols.provides")){
+			for(String protocol: conf.getStringArray("transfers.protocols.provides")){
 				xw.writeEntity("protocol").writeAttribute("uri", protocol).endEntity();
 			}
 			xw.endEntity();
@@ -96,13 +102,13 @@ public class MetadataController {
 			xw.writeEntity("views");
 			
 			xw.writeEntity("accepts");
-			for(String view: (List<String>)conf.getList("core.views.accepts")){
+			for(String view: ACCEPTS_VIEW){
 				xw.writeEntity("view").writeAttribute("uri", view).endEntity();
 			}
 			xw.endEntity();
 			
 			xw.writeEntity("provides");
-			for(String view: (List<String>)conf.getList("core.views.provides")){
+			for(String view: PROVIDES_VIEW){
 				xw.writeEntity("view").writeAttribute("uri", view).endEntity();
 			}
 			xw.endEntity();
@@ -129,15 +135,39 @@ public class MetadataController {
 			xw.writeEntity("properties");
 			
 			xw.writeEntity("accepts");
-			for(String prop: (List<String>)conf.getList("core.properties.accepts")){
-				xw.writeEntity("property").writeAttribute("uri", prop).endEntity();
-			}
+	        DbPoolServlet.goSql("Retrieving accepts properties",
+	                "SELECT property_uri from properties where property_accepts = 1",
+	                new SqlWorker<Boolean>() {
+	                    @Override
+	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	                        ResultSet rs = stmt.executeQuery();
+	                        while (rs.next()) {
+	                        	try {
+	                        		xw.writeEntity("property").writeAttribute("uri", rs.getString(1)).endEntity();
+	                        	} catch(IOException ex) {logger.error(ex.getMessage());};
+	                        }
+	                    	return true;
+	                    }
+	                }
+	        );
 			xw.endEntity();
 			
 			xw.writeEntity("provides");
-			for(String prop: (List<String>)conf.getList("core.properties.provides")){
-				xw.writeEntity("property").writeAttribute("uri", prop).endEntity();
-			}
+	        DbPoolServlet.goSql("Retrieving provides properties",
+	                "SELECT property_uri from properties where property_provides = 1",
+	                new SqlWorker<Boolean>() {
+	                    @Override
+	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	                        ResultSet rs = stmt.executeQuery();
+	                        while (rs.next()) {
+	                        	try {
+	                        		xw.writeEntity("property").writeAttribute("uri", rs.getString(1)).endEntity();
+	                        	} catch(IOException ex) {logger.error(ex.getMessage());};
+	                        }
+	                    	return true;
+	                    }
+	                }
+	        );
 			xw.endEntity();
 
 			xw.writeEntity("contains");

@@ -75,6 +75,12 @@ public class TransfersController {
 	private static Configuration conf = SettingsServlet.getConfig();;
 	private @Context SecurityContext security; 
 	
+	private static final String UWS_NAMESPACE = "http://www.ivoa.net/xml/UWS/v1.0";
+	private static final String VOS_NAMESPACE = "http://www.ivoa.net/xml/VOSpace/v2.0";
+	private static final String XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+	private static final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
+	private static final String SCHEMA_LOCATION = "http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd";
+
 	/**
 	 * Manages the transfers methods:
 	 * sending data to a service (pushToVoSpace)
@@ -128,7 +134,6 @@ public class TransfersController {
 
 			SAXBuilder xmlBuilder = new SAXBuilder();
 			Element nodeElm = xmlBuilder.build(strRead).getRootElement();
-			//List<Element> paramNodes = nodeElm.getChild("jobInfo",Namespace.getNamespace(conf.getString("namespace.uws"))).getChild("transfer",Namespace.getNamespace(conf.getString("namespace.vos"))).getChildren();
 			List<Element> paramNodes = nodeElm.getChildren();
 			for(Iterator<Element> it = paramNodes.iterator(); it.hasNext();){
 				Element param = it.next();
@@ -165,7 +170,7 @@ public class TransfersController {
 					job.setKeepBytes(Boolean.parseBoolean(param.getValue()));
 				} else if(param.getName().equals("protocol")){
 					String protocol = param.getAttributeValue("uri");
-					String protocolEndpoint = param.getChildText("protocolEndpoint", Namespace.getNamespace(conf.getString("namespace.vos")));
+					String protocolEndpoint = param.getChildText("protocolEndpoint", Namespace.getNamespace(VOS_NAMESPACE));
 					
 					if(job.getDirection().equals(DIRECTION.PULLFROMVOSPACE) || job.getDirection().equals(DIRECTION.PUSHTOVOSPACE)){
 						protocolEndpoint = conf.getString("application.url")+"/data/"+job.getId();
@@ -229,11 +234,11 @@ public class TransfersController {
 			JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 			
 			xw.writeEntity("uws:job").
-				writeAttribute("xmlns:uws", conf.getString("namespace.uws")).
-				writeAttribute("xmlns:vos", conf.getString("namespace.vos")).
-				writeAttribute("xmlns:xlink", conf.getString("namespace.xlink")).
-				writeAttribute("xmlns:xsi", conf.getString("namespace.xsi")).
-				writeAttribute("xmlns:schemaLocation", conf.getString("namespace.schema_location"));
+				writeAttribute("xmlns:uws", UWS_NAMESPACE).
+				writeAttribute("xmlns:vos", VOS_NAMESPACE).
+				writeAttribute("xmlns:xlink", XLINK_NAMESPACE).
+				writeAttribute("xmlns:xsi", XSI_NAMESPACE).
+				writeAttribute("xmlns:schemaLocation", SCHEMA_LOCATION);
 
 		  
 			xw.writeEntity("uws:jobId").writeText(jobId).endEntity();
@@ -270,16 +275,19 @@ public class TransfersController {
 
 						switch(job.getDirection()){
 							case PULLFROMVOSPACE:
-								xw.writeEntity("vos:direction").writeText(conf.getString("transfers.direction.pull_from_vospace")).endEntity();
+								xw.writeEntity("vos:direction").writeText("pullFromVoSpace").endEntity();
 								break;
 							case PULLTOVOSPACE:
-								xw.writeEntity("vos:direction").writeText(conf.getString("transfers.direction.pull_to_vospace")).endEntity();
+								xw.writeEntity("vos:direction").writeText("pullToVoSpace").endEntity();
 								break;
 							case PUSHFROMVOSPACE:
-								xw.writeEntity("vos:direction").writeText(conf.getString("transfers.direction.push_from_vospace")).endEntity();
+								xw.writeEntity("vos:direction").writeText("pushFromVoSpace").endEntity();
 								break;
 							case PUSHTOVOSPACE:
-								xw.writeEntity("vos:direction").writeText(conf.getString("transfers.direction.push_to_vospace")).endEntity();
+								xw.writeEntity("vos:direction").writeText("pushToVoSpace").endEntity();
+								break;
+							case LOCAL:
+								xw.writeEntity("vos:direction").writeText(job.getDirectionTarget()).endEntity();
 								break;
 						}
 
@@ -366,9 +374,9 @@ public class TransfersController {
 		StringWriter writ = new StringWriter();
 		SimpleXmlWriter xw = new SimpleXmlWriter(writ);
 		try {
-			xw.writeEntity("ns0:results").writeAttribute("xmlns:ns0", conf.getString("namespace.uws"));
+			xw.writeEntity("ns0:results").writeAttribute("xmlns:ns0", UWS_NAMESPACE);
 				xw.writeEntity("ns0:result").
-					writeAttribute("xmlns:ns1", conf.getString("namespace.xlink")).
+					writeAttribute("xmlns:ns1", XLINK_NAMESPACE).
 					writeAttribute("id","transferDetails").
 					writeAttribute("ns1:href",conf.getString("application.url")+"/transfers/"+jobId+"/results/details").endEntity();
 			xw.endEntity();
@@ -402,16 +410,19 @@ public class TransfersController {
 			xw.writeEntity("target").writeText(job.getTarget()).endEntity();
 			switch(job.getDirection()){
 				case PULLFROMVOSPACE:
-					xw.writeEntity("direction").writeText(conf.getString("transfers.direction.pull_from_vospace")).endEntity();
+					xw.writeEntity("vos:direction").writeText("pullFromVoSpace").endEntity();
 					break;
 				case PULLTOVOSPACE:
-					xw.writeEntity("direction").writeText(conf.getString("transfers.direction.pull_to_vospace")).endEntity();
+					xw.writeEntity("vos:direction").writeText("pullToVoSpace").endEntity();
 					break;
 				case PUSHFROMVOSPACE:
-					xw.writeEntity("direction").writeText(conf.getString("transfers.direction.push_from_vospace")).endEntity();
+					xw.writeEntity("vos:direction").writeText("pushFromVoSpace").endEntity();
 					break;
 				case PUSHTOVOSPACE:
-					xw.writeEntity("direction").writeText(conf.getString("transfers.direction.push_to_vospace")).endEntity();
+					xw.writeEntity("vos:direction").writeText("pushToVoSpace").endEntity();
+					break;
+				case LOCAL:
+					xw.writeEntity("vos:direction").writeText(job.getDirectionTarget()).endEntity();
 					break;
 			}
 			for(String view: job.getViews())

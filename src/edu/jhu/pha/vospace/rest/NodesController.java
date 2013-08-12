@@ -39,10 +39,8 @@ import javax.ws.rs.core.SecurityContext;
 import nu.xom.Builder;
 import nu.xom.Serializer;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.ConflictException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
@@ -66,7 +64,6 @@ import edu.jhu.pha.vospace.oauth.VoboxUser;
 @Path("/nodes/")
 public class NodesController {
 	private static final Logger logger = Logger.getLogger(NodesController.class);
-	private static final Configuration conf = SettingsServlet.getConfig();
 	private @Context SecurityContext security; 
 
 	@GET

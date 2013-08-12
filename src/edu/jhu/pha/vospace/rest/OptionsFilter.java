@@ -17,15 +17,12 @@ package edu.jhu.pha.vospace.rest;
 
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.log4j.Logger;
-
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerResponse;
 import com.sun.jersey.spi.container.ContainerResponseFilter;
 
 
 public class OptionsFilter implements ContainerResponseFilter {
-	private static final Logger logger = Logger.getLogger(OptionsFilter.class);
 	
 	@Override
 	public ContainerResponse filter(ContainerRequest request,

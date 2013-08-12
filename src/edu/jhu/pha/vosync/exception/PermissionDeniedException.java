@@ -20,6 +20,8 @@ import javax.ws.rs.core.Response.Status;
 
 public class PermissionDeniedException extends DropboxException {
 
+	private static final long serialVersionUID = 4766001525807312325L;
+
 	public PermissionDeniedException(String message) {
 		super(Response.status(Status.BAD_REQUEST).entity(DropboxException.constructBody(message)).type("application/json").build());
 	}

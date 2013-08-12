@@ -52,7 +52,6 @@ public class ContainerNode extends DataNode {
 	
 	private static final Logger logger = Logger.getLogger(ContainerNode.class);
 	private static MappingJsonFactory f = new MappingJsonFactory();
-	private static ObjectMapper objMapper = new ObjectMapper();
 
     /**
      * Construct a Node from the byte array
@@ -194,8 +193,6 @@ public class ContainerNode extends DataNode {
 					g.writeTree(rootNode);*/
 	        	}
 
-	        	g.close();
-	        	
 			} catch (JsonGenerationException e) {
 				e.printStackTrace();
 				throw new InternalServerErrorException("Error generationg JSON: "+e.getMessage());
@@ -205,6 +202,12 @@ public class ContainerNode extends DataNode {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 				throw new InternalServerErrorException("Error generating MD5 hash: "+e.getMessage());
+			} finally {
+				try {
+					g.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 
 			if(format.equals("json-dropbox")) {
@@ -374,7 +377,7 @@ public class ContainerNode extends DataNode {
 			VospaceId newNodeUri = getUri().appendPath(new NodePath(filename));
 			getStorage().putBytes(newNodeUri.getNodePath(), data);
 			if(!getMetastore().isStored(newNodeUri)){
-				DataNode node = (DataNode)NodeFactory.createNode(newNodeUri, owner, NodeType.DATA_NODE);
+				DataNode node = NodeFactory.<DataNode>createNode(newNodeUri, owner, NodeType.DATA_NODE);
 				node.setNode(null);
 			}
 		} catch (URISyntaxException e) {

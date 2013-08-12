@@ -15,9 +15,6 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.process;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-
 import javax.servlet.http.HttpServlet;
 
 import org.apache.commons.configuration.Configuration;
@@ -28,7 +25,6 @@ import edu.jhu.pha.vospace.SettingsServlet;
 public class NodeProcessingServlet extends HttpServlet {
 
 	private static final long serialVersionUID = -2827132663634842769L;
-	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static final Logger logger = Logger.getLogger(NodeProcessingServlet.class);
 
     private Thread nodeProcThread = null;

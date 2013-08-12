@@ -22,7 +22,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
@@ -37,11 +36,9 @@ import edu.jhu.pha.vospace.storage.StorageManagerFactory;
  */
 public class HttpPutProtocolHandler implements ProtocolHandler {
 
-	private static final Logger logger = Logger.getLogger(HttpPutProtocolHandler.class);
-	
 	/*
 	 * (non-Javadoc)
-	 * @see edu.caltech.vao.vospace.protocol.ProtocolHandler#getUri()
+	 * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#getUri()
 	 */
 	@Override
 	public String getUri() {
@@ -50,7 +47,7 @@ public class HttpPutProtocolHandler implements ProtocolHandler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see edu.caltech.vao.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
+	 * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
 	 */
 	@Override
     public void invoke(JobDescription job) throws IOException {

@@ -43,12 +43,11 @@ import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 
 public abstract class JobsProcessor implements Runnable  {
 
-	private static final long serialVersionUID = 4011217154603941869L;
 	private static final Logger logger = Logger.getLogger(JobsProcessor.class);
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	static Configuration conf = SettingsServlet.getConfig();
-	Hashtable<String, Class> protocolHandlers;
+	Hashtable<String, Class<? extends ProtocolHandler>> protocolHandlers;
 	int jobsPoolSize;
 
 	public JobsProcessor() {
@@ -178,12 +177,12 @@ public abstract class JobsProcessor implements Runnable  {
 	
 	private void initProtocolHandlers(){
 		String confProtocolsPrefix = "transfers.protocol.handler";
-		protocolHandlers = new Hashtable<String, Class>();
+		protocolHandlers = new Hashtable<String, Class<? extends ProtocolHandler>>();
 		for(Iterator<String> it = conf.getKeys(confProtocolsPrefix); it.hasNext();){
 			String protocolHandlerKey = it.next();
 			String protocolName = protocolHandlerKey.substring(confProtocolsPrefix.length()+1);
 			try {
-				Class handlerClass = Class.forName(conf.getString(protocolHandlerKey));
+				Class<? extends ProtocolHandler> handlerClass = (Class<? extends ProtocolHandler>)Class.forName(conf.getString(protocolHandlerKey));
 				protocolHandlers.put(conf.getString("transfers.protocol."+protocolName), handlerClass);
 			} catch(ClassNotFoundException ex) {
 				logger.error("Unable to initialise the protocol handler "+protocolName+": Class "+conf.getString(protocolHandlerKey)+" not found.");

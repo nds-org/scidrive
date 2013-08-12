@@ -97,13 +97,9 @@ public class UdtServlet extends HttpServlet implements Runnable {
 
 		private final NumberFormat format=NumberFormat.getNumberInstance();
 
-		private boolean verbose = false;
-
-		private final boolean memMapped;
 		public RequestRunner(UDTSocket socket){
 			this.socket=socket;
 			format.setMaximumFractionDigits(3);
-			memMapped=false;//true;
 		}
 
 		public void run(){

@@ -30,10 +30,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
-import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
@@ -56,7 +54,6 @@ public class DataController {
 	
 	private static final Logger logger = Logger.getLogger(DataController.class);
 	private @Context SecurityContext security; 
-	private static Configuration conf = SettingsServlet.getConfig();
 	
 	/**
 	 * Returns the data of a transfer

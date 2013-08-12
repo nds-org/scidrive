@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -55,6 +54,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
@@ -122,7 +122,7 @@ public class NodeProcessor extends Thread {
 	            	try {
 				    	QueueingConsumer.Delivery delivery = consumer.nextDelivery();
 				    	
-				    	Map<String,Object> nodeData = (new ObjectMapper()).readValue(delivery.getBody(), 0, delivery.getBody().length, Map.class);
+				    	Map<String,Object> nodeData = (new ObjectMapper()).readValue(delivery.getBody(), 0, delivery.getBody().length, new TypeReference<HashMap<String,Object>>() {});
 
 		            	channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
 						final Node node = NodeFactory.getNode(new VospaceId((String)nodeData.get("uri")), (String)nodeData.get("owner"));
@@ -153,7 +153,7 @@ public class NodeProcessor extends Thread {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			Vector<ProcessorConfig> curProcessors = new Vector();
+			        			Vector<ProcessorConfig> curProcessors = new Vector<ProcessorConfig>();
 			        			for(String checkProcId: processors.keySet()){
 			        				ProcessorConfig procConf = processors.get(checkProcId);
 			        				if(procConf.getMimeTypes().contains(type.toString()))
@@ -333,14 +333,14 @@ public class NodeProcessor extends Thread {
 			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
 			this.title = conf.getString("//processor[id='"+processorId+"']/title", processorId);
 
-			List<String> list = conf.getList("//processor[id='"+processorId+"']/schema/field/@name");
+			String[] namesArray = conf.getStringArray("//processor[id='"+processorId+"']/schema/field/@name");
 			CredentialsSchema schema = new CredentialsSchema();
 			schema.description = conf.getString("//processor[id='"+processorId+"']/description", "");
 
-			if(list != null && list.size() > 0){
-				for(Iterator<String> it = list.listIterator(); it.hasNext();) {
+			if(namesArray != null && namesArray.length > 0){
+				for(String fieldName: namesArray) {
 					CredentialsSchemaField field = new CredentialsSchemaField();
-					field.setName(it.next());
+					field.setName(fieldName);
 					field.setRequired(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@required"));
 					field.setDefaultValue(conf.getString("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@default"));
 					field.setPassword(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@ispassword", false));
@@ -426,10 +426,6 @@ public class NodeProcessor extends Thread {
 		public void setPassword(boolean isPassword) {
 			this.isPassword = isPassword;
 		}
-    }
-    
-    public static void main(String[] s) {
-    	Configuration conf = NodeProcessor.conf;
     }
     
 }

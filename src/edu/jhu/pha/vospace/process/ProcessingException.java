@@ -23,6 +23,8 @@ package edu.jhu.pha.vospace.process;
  */
 public class ProcessingException extends Exception {
 
+	private static final long serialVersionUID = -1762128333122718113L;
+
 	public ProcessingException(String message) {
 		super(message);
 	}
