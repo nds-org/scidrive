@@ -99,10 +99,11 @@ public class MySQLOAuthProvider2 {
 	
     public static synchronized Token getAccessToken(final String tokenStr) {
     	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
-        		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission, is_share_token "+
+        		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission, share_id "+
         				"from oauth_accessors "+
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
+        				"left outer join container_shares on oauth_accessors.share_key = container_shares.share_key "+
         				"left outer join users on users.user_id = containers.user_id "+
         				"left outer join user_identities on users.user_id = user_identities.user_id "+
         				"where access_token = ? limit 1",
@@ -116,7 +117,7 @@ public class MySQLOAuthProvider2 {
             			if(rs.next()){
             				
             				Set<USER_ROLES> rolesSet = new HashSet<USER_ROLES>();
-            				if(!rs.getBoolean("is_share_token")) {
+            				if(null == rs.getString("share_id")) {
             					rolesSet.add(USER_ROLES.user);
             				} else {
             					if(rs.getBoolean("accessor_write_permission"))
@@ -232,8 +233,9 @@ public class MySQLOAuthProvider2 {
 	        );
         } else {
 	        DbPoolServlet.goSql("Insert new request token",
-	        		"insert into oauth_accessors (request_token, token_secret, consumer_id, container_id, created, accessor_write_permission, is_share_token) "+
-	        				"select ?, ?, consumer_id , container_id, ?, share_write_permission, 1 from oauth_consumers, container_shares "+
+	        		"insert into oauth_accessors (request_token, token_secret, consumer_id, container_id, created, accessor_write_permission, share_key) "+
+	        				"select ?, ?, consumer_id , container_id, ?, share_write_permission, share_key "+
+	        				"from oauth_consumers, container_shares "+
 	        				"where consumer_key = ? and share_id = ?",
 	                new SqlWorker<Boolean>() {
 	                    @Override
