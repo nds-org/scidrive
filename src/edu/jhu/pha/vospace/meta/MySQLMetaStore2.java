@@ -629,7 +629,7 @@ public class MySQLMetaStore2 implements MetaStore{
         		"JOIN nodes ON node_properties.node_id = nodes.node_id " +
 				"JOIN containers ON nodes.container_id = containers.container_id "+
         		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
-        		"WHERE `current_rev` = 1 AND `container_name` = ? AND `path` = ? AND `identity` = ? AND `property_type` = ?",
+        		"WHERE `current_rev` = 1 AND `container_name` = ? AND `path` = ? AND `identity` = ?",
                 new SqlWorker<Map<String, String>>() {
                     @Override
                     public Map<String, String> go(Connection conn, PreparedStatement stmt) throws SQLException {
