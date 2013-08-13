@@ -239,8 +239,8 @@ public class DropboxService {
 			g2.writeStartObject();
 			
 			g2.writeNumberField("shared",0);
-			g2.writeNumberField("quota",info.getSoftLimit());
-			g2.writeNumberField("normal",info.getBytesUsed()/GIGABYTE);
+			g2.writeNumberField("quota",info.getSoftLimit()*GIGABYTE);
+			g2.writeNumberField("normal",info.getBytesUsed());
 			
 			g2.writeEndObject();
 
