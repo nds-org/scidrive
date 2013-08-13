@@ -103,8 +103,6 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
     public static final String PROPERTY_IGNORE_PATH_PATTERN = "com.sun.jersey.config.property.oauth.ignorePathPattern";
     /** Can be set to max. age (in milliseconds) of nonces that should be tracked (default = 300000 ms = 5 min). */
     public static final String PROPERTY_MAX_AGE = "com.sun.jersey.config.property.oauth.maxAge";
-    /** Property that can be set to frequency of collecting nonces exceeding max. age (default = 100 = every 100 requests). */
-    public static final String PROPERTY_GC_PERIOD = "com.sun.jersey.config.property.oauth.gcPeriod";
     /** If set to true makes the correct OAuth authentication optional - i.e. instead of returning the appropriate status code
      * ({@link Response.Status#BAD_REQUEST} or {@link Response.Status#UNAUTHORIZED}) the filter
      * will ignore this request (as if it was not authenticated) and let the web application deal with it. */
@@ -114,13 +112,10 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
     private final OAuthProvider provider;
 
     /** Manages and validates incoming nonces. */
-    private final NonceManager nonces;
+    private final DbNonceManager nonces;
 
     /** Maximum age (in milliseconds) of timestamp to accept in incoming messages. */
     private final int maxAge;
-
-    /** Average requests to process between nonce garbage collection passes. */
-    private final int gcPeriod;
 
     /** Value to return in www-authenticate header when 401 response returned. */
     private final String wwwAuthenticateHeader;
@@ -145,11 +140,10 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
         // optional initialization parameters (defaulted)
         String realm = defaultInitParam(rc, PROPERTY_REALM, "default");
         maxAge = intValue(defaultInitParam(rc, PROPERTY_MAX_AGE, "300000")); // 5 minutes
-        gcPeriod = intValue(defaultInitParam(rc, PROPERTY_GC_PERIOD, "100")); // every 100 on average
         ignorePathPattern = pattern(defaultInitParam(rc, PROPERTY_IGNORE_PATH_PATTERN, null)); // no pattern
         optional = rc.getFeature(FEATURE_NO_FAIL);
 
-        nonces = new NonceManager(maxAge, gcPeriod);
+        nonces = new DbNonceManager(maxAge);
 
         // www-authenticate header for the life of the object
         wwwAuthenticateHeader = "OAuth realm=\"" + realm + "\"";
@@ -211,13 +205,11 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
 
         OAuthSecrets secrets = new OAuthSecrets().consumerSecret(consumer.getSecret());
         OAuthSecurityContext sc;
-        String nonceKey;
 
         if (token == null) {
             if (consumer.getPrincipal() == null) {
                 throw newUnauthorizedException();
             }
-            nonceKey = "c:" + consumerKey;
             sc = new OAuthSecurityContext(consumer, request.isSecure());
         } else {
             OAuthToken accessToken = provider.getAccessToken(token);
@@ -230,7 +222,6 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
                 throw newUnauthorizedException();
             }
 
-            nonceKey = "t:" + token;
             secrets.tokenSecret(accessToken.getSecret());
             sc = new OAuthSecurityContext(accessToken, request.isSecure());
         }
@@ -239,7 +230,7 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
             throw newUnauthorizedException();
         }
 
-        if (!nonces.verify(nonceKey, timestamp, nonce)) {
+        if (!nonces.verify(timestamp, nonce)) {
             throw newUnauthorizedException();
         }
 

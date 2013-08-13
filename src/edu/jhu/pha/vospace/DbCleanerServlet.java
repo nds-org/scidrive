@@ -16,6 +16,7 @@
 package edu.jhu.pha.vospace;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.HOURS;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -40,81 +41,100 @@ public class DbCleanerServlet extends HttpServlet {
 	
 	private static final long serialVersionUID = -6837095401346471188L;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
-    private ScheduledFuture<?> cleanerHandle;
+    private ScheduledFuture<?> nodesCleanerHandle, dbCleanerHandle;
     
     private final int NODE_EXPIRY_INTERVAL = SettingsServlet.getConfig().getInt("node_expiry", 10);
-    private final int RUN_PERIOD = SettingsServlet.getConfig().getInt("cleaner_period", 1);
+    private final int NODES_RUN_PERIOD = SettingsServlet.getConfig().getInt("cleaner_period", 1);
+    private final int DB_RUN_PERIOD = SettingsServlet.getConfig().getInt("db_cleaner_period", 12);
 
     private static final Logger logger = Logger.getLogger(DbCleanerServlet.class);
     
     @Override
 	public void init() {
-        final Runnable cleaner = new Runnable() {
-            @Override
-			public void run() {
-            	boolean res = true;
-            	while(res) {
-	            	res = DbPoolServlet.goSql("Cleaning DB nodes",
-	                		"select container_name, path, identity from nodes " +
-	                		"JOIN containers ON nodes.container_id = containers.container_id " +
-	                		"JOIN user_identities ON containers.user_id = user_identities.user_id " +
-	                		"where deleted = 1 and mtime < (NOW() - INTERVAL "+NODE_EXPIRY_INTERVAL+" MINUTE) order by path limit 1",
-	                        new SqlWorker<Boolean>() {
-	                            @Override
-	                            public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-	                                ResultSet resSet = stmt.executeQuery();
-	                                if(resSet.next()) {
-	                                	String username = resSet.getString("identity");
-	                                	
-	                                	Node newNode = null;
-	                                	try {
-		                                	VospaceId uri = new VospaceId(new NodePath(resSet.getString("container_name")+"/"+resSet.getString("path")));
-		                                	
-		                                	logger.debug("Removing "+uri.toString()+"of user "+username);
-		                                	
-		                                	newNode = NodeFactory.getNode(uri, username);
-	
-		                    				newNode.getStorage().remove(newNode.getUri().getNodePath(), true);
-	                    					newNode.getMetastore().remove(newNode.getUri());
-	
-	                    					if(!newNode.getUri().getNodePath().isRoot(false)) {
-			                    				// Update root container size
-		                    					ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
-		                    							new VospaceId(new NodePath(newNode.getUri().getNodePath().getContainerName())), 
-		                    							newNode.getOwner());
-		                    					newNode.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
-		                    					newNode.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-	                    					}
-	                    				} catch(Exception ex) {
-	                                		ex.printStackTrace();
-	                                		if(null != newNode) {
-	                                			newNode.markRemoved(false);
-	                                			logger.error("Error removing the node "+newNode.getUri()+" : "+ex.getMessage());
-	                                		}
-	                                	}
-		                            	return true;
-	                                }
-	                            	return false;
-	                            }
-	                        }
-	                );
-            	}
-            }
-        };
-
-        cleanerHandle =
-            scheduler.scheduleAtFixedRate(cleaner, 1, RUN_PERIOD, MINUTES);
+        final Runnable nodescleaner = new NodesRemover();
+        nodesCleanerHandle = scheduler.scheduleAtFixedRate(nodescleaner, (long)(Math.random()*NODES_RUN_PERIOD), NODES_RUN_PERIOD, MINUTES);
+        final Runnable dbcleaner = new DBCleaner();
+        dbCleanerHandle = scheduler.scheduleAtFixedRate(dbcleaner, (long)(Math.random()*DB_RUN_PERIOD), DB_RUN_PERIOD, HOURS);
     }
 
     @Override
     public void destroy() {
-    	cleanerHandle.cancel(true);
+    	nodesCleanerHandle.cancel(true);
+    	dbCleanerHandle.cancel(true);
     	scheduler.shutdownNow();
     	logger.info("Cleaner is terminating");
     }
         
+    private class NodesRemover implements Runnable {
+        @Override
+		public void run() {
+        	boolean res = true;
+        	while(res) {
+            	res = DbPoolServlet.goSql("Cleaning DB nodes",
+                		"select container_name, path, identity from nodes " +
+                		"JOIN containers ON nodes.container_id = containers.container_id " +
+                		"JOIN user_identities ON containers.user_id = user_identities.user_id " +
+                		"where deleted = 1 and mtime < (NOW() - INTERVAL "+NODE_EXPIRY_INTERVAL+" MINUTE) order by path limit 1",
+                        new SqlWorker<Boolean>() {
+                            @Override
+                            public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                                ResultSet resSet = stmt.executeQuery();
+                                if(resSet.next()) {
+                                	String username = resSet.getString("identity");
+                                	
+                                	Node newNode = null;
+                                	try {
+	                                	VospaceId uri = new VospaceId(new NodePath(resSet.getString("container_name")+"/"+resSet.getString("path")));
+	                                	
+	                                	logger.debug("Removing "+uri.toString()+"of user "+username);
+	                                	
+	                                	newNode = NodeFactory.getNode(uri, username);
+
+	                    				newNode.getStorage().remove(newNode.getUri().getNodePath(), true);
+                    					newNode.getMetastore().remove(newNode.getUri());
+
+                    					if(!newNode.getUri().getNodePath().isRoot(false)) {
+		                    				// Update root container size
+	                    					ContainerNode contNode = (ContainerNode)NodeFactory.getNode(
+	                    							new VospaceId(new NodePath(newNode.getUri().getNodePath().getContainerName())), 
+	                    							newNode.getOwner());
+	                    					newNode.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
+	                    					newNode.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
+                    					}
+                    				} catch(Exception ex) {
+                                		ex.printStackTrace();
+                                		if(null != newNode) {
+                                			newNode.markRemoved(false);
+                                			logger.error("Error removing the node "+newNode.getUri()+" : "+ex.getMessage());
+                                		}
+                                	}
+	                            	return true;
+                                }
+                            	return false;
+                            }
+                        }
+                );
+        	}
+        }
+    }
+
+    private class DBCleaner implements Runnable {
+        @Override
+		public void run() {
+            DbPoolServlet.goSql("Cleaning DB oauth nonces",
+        		"delete from oauth_nonces where timestamp < (UNIX_TIMESTAMP(NOW())-86400)*1000",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.executeUpdate();
+                    	return true;
+                    }
+            	}
+            );
+        }
+    }
 
 }
 
