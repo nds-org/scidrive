@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.Vector;
@@ -181,14 +182,14 @@ public class MySQLOAuthProvider2 {
      * @param shareId
      * @return
      */
-    public static synchronized Vector<String> getShareUsers(final String shareId) {
+    public static synchronized List<String> getShareUsers(final String shareId) {
         return DbPoolServlet.goSql("Get share user logins",
         		"select identity from user_identities JOIN user_groups ON user_groups.user_id = user_identities.user_id JOIN container_shares ON user_groups.group_id = container_shares.group_id AND container_shares.share_id = ?",
-                new SqlWorker<Vector<String>>() {
+                new SqlWorker<List<String>>() {
                     @Override
-                    public Vector<String> go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    public List<String> go(Connection conn, PreparedStatement stmt) throws SQLException {
             			stmt.setString(1, shareId);
-            			Vector<String> returnVect = new Vector<String>();
+            			List<String> returnVect = new Vector<String>();
             			ResultSet rs = stmt.executeQuery();
             			while(rs.next()){
             				returnVect.add(rs.getString(1));

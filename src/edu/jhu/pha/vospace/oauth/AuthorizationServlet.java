@@ -76,7 +76,7 @@ public class AuthorizationServlet extends BaseServlet {
         logger.debug("Handling request for \"" + request.getRequestURL() + "\"");
         try {
         	
-        	Vector<String> userLogins = null;
+        	List<String> userLogins = null;
         	if(isShareRequest(request)){
         		userLogins = MySQLOAuthProvider2.getShareUsers(request.getParameter("share"));
         		if(null == userLogins || userLogins.isEmpty()) { // open to any user TODO check NULL user
@@ -269,7 +269,7 @@ public class AuthorizationServlet extends BaseServlet {
     			throw new PermissionDeniedException("401 Unauthorized");
             if(null != reqToken.getAttributes().getFirst("root_container")){ // pre-shared container accessor
             	if(shareId != null) {//already created the share - user bound sharing
-	        		Vector<String> groupUserLogins = MySQLOAuthProvider2.getShareUsers(shareId);
+	        		List<String> groupUserLogins = MySQLOAuthProvider2.getShareUsers(shareId);
 	        		if(!groupUserLogins.contains(username)){ // the username of the one authorized != user that share was created for
 	        			throw new PermissionDeniedException("401 Unauthorized");
 	        		}

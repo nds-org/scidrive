@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -153,7 +154,7 @@ public class NodeProcessor extends Thread {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			Vector<ProcessorConfig> curProcessors = new Vector<ProcessorConfig>();
+			        			List<ProcessorConfig> curProcessors = new Vector<ProcessorConfig>();
 			        			for(String checkProcId: processors.keySet()){
 			        				ProcessorConfig procConf = processors.get(checkProcId);
 			        				if(procConf.getMimeTypes().contains(type.toString()))
@@ -316,7 +317,7 @@ public class NodeProcessor extends Thread {
     
     public static class ProcessorConfig {
     	private String id;
-    	private Vector<String> mimeTypes = new Vector<String>();
+    	private List<String> mimeTypes = new Vector<String>();
     	private String config;
     	private String processor;
     	private String handler;
@@ -353,7 +354,7 @@ public class NodeProcessor extends Thread {
     	public String getId() {
 			return id;
 		}
-		public Vector<String> getMimeTypes() {
+		public List<String> getMimeTypes() {
 			return mimeTypes;
 		}
 		public String getConfig() {
@@ -374,12 +375,12 @@ public class NodeProcessor extends Thread {
     }
     
     public static class CredentialsSchema {
-    	private Vector<CredentialsSchemaField> properties = new Vector<CredentialsSchemaField>();
+    	private List<CredentialsSchemaField> properties = new Vector<CredentialsSchemaField>();
     	private String description;
     	public void addField(CredentialsSchemaField field) {
     		this.properties.add(field);
     	}
-    	public Vector<CredentialsSchemaField> getFields() {
+    	public List<CredentialsSchemaField> getFields() {
     		return properties;
     	}
     	@Override
