@@ -49,6 +49,8 @@ public abstract class JobsProcessor implements Runnable  {
 	static Configuration conf = SettingsServlet.getConfig();
 	Hashtable<String, Class<? extends ProtocolHandler>> protocolHandlers;
 	int jobsPoolSize;
+	
+	private static JobsProcessor processor;
 
 	public JobsProcessor() {
         jobsPoolSize = conf.getInt("maxtransfers");
@@ -57,15 +59,10 @@ public abstract class JobsProcessor implements Runnable  {
 		initProtocolHandlers();
 	}
 		
-	public static Class<? extends JobsProcessor> getImplClass() {
-		Class<? extends JobsProcessor> jobsClass;
-		try {
-			jobsClass = (Class<? extends JobsProcessor>) Class.forName(conf.getString("jobsprocessor.class"));
-			return jobsClass;
-		} catch (ClassNotFoundException e) {
-			logger.error("Error in configuration: can't find the jobs processor class");
-			return null;
-		}
+	public static final JobsProcessor getDefaultImpl() {
+		if(null == processor)
+			processor = new JobsProcessorQueuedImpl();
+		return processor;
 	}
 	
 	/**
@@ -140,7 +137,7 @@ public abstract class JobsProcessor implements Runnable  {
 	 * Adds the new job to the SQL database
 	 * @param job The job description object
 	 */
-	protected static void submitJob(final String login, final JobDescription job) {
+	public void submitJob(final String login, final JobDescription job) {
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 		

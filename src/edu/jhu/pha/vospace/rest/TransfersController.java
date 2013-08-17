@@ -183,27 +183,14 @@ public class TransfersController {
 				}
 			}
 			
-			Method submitJobMethod = Class.forName(conf.getString("jobsprocessor.class")).getMethod("submitJob", String.class, JobDescription.class);
-			submitJobMethod.invoke(null, username, job);
+			JobsProcessor.getDefaultImpl().submitJob(username, job);
 		} catch (JDOMException e) {
 			e.printStackTrace();
 			throw new InternalServerErrorException(e);
 		} catch (IOException e) {
 			logger.error(e);
 			throw new InternalServerErrorException(e);
-		} catch (NoSuchMethodException e) {
-			logger.error("Error calling the job task: "+e.getMessage());
-			throw new InternalServerErrorException("InternalFault");
-		} catch (ClassNotFoundException e) {
-			logger.error("Error calling the job task: "+e.getMessage());
-			throw new InternalServerErrorException("InternalFault");
 		} catch (IllegalArgumentException e) {
-			logger.error("Error calling the job task: "+e.getMessage());
-			throw new InternalServerErrorException("InternalFault");
-		} catch (IllegalAccessException e) {
-			logger.error("Error calling the job task: "+e.getMessage());
-			throw new InternalServerErrorException("InternalFault");
-		} catch (InvocationTargetException e) {
 			logger.error("Error calling the job task: "+e.getMessage());
 			throw new InternalServerErrorException("InternalFault");
 		} finally {

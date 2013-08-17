@@ -47,7 +47,8 @@ public class JobsProcessorQueuedImpl extends JobsProcessor {
 	private Thread jobsThread = null;
 	private static Vector<Future> workers;
 	
-	public JobsProcessorQueuedImpl() {
+	JobsProcessorQueuedImpl() {
+		super();
         service = Executors.newCachedThreadPool();
         workers = new Vector<Future>();
 	}
@@ -177,8 +178,8 @@ public class JobsProcessorQueuedImpl extends JobsProcessor {
 		jobsThread.start();
 	}
 	
-	public static void submitJob(final String login, final JobDescription job) {
-		JobsProcessor.submitJob(login, job);
+	public void submitJob(final String login, final JobDescription job) {
+		super.submitJob(login, job);
 		if(job.getDirection() == DIRECTION.PUSHFROMVOSPACE || job.getDirection() == DIRECTION.PULLTOVOSPACE || job.getDirection() == DIRECTION.LOCAL) {
 			QueueConnector.goAMQP("submitJob", new QueueConnector.AMQPWorker<Boolean>() {
 				@Override

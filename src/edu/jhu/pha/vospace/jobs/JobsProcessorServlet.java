@@ -32,22 +32,8 @@ public class JobsProcessorServlet extends HttpServlet  {
 
 	private static final long serialVersionUID = 8829039248294774005L;
 	private static final Logger logger = Logger.getLogger(JobsProcessorServlet.class);
-	static Configuration conf = SettingsServlet.getConfig();;
-	private static JobsProcessor processor = null;
-
-	static {
-		try {
-			Class jobsHandlerClass = Class.forName(conf.getString("jobsprocessor.class"));
-			processor = (JobsProcessor)jobsHandlerClass.newInstance();
-		} catch(ClassNotFoundException e){
-			logger.error("Erorr initializing the JobsProcessorServlet: "+e.getMessage());
-		} catch (InstantiationException e) {
-			logger.error("Erorr initializing the JobsProcessorServlet: "+e.getMessage());
-		} catch (IllegalAccessException e) {
-			logger.error("Erorr initializing the JobsProcessorServlet: "+e.getMessage());
-		}
-
-	}
+	static Configuration conf = SettingsServlet.getConfig();
+	private static JobsProcessor processor = JobsProcessor.getDefaultImpl();
 
 	@Override
 	public void init() throws ServletException {

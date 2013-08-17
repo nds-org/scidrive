@@ -180,23 +180,13 @@ public class DataNode extends Node implements Cloneable {
 			job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
 			job.setUsername(getOwner());
 			
-			Method submitJobMethod;
 			String endpointUrl = null;
-			submitJobMethod = JobsProcessor.getImplClass().getMethod("submitJob", String.class, JobDescription.class);
-			submitJobMethod.invoke(null, owner, job);
+			JobsProcessor.getDefaultImpl().submitJob(owner, job);
 			endpointUrl = conf.getString("application.url")+"/data/"+job.getId();
 			return new URI(endpointUrl);
 		} catch(URISyntaxException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
 		} catch (SecurityException e) {
-			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
-		} catch (NoSuchMethodException e) {
-			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
-		} catch (IllegalArgumentException e) {
-			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
-		} catch (IllegalAccessException e) {
-			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
-		} catch (InvocationTargetException e) {
 			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());
 		}
 	}
