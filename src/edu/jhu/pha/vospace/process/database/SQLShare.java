@@ -68,7 +68,7 @@ public class SQLShare implements Database {
 			sb.append("\n");
 			ArrayList<String[]> rows = table.getRows();
 			for (int j=0; j<rows.size(); j++) {
-				String[] row = rows.get(i);
+				String[] row = rows.get(j);
 				for (int k=0; k<row.length; k++) {
 					if (k>0) sb.append(",");
 					sb.append(row[k]);
