@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,7 +72,7 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 
-public class NodeProcessor extends Thread {
+public class NodeProcessor implements Runnable {
 
 	private static final Logger logger = Logger.getLogger(NodeProcessor.class);
 	private final static String EXTERNAL_LINK_PROPERTY = "ivo://ivoa.net/vospace/core#external_link";
@@ -101,9 +102,6 @@ public class NodeProcessor extends Thread {
 	
     @Override
 	public void run() {
-    	
-    	final Thread currentThread = this;
-    	
 		QueueConnector.goAMQP("nodesProcessor", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
 			public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
@@ -118,7 +116,7 @@ public class NodeProcessor extends Thread {
 				QueueingConsumer consumer = new QueueingConsumer(channel);
 				channel.basicConsume(conf.getString("process.queue.nodeprocess"), false, consumer);
 				
-				while (!currentThread.isInterrupted()) {
+				while (!Thread.currentThread().isInterrupted()) {
 
 	            	try {
 				    	QueueingConsumer.Delivery delivery = consumer.nextDelivery();
@@ -163,6 +161,7 @@ public class NodeProcessor extends Thread {
 			            		
 			            		try {
 			            			
+			            			List<String> externalLinks = new ArrayList<String>();
 			            			for(ProcessorConfig processor: curProcessors) {
 			            				JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processor.getId());
 			        					if(credentialsNode == null) {
@@ -219,12 +218,17 @@ public class NodeProcessor extends Thread {
 					        				}
 					        			}
 
-			        					String[] externalLinks = nodeTikaMeta.getValues("EXTERNAL_LINKS");
-			        					if(null != externalLinks && externalLinks.length > 0) {
-				        			        Map<String, String> properties = new HashMap<String, String>();
-				        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
-				        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
+					        			String[] links = nodeTikaMeta.getValues("EXTERNAL_LINKS");
+			        					
+			        					if(null != links && links.length > 0) {
+			        						externalLinks.addAll(Arrays.asList(links));
 			        					}
+			            			}
+
+			            			if(externalLinks.size() > 0) {
+				            			Map<String, String> properties = new HashMap<String, String>();
+			        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
+			        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
 			            			}
 
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());

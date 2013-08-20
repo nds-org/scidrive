@@ -15,36 +15,29 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.process;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import javax.servlet.http.HttpServlet;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
-
-import edu.jhu.pha.vospace.SettingsServlet;
 
 public class NodeProcessingServlet extends HttpServlet {
 
 	private static final long serialVersionUID = -2827132663634842769L;
     private static final Logger logger = Logger.getLogger(NodeProcessingServlet.class);
 
-    private Thread nodeProcThread = null;
-
-    static Configuration conf = SettingsServlet.getConfig();
+	ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Override
 	public void init() {
-		nodeProcThread = new NodeProcessor();
-		nodeProcThread.setDaemon(true);
-		String runProc = getServletConfig().getInitParameter("processNodes");
-		if(null == runProc || Boolean.parseBoolean(runProc)) {
-			nodeProcThread.start();
-		}
+    	Future npFuture = executor.submit(new NodeProcessor());
     }
 
 	@Override
 	public void destroy() {
-		logger.debug("INTERRUPTING nodeProcessor!");
-		nodeProcThread.interrupt();
+		executor.shutdownNow();
 	}
 }
 
