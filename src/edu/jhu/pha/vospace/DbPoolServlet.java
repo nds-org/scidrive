@@ -33,7 +33,7 @@ import org.apache.commons.dbcp.PoolingDriver;
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.log4j.Logger;
 
-import com.mysql.jdbc.exceptions.MySQLTransactionRollbackException;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLTransactionRollbackException;
 
 public class DbPoolServlet extends HttpServlet {
 	
