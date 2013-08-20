@@ -1,28 +1,11 @@
 <fileprocessors>
 	<processor>
-		<id>docsprocessor</id>
-		<title>Full-text search</title>
-		<description>Extracts the text from Word and plain text documents and adds it to the Lucene index. Allows searching the user documents by keywords.</description>
-		<mimetype>application/msword</mimetype>
-		<mimetype>application/vnd.openxmlformats-officedocument.wordprocessingml.document</mimetype>
-		<mimetype>text/plain</mimetype>
-		<processor>edu.sdsc.vospace.process.DocumentsProcessor</processor>
-	</processor>
-	<processor>
-		<id>simprocessor</id>
-		<title>Simulations parser</title>
-		<description>Extracts the simulation ID and simulation datasets ID from ENZO simulations and stores these in file metadata.</description>
-		<mimetype>application/enzoparameterfile</mimetype>
-		<mimetype>application/enzosimulation</mimetype>
-		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
-		<config>tika/tika-simulation.xml</config>
-	</processor>
-	<processor>
 		<id>fitsprocessor</id>
 		<title>Tables extractor</title>
-		<description>Extracts tabular data from fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database.</description>
+		<description>Extracts tabular data from csv\, fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database.</description>
 		<mimetype>application/fits</mimetype>
-		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
+		<mimetype>application/fits</mimetype>
+		<mimetype>text/plain</mimetype>
 		<mimetype>image/tiff</mimetype>
 		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>
 		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
@@ -36,10 +19,27 @@
 	<processor>
 		<id>sqlshareprocessor</id>
 		<title>Tables extractor (SQLShare)</title>
-		<description>Extracts tabular data from plain text files using NumPY library and stores it in connected &lt;a href=&quot;sqlshare&quot;&gt;SQLShare&lt;/a&gt; database.</description>
+		<description>Extracts tabular data from plain text files using NumPY library and stores it in connected 
+		    &lt;a href=&quot;http://sqlshare.escience.washington.edu&quot;&gt;SQLShare&lt;/a&gt; database. 
+		    You can obtain your API key by visiting 
+		    &lt;a href=&quot;https://sqlshare.escience.washington.edu/sqlshare/#s=credentials&quot; target=&quot;_blank&quot;&gt;credentials service&lt;/a&gt; after registering at the service.</description>
 		<mimetype>text/plain</mimetype>
 		<processor>edu.jhu.pha.vospace.process.FileToSQLShareProcessor</processor>
 		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
 		<config>tika/tika-conf.xml</config>
+		<schema>
+			<field name="endpoint" required="true" default="https://sqlshare-rest.cloudapp.net/REST.svc/v3/file"/>
+		   	<field name="userId" required="true"/>
+			<field name="apiKey" required="true"/>
+		</schema>
+	</processor>
+	<processor>
+		<id>simprocessor</id>
+		<title>Simulations parser</title>
+		<description>Extracts the simulation ID and simulation datasets ID from ENZO simulations and stores these in file metadata.</description>
+		<mimetype>application/enzoparameterfile</mimetype>
+		<mimetype>application/enzosimulation</mimetype>
+		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
+		<config>tika/tika-simulation.xml</config>
 	</processor>
 </fileprocessors>

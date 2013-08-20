@@ -32,6 +32,7 @@ public class SQLShare implements Database {
 
 	private String userId = "";
 	private String apiKey = "";
+	private String serviceUrl = "";
 	
 	private final Logger log = Logger.getLogger(this.getClass());
 	
@@ -42,6 +43,7 @@ public class SQLShare implements Database {
 	public SQLShare(JsonNode credentials) {
 		this.userId = credentials.path("userId").getTextValue();
 		this.apiKey = credentials.path("apiKey").getTextValue();
+		this.serviceUrl = credentials.path("endpoint").getTextValue();
 	}
 	
 	@Override
@@ -96,7 +98,7 @@ public class SQLShare implements Database {
         
 		HttpClient httpClient = new DefaultHttpClient(ccm);
 		
-		HttpPost postRequest = new HttpPost("https://sqlshare-rest.cloudapp.net/REST.svc/v3/file");
+		HttpPost postRequest = new HttpPost(this.serviceUrl);
 		postRequest.addHeader("Authorization", "ss_apikey " + userId + " : " + apiKey);
 		MultipartEntity multipartEntity = new MultipartEntity();
 		InputStreamBody fileBody = new InputStreamBody(is,datasetName); 
@@ -109,7 +111,7 @@ public class SQLShare implements Database {
         log.debug("file id: "+fileId);
 		//System.out.println(fileId);
         
-        HttpPut putRequest = new HttpPut("https://sqlshare-rest.cloudapp.net/REST.svc/v3/file/" + fileId + "/database");
+        HttpPut putRequest = new HttpPut(this.serviceUrl +"/" + fileId + "/database");
         putRequest.addHeader("Authorization", "ss_apikey " + userId + " : " + apiKey);
         httpClient.execute(putRequest);
 
@@ -118,7 +120,7 @@ public class SQLShare implements Database {
 	        do
 	        {
 	        	Thread.sleep(2000);
-	            HttpGet getRequest = new HttpGet("https://sqlshare-rest.cloudapp.net/REST.svc/v3/file/" + fileId + "/database");
+	            HttpGet getRequest = new HttpGet(this.serviceUrl +"/" + fileId + "/database");
 	            getRequest.addHeader("Authorization", "ss_apikey " + userId + " : " + apiKey);
 	            response = httpClient.execute(getRequest);
 	            
