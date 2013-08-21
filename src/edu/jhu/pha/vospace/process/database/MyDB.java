@@ -473,44 +473,62 @@ public class MyDB implements Database {
 				throw new DatabaseException("Table creation failed "+databaseFormat.formatObjectName(tableName),e);
 			}			
 			
-			StringBuilder insertRowQuery = new StringBuilder();
-			insertRowQuery.append("INSERT INTO "+databaseFormat.formatObjectName(tableName)+" ");
-			boolean first = true;
-			for (String[] row : table.getRows()) {
-				
-				StringBuilder rowValues = new StringBuilder();
-				for (int i=0; i<table.getColumns(); i++) {
-					if (i!=0) {
-						rowValues.append(",");
-					}
-					String s = row[i];
-					if (table.getColumnTypes()[i].charAt(0) == 'A') {
-						s = databaseFormat.formatCharString(s);
-					}
-					else if (s.trim().isEmpty()) {
-						s = "NULL";
-					}
-					rowValues.append(s);
-				}
-	
-				if (first) {
-					insertRowQuery.append("\n  SELECT "); 
-					first = false;
+
+			
+			int startRow = 0;
+			int BATCH_SIZE = 250;
+			ArrayList<String[]> rows = table.getRows();
+			
+			while (startRow < (rows.size()-1)) {
+				StringBuilder insertRowQuery = new StringBuilder();
+				insertRowQuery.append("INSERT INTO "+databaseFormat.formatObjectName(tableName)+" ");
+				int n;
+				if (startRow + BATCH_SIZE > rows.size()) {
+					n = rows.size() - startRow; 
 				}
 				else {
-					insertRowQuery.append(" UNION\n  SELECT ");
+					n = BATCH_SIZE;
 				}
-				insertRowQuery.append(rowValues.toString());
-			}
-			if (!first) {
-				log.debug("Executing query...\n"+insertRowQuery.toString());
-				quickJob.setQry(insertRowQuery.toString());
-				try {
-					stub.executeQuickJob(quickJob);
+				
+				boolean first = true;
+				for (int currentRow = startRow; currentRow<(startRow+n); currentRow++) {
+					String[] row = rows.get(currentRow);
+					StringBuilder rowValues = new StringBuilder();
+					for (int i=0; i<table.getColumns(); i++) {
+						if (i!=0) {
+							rowValues.append(",");
+						}
+						String s = row[i];
+						if (table.getColumnTypes()[i].charAt(0) == 'A') {
+							s = databaseFormat.formatCharString(s);
+						}
+						else if (s.trim().isEmpty()) {
+							s = "NULL";
+						}
+						rowValues.append(s);
+					}
+		
+					if (first) {
+						insertRowQuery.append("\n  SELECT "); 
+						first = false;
+					}
+					else {
+						insertRowQuery.append(" UNION\n  SELECT ");
+					}
+					insertRowQuery.append(rowValues.toString());
 				}
-				catch (RemoteException e) {
-					throw new DatabaseException("Table update failed "+databaseFormat.formatObjectName(tableName),e);
+				if (!first) {
+					log.debug("Executing query...\n"+insertRowQuery.toString());
+					quickJob.setQry(insertRowQuery.toString());
+					try {
+						stub.executeQuickJob(quickJob);
+					}
+					catch (RemoteException e) {
+						throw new DatabaseException("Table update failed "+databaseFormat.formatObjectName(tableName),e);
+					}
 				}
+				
+				startRow += BATCH_SIZE;
 			}
 			
 
@@ -518,7 +536,7 @@ public class MyDB implements Database {
 			
 			StringBuilder insertTableMetadataQuery = new StringBuilder();
 			insertTableMetadataQuery.append("INSERT INTO "+databaseFormat.formatObjectName(TABLE_METADATA_TABLE_NAME)+" ([resourceId],[tableId],[keyword],[value],[comment]) ");
-			first = true;
+			boolean first = true;
 			for (String name: metadata.names()) {
 				if (name.startsWith(prefix)) {
 					String keyword = name.substring(name.indexOf(":")+1);
