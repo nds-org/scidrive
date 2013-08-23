@@ -77,6 +77,8 @@ public class NodeProcessor implements Runnable {
 
 	private static final Logger logger = Logger.getLogger(NodeProcessor.class);
 	private final static String EXTERNAL_LINK_PROPERTY = "ivo://ivoa.net/vospace/core#external_link";
+	private final static String PROCESSING_PROPERTY = "ivo://ivoa.net/vospace/core#processing";
+	private final static String ERROR_MESSAGE_PROPERTY = "ivo://ivoa.net/vospace/core#error_message";
 
     static Configuration conf = SettingsServlet.getConfig();
 
@@ -117,16 +119,17 @@ public class NodeProcessor implements Runnable {
 				
 				while (!Thread.currentThread().isInterrupted()) {
 
+					Node node = null;
+					
 	            	try {
 				    	QueueingConsumer.Delivery delivery = consumer.nextDelivery();
 				    	
 				    	Map<String,Object> nodeData = (new ObjectMapper()).readValue(delivery.getBody(), 0, delivery.getBody().length, new TypeReference<HashMap<String,Object>>() {});
 
 		            	channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-						final Node node = NodeFactory.getNode(new VospaceId((String)nodeData.get("uri")), (String)nodeData.get("owner"));
+						node = NodeFactory.getNode(new VospaceId((String)nodeData.get("uri")), (String)nodeData.get("owner"));
 
 		            	logger.debug("Node changed: "+nodeData.get("uri")+" "+nodeData.get("owner")+" "+node.getType());
-		            	
 		            	
 		            	switch(node.getType()) {
 			            	case DATA_NODE: {
@@ -241,6 +244,10 @@ public class NodeProcessor implements Runnable {
 			        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
 			            			}
 
+			            			Map<String, String> properties = new HashMap<String, String>();
+		        			        properties.put(PROCESSING_PROPERTY, "done");
+		        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
+		        			        
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
 
 				            		// update node's container size metadata
@@ -263,11 +270,14 @@ public class NodeProcessor implements Runnable {
 					        		}
 			            		} catch(TikaException ex) {
 			            			logger.error("Error parsing the node "+node.getUri().toString()+": "+ex.getMessage());
+			            			processError(node, ex);
 			            			ex.printStackTrace();
 			            		} catch(SAXException ex) {
 			            			logger.error("Error SAX parsing the node "+node.getUri().toString()+": "+ex.getMessage());
+			            			processError(node, ex);
 			            		} catch(IOException ex) {
 			            			logger.error("Error reading the node "+node.getUri().toString()+": "+ex.getMessage());
+			            			processError(node, ex);
 			            		}
 			            		
 			            		break;
@@ -307,18 +317,24 @@ public class NodeProcessor implements Runnable {
 		            	
 	            	} catch(InterruptedException ex) {
 	            		logger.error("Sleeping interrupted. "+ex.getMessage());
+            			processError(node, ex);
 	            	} catch(JsonMappingException ex) {
 	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
+            			processError(node, ex);
 	            	} catch(JsonParseException ex) {
 	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
+            			processError(node, ex);
 	            	} catch (IOException ex) {
 	            		ex.printStackTrace();
 	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
+            			processError(node, ex);
 					} catch (URISyntaxException ex) {
 	            		logger.error("Error parsing VospaceId from changed node JSON: "+ex.getMessage());
+            			processError(node, ex);
 					} catch (Exception ex) {
 						ex.printStackTrace();
 	            		logger.error("Error parsing fits: "+ex.getMessage());
+            			processError(node, ex);
 					}
 	            }
 
@@ -327,6 +343,19 @@ public class NodeProcessor implements Runnable {
 			}
 		});
 
+    }
+    
+    private void processError(Node node, Exception ex) {
+    	if(null != node) {
+    		try {
+				Map<String, String> properties = new HashMap<String, String>();
+		        properties.put(PROCESSING_PROPERTY, "error");
+		        properties.put(ERROR_MESSAGE_PROPERTY, ex.getMessage());
+		        node.getMetastore().updateUserProperties(node.getUri(), properties);
+    		} catch(Exception ex2) {
+    			logger.error("Error setting error node props: "+ex2.getMessage());
+    		}
+    	}
     }
     
     public static class ProcessorConfig {
