@@ -82,7 +82,7 @@ public class NodeProcessor implements Runnable {
 
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     
-	public final static Map<String, ProcessorConfig> processors = new HashMap<String, ProcessorConfig>();;
+	public final static Map<String, ProcessorConfig> processors = new HashMap<String, ProcessorConfig>();
 	
 	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
