@@ -26,6 +26,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -81,7 +82,7 @@ public class NodeProcessor implements Runnable {
 
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     
-	public static Hashtable<String, ProcessorConfig> processors;
+	public final static Map<String, ProcessorConfig> processors = new HashMap<String, ProcessorConfig>();;
 	
 	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -90,8 +91,6 @@ public class NodeProcessor implements Runnable {
 			XMLConfiguration processorConf = new XMLConfiguration("processors.xml");
 			processorConf.setExpressionEngine(new XPathExpressionEngine());
 
-			
-			processors = new Hashtable<String, ProcessorConfig>();
 			for(String processorId: processorConf.getStringArray("//processor/id")) {
 				processors.put(processorId, new ProcessorConfig(processorConf, processorId));
 			}
@@ -152,77 +151,89 @@ public class NodeProcessor implements Runnable {
 			            			try {inp.close();} catch(Exception ex) {};
 			            		}
 			            		
-			        			List<ProcessorConfig> curProcessors = new Vector<ProcessorConfig>();
-			        			for(String checkProcId: processors.keySet()){
-			        				ProcessorConfig procConf = processors.get(checkProcId);
-			        				if(procConf.getMimeTypes().contains(type.toString()))
-			        					curProcessors.add(procConf);
-			        			}
-			            		
 			            		try {
 			            			
+			            			JsonNode allCredentials = UserHelper.getProcessorCredentials(node.getOwner());
+			            			
+			            			Iterator<String> processorIds = allCredentials.getFieldNames();
+			            			
 			            			List<String> externalLinks = new ArrayList<String>();
-			            			for(ProcessorConfig processor: curProcessors) {
-			            				JsonNode credentialsNode = UserHelper.getProcessorCredentials(node.getOwner(), processor.getId());
-			        					if(credentialsNode == null) {
-			        						logger.debug("User doesn't have credentials setup for processing of "+node.getUri().toString());
-			        						continue;
-			        					}
-			        					
-					            		Metadata nodeTikaMeta = new Metadata();
-					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
-					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
-					            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
-					            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
+			            			for(String processorId = processorIds.next(); processorIds.hasNext();) {
+			            				ProcessorConfig processor = processors.get(processorId);
+			            				JsonNode credentialsNode = allCredentials.findValue(processorId);
 			            				
-					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
-					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
+			            				String nodeContainer = node.getUri().getNodePath().getContainerName();
 			            				
-			            				AbstractParser parser;
-		            					TikaConfig config = TikaConfig.getDefaultConfig();
-			            				if(processor.getConfig() != null) {
-			            					config = new TikaConfig(getClass().getResourceAsStream(processor.getConfig()));
+			            				JsonNode containersNode = credentialsNode.get("containers");
+			            				boolean parseContainer = false;
+			            				if(null != containersNode) {
+			            					for(JsonNode curContainer: containersNode) {
+			            						NodePath containerPath = new NodePath(curContainer.getTextValue());
+			            						if(containerPath.getContainerName().equals(nodeContainer)) {
+			            							parseContainer = true;
+			            						}
+			            					}
 			            				}
 			            				
-										parser = new CompositeParser(config.getMediaTypeRegistry(), config.getParser());
-			            			
-			            				ContentHandler handler;
-			            				if(null != processor.getHandler())
-			            					handler = (ContentHandler) Class.forName(processor.getHandler()).getConstructor().newInstance();
-			            				else
-			            					handler = new BodyContentHandler();
-			            				
-			            				InputStream str = null;
-			            				try {
-			            					str = TikaInputStream.get(node.exportData());
-					            			parser.parse(str,
-					            					handler,
-					            			        nodeTikaMeta,
-					            			        new ParseContext());
-			            				} finally {
-					            			try {str.close();} catch(Exception ex) {}
-					            		}				            			
-			            				
-					            		// now do out-of-tika processing of results
-					        			if(null != processor.getProcessor()) {
-					        				try {
-					        					Class handlerClass = Class.forName(processor.getProcessor());
-					        					Method processMetaMethod = handlerClass.getMethod("processNodeMeta", Metadata.class, Object.class, JsonNode.class);
-					        					
-					        					processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
-						        				logger.debug("Processing of "+node.getUri().toString()+" is finished.");
-					        					
-					        				} catch (Exception e) {
-					        					logger.error("Error processing the node. "+e.getMessage());
-					        					e.printStackTrace();
-					        				}
-					        			}
-
-					        			String[] links = nodeTikaMeta.getValues("EXTERNAL_LINKS");
-			        					
-			        					if(null != links && links.length > 0) {
-			        						externalLinks.addAll(Arrays.asList(links));
-			        					}
+			            				if(null != processor
+			            						&& parseContainer
+			            						&& processor.isSupportMimeType(node.getNodeInfo().getContentType())) {
+				        					
+						            		Metadata nodeTikaMeta = new Metadata();
+						            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
+						            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
+						            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
+						            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
+				            				
+						            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
+						            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
+				            				
+				            				AbstractParser parser;
+			            					TikaConfig config = TikaConfig.getDefaultConfig();
+				            				if(processor.getConfig() != null) {
+				            					config = new TikaConfig(getClass().getResourceAsStream(processor.getConfig()));
+				            				}
+				            				
+											parser = new CompositeParser(config.getMediaTypeRegistry(), config.getParser());
+				            			
+				            				ContentHandler handler;
+				            				if(null != processor.getHandler())
+				            					handler = (ContentHandler) Class.forName(processor.getHandler()).getConstructor().newInstance();
+				            				else
+				            					handler = new BodyContentHandler();
+				            				
+				            				InputStream str = null;
+				            				try {
+				            					str = TikaInputStream.get(node.exportData());
+						            			parser.parse(str,
+						            					handler,
+						            			        nodeTikaMeta,
+						            			        new ParseContext());
+				            				} finally {
+						            			try {str.close();} catch(Exception ex) {}
+						            		}				            			
+				            				
+						            		// now do out-of-tika processing of results
+						        			if(null != processor.getProcessor()) {
+						        				try {
+						        					Class handlerClass = Class.forName(processor.getProcessor());
+						        					Method processMetaMethod = handlerClass.getMethod("processNodeMeta", Metadata.class, Object.class, JsonNode.class);
+						        					
+						        					processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
+							        				logger.debug("Processing of "+node.getUri().toString()+" is finished.");
+						        					
+						        				} catch (Exception e) {
+						        					logger.error("Error processing the node. "+e.getMessage());
+						        					e.printStackTrace();
+						        				}
+						        			}
+	
+						        			String[] links = nodeTikaMeta.getValues("EXTERNAL_LINKS");
+				        					
+				        					if(null != links && links.length > 0) {
+				        						externalLinks.addAll(Arrays.asList(links));
+				        					}
+			            				}
 			            			}
 
 			            			if(externalLinks.size() > 0) {
@@ -358,8 +369,8 @@ public class NodeProcessor implements Runnable {
     	public String getId() {
 			return id;
 		}
-		public List<String> getMimeTypes() {
-			return mimeTypes;
+		public boolean isSupportMimeType(String mimeType) {
+			return this.mimeTypes.contains(mimeType);
 		}
 		public String getConfig() {
 			return config;

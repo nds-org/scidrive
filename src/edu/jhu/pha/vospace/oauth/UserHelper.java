@@ -168,7 +168,13 @@ public class UserHelper {
                 });
 	}
 
-	public static JsonNode getProcessorCredentials(final String username, final String processorId) {
+	/**
+	 * Returns all processors credentials from the DB
+	 * @param username
+	 * @param processorId
+	 * @return
+	 */
+	public static JsonNode getProcessorCredentials(final String username) {
         return DbPoolServlet.goSql("Retrieving processor credentials for " + username,
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<JsonNode>() {
@@ -185,7 +191,7 @@ public class UserHelper {
                     		if(null == credBytes || credBytes.length == 0)
                     			credBytes = "{}".getBytes();
                     		JsonNode allCredentials = mapper.readValue(credBytes, JsonNode.class);
-	                        return allCredentials.findValue(processorId);
+	                        return allCredentials;
 	                    } catch(IOException ex) {
 	                    	throw new InternalServerErrorException("Unable to read user "+username+" service credentials");
 	                    }
