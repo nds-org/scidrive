@@ -155,10 +155,9 @@ public class NodeProcessor implements Runnable {
 			            			
 			            			JsonNode allCredentials = UserHelper.getProcessorCredentials(node.getOwner());
 			            			
-			            			Iterator<String> processorIds = allCredentials.getFieldNames();
-			            			
 			            			List<String> externalLinks = new ArrayList<String>();
-			            			for(String processorId = processorIds.next(); processorIds.hasNext(); processorId = processorIds.next()) {
+			            			for(Iterator<String> processorIds = allCredentials.getFieldNames(); processorIds.hasNext();) {
+			            				String processorId = processorIds.next();
 			            				ProcessorConfig processor = processors.get(processorId);
 			            				JsonNode credentialsNode = allCredentials.findValue(processorId);
 			            				
