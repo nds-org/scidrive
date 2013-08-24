@@ -34,17 +34,26 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.Office;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.codehaus.jackson.JsonNode;
+import org.xml.sax.ContentHandler;
 
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.process.ProcessingException;
+import edu.jhu.pha.vospace.process.Processor;
+import edu.jhu.pha.vospace.process.ProcessorConfig;
 
 
-public class DocumentsProcessor {
+public class DocumentsProcessor extends Processor {
 
     private static Analyzer analysis = new EnglishAnalyzer(Version.LUCENE_41);
     private static IndexWriterConfig indexconf = new IndexWriterConfig(Version.LUCENE_41, analysis);
 	private static Configuration conf = SettingsServlet.getConfig();
     
-	public static void processNodeMeta(Metadata metadata, Object handler, JsonNode credentials) throws Exception {
+	protected DocumentsProcessor(ProcessorConfig config) {
+		super(config);
+	}
+	
+	@Override
+	public void processNodeMeta(Metadata metadata, JsonNode credentials) throws ProcessingException {
         Document doc = new Document();
 
 		Field contents = new TextField("content", handler.toString(), Store.YES);
@@ -69,12 +78,13 @@ public class DocumentsProcessor {
     						new NativeFSLockFactory(conf.getString("lucene.lock"))
     				), 
     				indexconf);
+	        idx.addDocument(doc);
     	} catch(IOException ex) {
     		ex.printStackTrace();
+    	} finally {
+	        try {idx.close();} catch(Exception ignored) {}
     	}
 
-        idx.addDocument(doc);
-        idx.close();
   	}
 
 }

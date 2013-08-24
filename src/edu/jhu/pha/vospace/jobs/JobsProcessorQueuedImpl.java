@@ -18,6 +18,7 @@ package edu.jhu.pha.vospace.jobs;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,6 +34,7 @@ import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.protocol.ProtocolHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
+import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 
 /**
  * The JobsProcessor class creates a separate thread, waiting for new jobs to appear in the queue.
@@ -45,12 +47,12 @@ public class JobsProcessorQueuedImpl extends JobsProcessor {
 	private static final Logger logger = Logger.getLogger(JobsProcessorQueuedImpl.class);
     private ExecutorService service;
 	private Thread jobsThread = null;
-	private static Vector<Future> workers;
+	private static List<Future<STATE>> workers;
 	
 	JobsProcessorQueuedImpl() {
 		super();
         service = Executors.newCachedThreadPool();
-        workers = new Vector<Future>();
+        workers = new Vector<Future<STATE>>();
 	}
 
 	/*
@@ -59,8 +61,10 @@ public class JobsProcessorQueuedImpl extends JobsProcessor {
 	 */
 	@Override
 	public void destroy() {
-		logger.debug("INTERRUPTING!");
 		jobsThread.interrupt();
+		synchronized(JobsProcessor.class) {
+			JobsProcessor.class.notifyAll();
+		}
 	}
 	
 	/* (non-Javadoc)
@@ -124,8 +128,8 @@ public class JobsProcessorQueuedImpl extends JobsProcessor {
 					// The main cycle to process the jobs
 					while (!jobsThread.isInterrupted()) {
 						
-						for(Iterator<Future> it = workers.iterator(); it.hasNext();){
-							Future next = it.next();
+						for(Iterator<Future<STATE>> it = workers.iterator(); it.hasNext();){
+							Future<STATE> next = it.next();
 							if(next.isDone()){
 								it.remove();
 								logger.debug("Job "+next+" is removed from the workers.");
@@ -148,9 +152,8 @@ public class JobsProcessorQueuedImpl extends JobsProcessor {
 					    	logger.debug("There's a submited job! "+job.getId());
 	
 			    			TransferThread thread = new TransferThread(job, parentProc);
-			    			thread.setName(job.getId());
 			    			
-			    			Future future = service.submit(thread);
+			    			Future<STATE> future = service.submit(thread);
 			    			
 			    			workers.add(future);
 			    			channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);

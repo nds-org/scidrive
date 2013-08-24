@@ -33,7 +33,7 @@ public class ProcessingException extends Exception {
 		super(cause);
 	}
 
-	public ProcessingException(Throwable cause, String message) {
+	public ProcessingException(String message, Throwable cause) {
 		super(message, cause);
 	}
 }

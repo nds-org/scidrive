@@ -17,25 +17,16 @@ package edu.jhu.pha.vospace.process;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.Vector;
-
 import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tika.config.TikaConfig;
@@ -52,13 +43,9 @@ import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.pkg.SimulationDetector;
-import org.apache.tika.sax.BodyContentHandler;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
-import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
 import com.rabbitmq.client.QueueingConsumer;
@@ -82,26 +69,13 @@ public class NodeProcessor implements Runnable {
 
     static Configuration conf = SettingsServlet.getConfig();
 
-	private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-    
-	public final static Map<String, ProcessorConfig> processors = new HashMap<String, ProcessorConfig>();
-	
+	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+
 	static {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-		try	{
-			XMLConfiguration processorConf = new XMLConfiguration("processors.xml");
-			processorConf.setExpressionEngine(new XPathExpressionEngine());
-
-			for(String processorId: processorConf.getStringArray("//processor/id")) {
-				processors.put(processorId, new ProcessorConfig(processorConf, processorId));
-			}
-		} catch(ConfigurationException ex) {
-		    logger.error("Error reading the nodes processor configuration file processors.xml." + ex.getMessage());
-		}
 	}
-	
-    @Override
+
+	@Override
 	public void run() {
 		QueueConnector.goAMQP("nodesProcessor", new QueueConnector.AMQPWorker<Boolean>() {
 			@Override
@@ -156,86 +130,57 @@ public class NodeProcessor implements Runnable {
 			            		
 			            		try {
 			            			
-			            			JsonNode allCredentials = UserHelper.getProcessorCredentials(node.getOwner());
+			            			JsonNode credentials = UserHelper.getProcessorCredentials(node.getOwner());
 			            			
 			            			List<String> externalLinks = new ArrayList<String>();
-			            			for(Iterator<String> processorIds = allCredentials.getFieldNames(); processorIds.hasNext();) {
-			            				String processorId = processorIds.next();
-			            				ProcessorConfig processor = processors.get(processorId);
-			            				JsonNode credentialsNode = allCredentials.findValue(processorId);
+			            			for(ProcessorConfig processorConf: ProcessingFactory.getInstance().getProcessorConfigsForNode(node, credentials)) {
+			            				Metadata nodeTikaMeta = new Metadata();
+					            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
+					            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
+					            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
+					            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
 			            				
-			            				String nodeContainer = node.getUri().getNodePath().getContainerName();
-			            				
-			            				JsonNode containersNode = credentialsNode.get("containers");
-			            				boolean parseContainer = false;
-			            				if(null != containersNode) {
-			            					for(JsonNode curContainer: containersNode) {
-			            						NodePath containerPath = new NodePath(curContainer.getTextValue());
-			            						if(containerPath.getContainerName().equals(nodeContainer)) {
-			            							parseContainer = true;
-			            						}
-			            					}
+					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
+					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
+
+
+			            				AbstractParser parser;
+		            					TikaConfig config = TikaConfig.getDefaultConfig();
+			            				if(processorConf.getTikaConfig() != null) {
+			            					config = new TikaConfig(getClass().getResourceAsStream(processorConf.getTikaConfig()));
 			            				}
 			            				
-			            				if(null != processor
-			            						&& parseContainer
-			            						&& processor.isSupportMimeType(node.getNodeInfo().getContentType())) {
+										parser = new CompositeParser(config.getMediaTypeRegistry(), config.getParser());
+										
+										Processor processor = Processor.fromProcessorConfig(processorConf);
+
+										InputStream str = null;
+			            				try {
+			            					str = TikaInputStream.get(node.exportData());
+					            			parser.parse(str,
+					            					processor.getContentHandler(),
+					            			        nodeTikaMeta,
+					            			        new ParseContext());
+			            				} finally {
+					            			try {str.close();} catch(Exception ex) {}
+					            		}				            			
+			            				
+					            		// now do out-of-tika processing of results
+				        				try {
+				        					processor.processNodeMeta(nodeTikaMeta, credentials.get(processorConf.getId()));
+					        				logger.debug("Processing of "+node.getUri().toString()+" is finished.");
 				        					
-						            		Metadata nodeTikaMeta = new Metadata();
-						            		nodeTikaMeta.set(TikaCoreProperties.SOURCE,node.getUri().toString());
-						            		nodeTikaMeta.set("owner",(String)nodeData.get("owner"));
-						            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
-						            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
-				            				
-						            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
-						            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
-				            				
-				            				AbstractParser parser;
-			            					TikaConfig config = TikaConfig.getDefaultConfig();
-				            				if(processor.getConfig() != null) {
-				            					config = new TikaConfig(getClass().getResourceAsStream(processor.getConfig()));
-				            				}
-				            				
-											parser = new CompositeParser(config.getMediaTypeRegistry(), config.getParser());
-				            			
-				            				ContentHandler handler;
-				            				if(null != processor.getHandler())
-				            					handler = (ContentHandler) Class.forName(processor.getHandler()).getConstructor().newInstance();
-				            				else
-				            					handler = new BodyContentHandler();
-				            				
-				            				InputStream str = null;
-				            				try {
-				            					str = TikaInputStream.get(node.exportData());
-						            			parser.parse(str,
-						            					handler,
-						            			        nodeTikaMeta,
-						            			        new ParseContext());
-				            				} finally {
-						            			try {str.close();} catch(Exception ex) {}
-						            		}				            			
-				            				
-						            		// now do out-of-tika processing of results
-						        			if(null != processor.getProcessor()) {
-						        				try {
-						        					Class handlerClass = Class.forName(processor.getProcessor());
-						        					Method processMetaMethod = handlerClass.getMethod("processNodeMeta", Metadata.class, Object.class, JsonNode.class);
-						        					
-						        					processMetaMethod.invoke(handlerClass, nodeTikaMeta, handler, credentialsNode);
-							        				logger.debug("Processing of "+node.getUri().toString()+" is finished.");
-						        					
-						        				} catch (Exception e) {
-						        					logger.error("Error processing the node. "+e.getMessage());
-						        					e.printStackTrace();
-						        				}
-						        			}
-	
-						        			String[] links = nodeTikaMeta.getValues("EXTERNAL_LINKS");
-				        					
-				        					if(null != links && links.length > 0) {
-				        						externalLinks.addAll(Arrays.asList(links));
-				        					}
-			            				}
+				        				} catch (Exception e) {
+				        					logger.error("Error processing the node. "+e.getMessage());
+				        					e.printStackTrace();
+				                			processError(node, e);
+				        				}
+
+					        			String[] links = nodeTikaMeta.getValues("EXTERNAL_LINKS");
+			        					
+			        					if(null != links && links.length > 0) {
+			        						externalLinks.addAll(Arrays.asList(links));
+			        					}
 			            			}
 
 			            			if(externalLinks.size() > 0) {
@@ -318,22 +263,12 @@ public class NodeProcessor implements Runnable {
 	            	} catch(InterruptedException ex) {
 	            		logger.error("Sleeping interrupted. "+ex.getMessage());
             			processError(node, ex);
-	            	} catch(JsonMappingException ex) {
-	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
-            			processError(node, ex);
-	            	} catch(JsonParseException ex) {
-	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
-            			processError(node, ex);
 	            	} catch (IOException ex) {
 	            		ex.printStackTrace();
 	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
             			processError(node, ex);
 					} catch (URISyntaxException ex) {
 	            		logger.error("Error parsing VospaceId from changed node JSON: "+ex.getMessage());
-            			processError(node, ex);
-					} catch (Exception ex) {
-						ex.printStackTrace();
-	            		logger.error("Error parsing fits: "+ex.getMessage());
             			processError(node, ex);
 					}
 	            }
@@ -356,120 +291,6 @@ public class NodeProcessor implements Runnable {
     			logger.error("Error setting error node props: "+ex2.getMessage());
     		}
     	}
-    }
-    
-    public static class ProcessorConfig {
-    	private String id;
-    	private List<String> mimeTypes = new Vector<String>();
-    	private String config;
-    	private String processor;
-    	private String handler;
-    	private String title;
-    	private CredentialsSchema schema;
-
-    	public ProcessorConfig(XMLConfiguration conf, String processorId) {
-			this.id = processorId;
-			for(String mimeType: conf.getStringArray("//processor[id='"+processorId+"']/mimetype")){
-				mimeTypes.add(mimeType);
-			}
-			this.config = conf.getString("//processor[id='"+processorId+"']/config");
-			this.processor = conf.getString("//processor[id='"+processorId+"']/processor");
-			this.handler = conf.getString("//processor[id='"+processorId+"']/handler");
-			this.title = conf.getString("//processor[id='"+processorId+"']/title", processorId);
-
-			String[] namesArray = conf.getStringArray("//processor[id='"+processorId+"']/schema/field/@name");
-			CredentialsSchema schema = new CredentialsSchema();
-			schema.description = conf.getString("//processor[id='"+processorId+"']/description", "");
-
-			if(namesArray != null && namesArray.length > 0){
-				for(String fieldName: namesArray) {
-					CredentialsSchemaField field = new CredentialsSchemaField();
-					field.setName(fieldName);
-					field.setRequired(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@required"));
-					field.setDefaultValue(conf.getString("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@default"));
-					field.setPassword(conf.getBoolean("//processor[id='"+processorId+"']/schema/field[@name = '"+field.getName()+"']/@ispassword", false));
-					schema.addField(field);
-				}
-			}
-			this.schema = schema;
-    	}
-    	
-    	public String getId() {
-			return id;
-		}
-		public boolean isSupportMimeType(String mimeType) {
-			return this.mimeTypes.contains(mimeType);
-		}
-		public String getConfig() {
-			return config;
-		}
-		public String getProcessor() {
-			return processor;
-		}
-		public String getHandler() {
-			return handler;
-		}
-		public CredentialsSchema getSchema() {
-			return schema;
-		}
-		public String getTitle() {
-			return title;
-		}
-    }
-    
-    public static class CredentialsSchema {
-    	private List<CredentialsSchemaField> properties = new Vector<CredentialsSchemaField>();
-    	private String description;
-    	public void addField(CredentialsSchemaField field) {
-    		this.properties.add(field);
-    	}
-    	public List<CredentialsSchemaField> getFields() {
-    		return properties;
-    	}
-    	@Override
-		public String toString() {
-			ObjectMapper mapper = new ObjectMapper();
-			try {
-				return mapper.writeValueAsString(this);
-			} catch (Exception e) {
-				e.printStackTrace();
-				return "{}";
-			}
-    	}
-		public String getDescription() {
-			return description;
-		}
-    }
-    
-    public static class CredentialsSchemaField {
-    	private String name;
-    	private boolean required;
-    	private String defaultValue = "";
-    	private boolean isPassword = false;
-		public String getName() {
-			return name;
-		}
-		public void setName(String name) {
-			this.name = name;
-		}
-		public boolean isRequired() {
-			return required;
-		}
-		public void setRequired(boolean required) {
-			this.required = required;
-		}
-		public String getDefaultValue() {
-			return defaultValue;
-		}
-		public void setDefaultValue(String defaultValue) {
-			this.defaultValue = (null == defaultValue)?"":defaultValue;
-		}
-		public boolean isPassword() {
-			return isPassword;
-		}
-		public void setPassword(boolean isPassword) {
-			this.isPassword = isPassword;
-		}
     }
     
 }

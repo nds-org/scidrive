@@ -32,8 +32,9 @@ import edu.jhu.pha.vospace.protocol.ProtocolHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
+import java.util.concurrent.Callable;
 
-public class TransferThread extends Thread {
+public class TransferThread implements Callable<STATE> {
 
 	private static final Logger logger = Logger.getLogger(TransferThread.class);
 	
@@ -49,10 +50,9 @@ public class TransferThread extends Thread {
 	 * Executes the RequestMethod
 	 */
 	@Override
-	public void run() {
+	public STATE call() {
 		JobsProcessor.modifyJobState(job, STATE.RUN);
 		logger.debug("Started the job "+job.getId());
-
 		try {
 			validateTransfer(job);
 
@@ -79,19 +79,24 @@ public class TransferThread extends Thread {
 			ex.printStackTrace();
 			JobsProcessor.modifyJobState(job, STATE.ERROR, ex.getResponse().getEntity().toString());
 			logger.error("Error executing job "+job.getId()+": "+ex.getResponse().getEntity().toString());
+			return STATE.ERROR;
 		} catch(BadRequestException ex) {
 			ex.printStackTrace();
 			JobsProcessor.modifyJobState(job, STATE.ERROR, ex.getResponse().getEntity().toString());
 			logger.error("Error executing job "+job.getId()+": "+ex.getResponse().getEntity().toString());
+			return STATE.ERROR;
 		} catch(Exception ex) {
 			ex.printStackTrace();
 			JobsProcessor.modifyJobState(job, STATE.ERROR, ex.toString());
 			logger.error("Error executing job "+job.getId()+": "+ex.toString());
+			return STATE.ERROR;
 		}
 
 		synchronized(JobsProcessor.class) {
-			JobsProcessor.class.notify();
+			JobsProcessor.class.notifyAll();
 		}
+
+		return STATE.COMPLETED;
 	}
 
 	/**

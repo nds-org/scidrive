@@ -25,9 +25,14 @@ import edu.jhu.pha.vospace.process.database.SQLShare;
 import edu.jhu.pha.vospace.process.sax.AsciiTable;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
 
-public class FileToSQLShareProcessor {
+public class FileToSQLShareProcessor extends Processor {
 
-	public static void processNodeMeta(Metadata metadata, Object handler, JsonNode credentials) throws Exception {
+	public FileToSQLShareProcessor(ProcessorConfig config) {
+		super(config);
+	}
+
+	@Override
+	public void processNodeMeta(Metadata metadata, JsonNode credentials) throws ProcessingException {
 		Database db = new SQLShare(credentials);
 		db.setup();
 		db.update(metadata, (ArrayList<AsciiTable>)((AsciiTableContentHandler)handler).getTables());

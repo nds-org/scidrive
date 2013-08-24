@@ -25,9 +25,15 @@ import edu.jhu.pha.vospace.process.database.MyDB;
 import edu.jhu.pha.vospace.process.sax.AsciiTable;
 import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
 
-public class FileToDatabaseProcessor {
+public class FileToDatabaseProcessor extends Processor {
 
-	public static void processNodeMeta(Metadata metadata, Object handler, JsonNode credentials) throws Exception {
+	protected FileToDatabaseProcessor(ProcessorConfig config) {
+		super(config);
+	}
+	
+	@Override
+	public void processNodeMeta(Metadata metadata, JsonNode credentials)
+			throws ProcessingException {
 		Database db = new MyDB(credentials);
 		db.setup();
 		db.update(metadata, (ArrayList<AsciiTable>)((AsciiTableContentHandler)handler).getTables());

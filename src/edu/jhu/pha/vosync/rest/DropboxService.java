@@ -95,7 +95,8 @@ import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.oauth.VoboxUser;
 import edu.jhu.pha.vospace.process.NodeProcessor;
-import edu.jhu.pha.vospace.process.NodeProcessor.ProcessorConfig;
+import edu.jhu.pha.vospace.process.ProcessorConfig;
+import edu.jhu.pha.vospace.process.ProcessingFactory;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vosync.exception.BadRequestException;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
@@ -246,7 +247,7 @@ public class DropboxService {
 
 			g2.writeArrayFieldStart("services");
 			JsonNode servicesCredentials = UserHelper.getUserServices(user.getName());
-			for(ProcessorConfig proc: NodeProcessor.processors.values()) {
+			for(ProcessorConfig proc: ProcessingFactory.getInstance().getProcessorConfigs().values()) {
 				g2.writeStartObject();
 				g2.writeStringField("id", proc.getId());
 				g2.writeStringField("title", proc.getTitle());
@@ -298,11 +299,11 @@ public class DropboxService {
 	
 	@GET @Path("account/service_schema/{processor:.+}")
 	public Response getAccountServiceSchema(@PathParam("processor") String processor) {
-		ProcessorConfig config = NodeProcessor.processors.get(processor);
+		ProcessorConfig config = ProcessingFactory.getInstance().getProcessorConfigs().get(processor);
 		if(config == null)
 			throw new NotFoundException("Processor not found");
 		
-		return Response.ok(config.getSchema().toString()).build();
+		return Response.ok(config.getSchemaAsJson()).build();
 	}
 	
 	@GET @Path("regions/info")

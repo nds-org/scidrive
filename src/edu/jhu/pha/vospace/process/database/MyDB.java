@@ -300,7 +300,7 @@ public class MyDB implements Database {
 		}
 	}
 	
-	public void updateImages(int resourceId, Metadata metadata) throws DatabaseException {
+	private void updateImages(int resourceId, Metadata metadata) throws DatabaseException {
 		Integer nAxis1;
 		Integer nAxis2;
 		Integer bitPix;
@@ -429,7 +429,7 @@ public class MyDB implements Database {
 		}
 	}
 	
-	public void updateResourceTables(int resourceId, Metadata metadata, ArrayList<AsciiTable> tables) throws DatabaseException {
+	private void updateResourceTables(int resourceId, Metadata metadata, ArrayList<AsciiTable> tables) throws DatabaseException {
 
 		for (AsciiTable table : tables) {
 			int tableId = table.getTableId();

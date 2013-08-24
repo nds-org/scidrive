@@ -16,6 +16,7 @@
 package edu.sdsc.vospace.process;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,15 +26,19 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.xml.sax.ContentHandler;
 
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.process.ProcessingException;
+import edu.jhu.pha.vospace.process.Processor;
+import edu.jhu.pha.vospace.process.ProcessorConfig;
 import edu.jhu.pha.vospace.process.tika.SimulationParser;
 
 
-public class SimulationProcessor {
+public class SimulationProcessor extends Processor {
 
 	private static Logger logger = Logger.getLogger(SimulationProcessor.class);
 	private final static String SIM_EXCHANGE = "sdsc.vobox.simulation";
@@ -41,19 +46,24 @@ public class SimulationProcessor {
 	private final static String SIM_ID_PROPERTY = "ivo://ivoa.net/vospace/core#simulation_id";
 	private final static String SIM_DATASET_ID_PROPERTY = "ivo://ivoa.net/vospace/core#simulation_dataset";
 	
-	public static void processNodeMeta(Metadata metadata, Object handler, JsonNode credentials) throws Exception {
+	protected SimulationProcessor(ProcessorConfig config) {
+		super(config);
+	}
+
+	@Override
+	public void processNodeMeta(Metadata metadata, JsonNode credentials) throws ProcessingException {
         String owner = metadata.get("owner");
         String source = metadata.get(TikaCoreProperties.SOURCE);
 
-        DataNode node = (DataNode)NodeFactory.getNode(new VospaceId(source), owner);
-        
-        Map<String, String> properties = new HashMap<String, String>();
-        properties.put(SIM_ID_PROPERTY, metadata.get(SimulationParser.METADATA_SIMULATION_UUID));
-        properties.put(SIM_DATASET_ID_PROPERTY, 
-        		StringUtils.join(metadata.getValues(SimulationParser.METADATA_DATASET_UUID), " "));
-        node.getMetastore().updateUserProperties(node.getUri(), properties);
-        
-		try {
+        try {
+	        DataNode node = (DataNode)NodeFactory.getNode(new VospaceId(source), owner);
+	        
+	        Map<String, String> properties = new HashMap<String, String>();
+	        properties.put(SIM_ID_PROPERTY, metadata.get(SimulationParser.METADATA_SIMULATION_UUID));
+	        properties.put(SIM_DATASET_ID_PROPERTY, 
+	        		StringUtils.join(metadata.getValues(SimulationParser.METADATA_DATASET_UUID), " "));
+	        node.getMetastore().updateUserProperties(node.getUri(), properties);
+	        
 			final String simEndpointUrl = node.getHttpDownloadLink().toASCIIString();
 			
 			QueueConnector.goAMQP("submit new simulation", new QueueConnector.AMQPWorker<Boolean>() {
@@ -61,20 +71,19 @@ public class SimulationProcessor {
 				public Boolean go(com.rabbitmq.client.Connection conn, com.rabbitmq.client.Channel channel) throws IOException {
 					Map<String,Object> jobData = new HashMap<String,Object>();
 					jobData.put("url",simEndpointUrl);
-
+	
 	    			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(jobData);
-
+	
 					channel.exchangeDeclare(SIM_EXCHANGE, "topic", true);
 					channel.basicPublish(SIM_EXCHANGE, "new_sim", null, jobSer);
 			    	
 			    	return true;
 				}
-			});				
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-			logger.error("Error creating simulation endpoint: "+e.getMessage());
-		}
+			});	
+        } catch (URISyntaxException ex) {
+        	throw new ProcessingException(ex);
+        }
+		
   	}
 
 }

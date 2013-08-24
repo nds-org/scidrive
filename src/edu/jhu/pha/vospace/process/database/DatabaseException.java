@@ -15,7 +15,9 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.process.database;
 
-public class DatabaseException extends Exception {
+import edu.jhu.pha.vospace.process.ProcessingException;
+
+public class DatabaseException extends ProcessingException {
 
 	private static final long serialVersionUID = 3446261787472822684L;
 
