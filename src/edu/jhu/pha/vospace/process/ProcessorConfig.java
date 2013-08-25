@@ -5,15 +5,20 @@ import java.util.Vector;
 
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.log4j.Logger;
+import org.apache.tika.mime.MediaType;
+import org.apache.tika.mime.MediaTypeRegistry;
+import org.apache.tika.mime.MimeTypes;
 import org.apache.tika.sax.BodyContentHandler;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.xml.sax.ContentHandler;
 
 public class ProcessorConfig {
 
+	private static final MediaTypeRegistry MIME_REGISTRY = new MimeTypes().getMediaTypeRegistry();
+	
 	private static final Logger logger = Logger.getLogger(ProcessorConfig.class);
 	private String id;
-	private List<String> mimeTypes = new Vector<String>();
+	private List<MediaType> mimeTypes = new Vector<MediaType>();
 	private String tikaConfig;
 	private Class<? extends ContentHandler> handlerClass;
 	private Class<? extends Processor> processorClass;
@@ -22,7 +27,7 @@ public class ProcessorConfig {
 	public ProcessorConfig(XMLConfiguration conf, String processorId) {
 		this.id = processorId;
 		for(String mimeType: conf.getStringArray("//processor[id='"+processorId+"']/mimetype")){
-			mimeTypes.add(mimeType);
+			mimeTypes.add(MediaType.parse(mimeType));
 		}
 		this.tikaConfig = conf.getString("//processor[id='"+processorId+"']/config");
 		
@@ -70,8 +75,19 @@ public class ProcessorConfig {
 	public String getId() {
 		return id;
 	}
+	
+	/**
+	 * Checks whether the given media type equals one of the supported types or is a specialization of these. 
+	 * @param mimeType The type to check
+	 * @return true if equals or is specialozation of supported type
+	 */
 	public boolean isSupportMimeType(String mimeType) {
-		return this.mimeTypes.contains(mimeType);
+		for(MediaType supportedType: this.mimeTypes)
+			if(MIME_REGISTRY.isInstanceOf(mimeType, supportedType))
+				return true;
+			else
+				logger.debug(mimeType.toString()+" isn't instanceof "+supportedType.toString());
+		return false;
 	}
 	public String getTikaConfig() {
 		return tikaConfig;

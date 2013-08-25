@@ -27,11 +27,13 @@ import org.xml.sax.SAXException;
 
 public class AsciiTableContentHandler implements ContentHandler {
 
-	static final int TABLE_ROW = 1;
-	static final int COLUMN_NAMES = 2;
-	static final int COLUMN_TYPES = 3;
+	private enum Element {
+		TABLE_ROW,
+		COLUMN_NAMES,
+		COLUMN_TYPES
+	};
 	
-	private Set<Integer> flags = new HashSet<Integer>();
+	private Set<Element> flags = new HashSet<Element>();
 	private List<AsciiTable> tables;
 	public List<AsciiTable> getTables() {
 		return tables;
@@ -49,13 +51,13 @@ public class AsciiTableContentHandler implements ContentHandler {
 	@Override
 	public void characters(char[] ch, int start, int length)
 			throws SAXException {
-		if (flags.contains(TABLE_ROW)) {
+		if (flags.contains(Element.TABLE_ROW)) {
 			currentRow[currentColumn] = String.valueOf(ch,start,length);
 		}
-		else if (flags.contains(COLUMN_TYPES)) {
+		else if (flags.contains(Element.COLUMN_TYPES)) {
 			currentTable.getColumnTypes()[currentColumn] = String.valueOf(ch,start,length);
 		}
-		else if (flags.contains(COLUMN_NAMES)) {
+		else if (flags.contains(Element.COLUMN_NAMES)) {
 			currentTable.getColumnNames()[currentColumn] = String.valueOf(ch,start,length);
 		}
  	}
@@ -71,13 +73,13 @@ public class AsciiTableContentHandler implements ContentHandler {
 			throws SAXException {
 
 		if ("tr".equals(localName)) {
-			flags.remove(TABLE_ROW);
+			flags.remove(Element.TABLE_ROW);
 			currentTable.getRows().add(currentRow);
 		}
 		
 		else if ("th".equals(localName)) {
-			flags.remove(COLUMN_TYPES);
-			flags.remove(COLUMN_NAMES);
+			flags.remove(Element.COLUMN_TYPES);
+			flags.remove(Element.COLUMN_NAMES);
 		}
 		
 		else if ("td".equals(localName)) {
@@ -140,16 +142,16 @@ public class AsciiTableContentHandler implements ContentHandler {
 			currentColumn = 0;
 			String info = atts.getValue("info");
 			if ("columnTypes".equals(info)) {
-				flags.add(COLUMN_TYPES);
+				flags.add(Element.COLUMN_TYPES);
 			}
 			else if ("columnNames".equals(info)) {
-				flags.add(COLUMN_NAMES);
+				flags.add(Element.COLUMN_NAMES);
 			}
 		}
 		else if ("tr".equals(localName)) {
 			currentColumn = 0;
 			currentRow = new String[currentTable.getColumns()];
-			flags.add(TABLE_ROW);
+			flags.add(Element.TABLE_ROW);
 		}
 	}
 

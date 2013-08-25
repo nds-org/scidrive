@@ -39,6 +39,8 @@ import org.apache.tika.metadata.HttpHeaders;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
+import org.apache.tika.mime.MediaTypeRegistry;
+import org.apache.tika.mime.MimeTypes;
 import org.apache.tika.parser.AbstractParser;
 import org.apache.tika.parser.CompositeParser;
 import org.apache.tika.parser.ParseContext;
@@ -66,6 +68,8 @@ public class NodeProcessor implements Runnable {
 	private final static String EXTERNAL_LINK_PROPERTY = "ivo://ivoa.net/vospace/core#external_link";
 	private final static String PROCESSING_PROPERTY = "ivo://ivoa.net/vospace/core#processing";
 	private final static String ERROR_MESSAGE_PROPERTY = "ivo://ivoa.net/vospace/core#error_message";
+
+	private static final MediaTypeRegistry MIME_REGISTRY = new MimeTypes().getMediaTypeRegistry();
 
     static Configuration conf = SettingsServlet.getConfig();
 
@@ -108,28 +112,20 @@ public class NodeProcessor implements Runnable {
 		            	switch(node.getType()) {
 			            	case DATA_NODE: {
 			            		TikaInputStream inp = null;
-			            		MediaType type = null;
 			            		try {
-			            			Metadata nodeTikaMeta = new Metadata();
+			            			Metadata detectTikaMeta = new Metadata();
+			            			detectTikaMeta.set(Metadata.RESOURCE_NAME_KEY, node.getUri().getNodePath().getNodeName());
 			            			inp = TikaInputStream.get(node.exportData());
 			            			//MediaType type = new DefaultDetector().detect(inp, nodeTikaMeta);
 			            			List<Detector> list = new ArrayList<Detector>();
 			            			list.add(new SimulationDetector());
 			            			list.add(new DefaultDetector());
 			            			Detector detector = new CompositeDetector(list);
-			            			type = detector.detect(inp, nodeTikaMeta);
-			            			
-			            			nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
-				            		node.getNodeInfo().setContentType(nodeTikaMeta.get(HttpHeaders.CONTENT_TYPE));
+
+			            			MediaType type = detector.detect(inp, detectTikaMeta);
+				            		node.getNodeInfo().setContentType(type.toString());
 				            		node.getMetastore().storeInfo(node.getUri(), node.getNodeInfo());
-			            		} catch(Exception ex) {
-			            			logger.error("Error detecting file type: "+ex.toString());
-			            		} finally {
-			            			try {inp.close();} catch(Exception ex) {};
-			            		}
-			            		
-			            		try {
-			            			
+
 			            			JsonNode credentials = UserHelper.getProcessorCredentials(node.getOwner());
 			            			
 			            			List<String> externalLinks = new ArrayList<String>();
@@ -142,7 +138,6 @@ public class NodeProcessor implements Runnable {
 			            				
 					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
 					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
-
 
 			            				AbstractParser parser;
 		            					TikaConfig config = TikaConfig.getDefaultConfig();
@@ -181,18 +176,25 @@ public class NodeProcessor implements Runnable {
 			        					if(null != links && links.length > 0) {
 			        						externalLinks.addAll(Arrays.asList(links));
 			        					}
-			            			}
-
-			            			if(externalLinks.size() > 0) {
-				            			Map<String, String> properties = new HashMap<String, String>();
-			        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
-			        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
+			        					
+			        					MediaType curType = MediaType.parse(nodeTikaMeta.get(Metadata.CONTENT_TYPE));
+			        					if(MIME_REGISTRY.isSpecializationOf(curType, type)) {
+			        						type = curType;
+			        						logger.debug("Media type reassigned to "+type.toString()+" by "+processorConf.getId());
+			        					}
+			        					
 			            			}
 
 			            			Map<String, String> properties = new HashMap<String, String>();
 		        			        properties.put(PROCESSING_PROPERTY, "done");
-		        			        node.getMetastore().updateUserProperties(node.getUri(), properties);
-		        			        
+			            			if(externalLinks.size() > 0) {
+			        			        properties.put(EXTERNAL_LINK_PROPERTY, StringUtils.join(externalLinks, ' '));
+			            			}
+				            		node.getNodeInfo().setContentType(type.toString());
+
+				            		node.getMetastore().updateUserProperties(node.getUri(), properties);
+				            		node.getMetastore().storeInfo(node.getUri(), node.getNodeInfo());
+
 				            		logger.debug("Updated node "+node.getUri().toString()+" to "+node.getNodeInfo().getContentType()+" and "+node.getNodeInfo().getSize());
 
 				            		// update node's container size metadata
@@ -223,6 +225,8 @@ public class NodeProcessor implements Runnable {
 			            		} catch(IOException ex) {
 			            			logger.error("Error reading the node "+node.getUri().toString()+": "+ex.getMessage());
 			            			processError(node, ex);
+			            		} finally {
+			            			try {inp.close();} catch(Exception ex2) {};
 			            		}
 			            		
 			            		break;
