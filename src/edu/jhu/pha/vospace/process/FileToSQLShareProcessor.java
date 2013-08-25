@@ -23,6 +23,7 @@ import org.apache.tika.mime.MediaTypeRegistry;
 import org.apache.tika.mime.MimeTypes;
 import org.codehaus.jackson.JsonNode;
 
+import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.process.database.Database;
 import edu.jhu.pha.vospace.process.database.SQLShare;
 import edu.jhu.pha.vospace.process.sax.AsciiTable;
@@ -32,7 +33,7 @@ public class FileToSQLShareProcessor extends Processor {
 
 	private static final MediaTypeRegistry MIME_REGISTRY = new MimeTypes().getMediaTypeRegistry();
 	private static final MediaType CSV_TYPE = MediaType.text("csv");
-	public FileToSQLShareProcessor(ProcessorConfig config) {
+	protected FileToSQLShareProcessor(ProcessorConfig config) {
 		super(config);
 	}
 
@@ -45,6 +46,8 @@ public class FileToSQLShareProcessor extends Processor {
 		if(!metadata.get(Metadata.CONTENT_TYPE).equals(CSV_TYPE.toString()) &&
 				MIME_REGISTRY.isSpecializationOf(CSV_TYPE, MediaType.parse(metadata.get(Metadata.CONTENT_TYPE)))){
 			metadata.set(Metadata.CONTENT_TYPE, CSV_TYPE.toString());
-		}		
+		}
+		
+		metadata.set("NodeType", NodeType.STRUCTURED_DATA_NODE.toString());
   	}
 }

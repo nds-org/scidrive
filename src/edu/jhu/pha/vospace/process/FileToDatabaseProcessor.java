@@ -23,6 +23,7 @@ import org.apache.tika.mime.MediaTypeRegistry;
 import org.apache.tika.mime.MimeTypes;
 import org.codehaus.jackson.JsonNode;
 
+import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.process.database.Database;
 import edu.jhu.pha.vospace.process.database.MyDB;
 import edu.jhu.pha.vospace.process.sax.AsciiTable;
@@ -37,8 +38,7 @@ public class FileToDatabaseProcessor extends Processor {
 	}
 	
 	@Override
-	public void processNodeMeta(Metadata metadata, JsonNode credentials)
-			throws ProcessingException {
+	public void processNodeMeta(Metadata metadata, JsonNode credentials) throws ProcessingException {
 		Database db = new MyDB(credentials);
 		db.setup();
 		db.update(metadata, (ArrayList<AsciiTable>)((AsciiTableContentHandler)handler).getTables());
@@ -47,5 +47,7 @@ public class FileToDatabaseProcessor extends Processor {
 				MIME_REGISTRY.isSpecializationOf(CSV_TYPE, MediaType.parse(metadata.get(Metadata.CONTENT_TYPE)))){
 			metadata.set(Metadata.CONTENT_TYPE, CSV_TYPE.toString());
 		}		
+
+		metadata.set("NodeType", NodeType.STRUCTURED_DATA_NODE.toString());
   	}
 }

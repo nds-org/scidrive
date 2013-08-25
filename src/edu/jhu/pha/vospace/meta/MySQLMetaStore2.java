@@ -493,6 +493,27 @@ public class MySQLMetaStore2 implements MetaStore{
       
 	}
 
+	@Override
+	public void changeNodeType(final VospaceId identifier, final NodeType type) {
+        DbPoolServlet.goSql("Adding nodeinfo",
+        		"update nodes set type = ? where current_rev = 1 and node_id = "+
+                		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
+                		"ON nodes.container_id = containers.container_id JOIN user_identities "+
+                		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
+                new SqlWorker<Integer>() {
+                    @Override
+                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, type.toString());
+                        stmt.setString(2, identifier.getNodePath().getContainerName());
+                        stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath());
+                        stmt.setString(4, owner);
+                        return stmt.executeUpdate();
+                    }
+                }
+        );
+      
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see edu.jhu.pha.vospace.meta.MetaStore#updateData(edu.jhu.pha.vospace.node.VospaceId, edu.jhu.pha.vospace.node.VospaceId)

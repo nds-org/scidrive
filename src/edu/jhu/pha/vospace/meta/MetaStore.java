@@ -28,6 +28,8 @@ import edu.jhu.pha.vospace.node.VospaceId;
  */
 public interface MetaStore {
 
+	public void changeNodeType(final VospaceId identifier, final NodeType type);
+
     /**
      * Get the node bytes
      * @param identifier

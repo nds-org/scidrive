@@ -59,6 +59,7 @@ import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
+import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 
@@ -110,7 +111,7 @@ public class NodeProcessor implements Runnable {
 		            	logger.debug("Node changed: "+nodeData.get("uri")+" "+nodeData.get("owner")+" "+node.getType());
 		            	
 		            	switch(node.getType()) {
-			            	case DATA_NODE: {
+			            	case DATA_NODE: case STRUCTURED_DATA_NODE: case UNSTRUCTURED_DATA_NODE: {
 			            		TikaInputStream inp = null;
 			            		try {
 			            			Metadata detectTikaMeta = new Metadata();
@@ -181,6 +182,18 @@ public class NodeProcessor implements Runnable {
 			        					if(MIME_REGISTRY.isSpecializationOf(curType, type)) {
 			        						type = curType;
 			        						logger.debug("Media type reassigned to "+type.toString()+" by "+processorConf.getId());
+			        					}
+			        				
+			        					String nodeTypeStr = nodeTikaMeta.get("NodeType");
+			        					if(null != nodeTypeStr) {
+			        						try {
+			        							logger.debug("!!!!!!!!!!!!! "+nodeTypeStr);
+			        							node.getMetastore().changeNodeType(node.getUri(), NodeType.valueOf(nodeTypeStr));
+			        						} catch(Exception ignored) {
+			        							ignored.printStackTrace();
+			        						}
+			        					} else {
+		        							logger.debug("!!!!!!!!!!!!! is null");
 			        					}
 			        					
 			            			}
