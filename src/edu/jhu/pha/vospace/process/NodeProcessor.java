@@ -129,6 +129,8 @@ public class NodeProcessor implements Runnable {
 
 			            			JsonNode credentials = UserHelper.getProcessorCredentials(node.getOwner());
 			            			
+			            			boolean makeStructured = false;
+			            			
 			            			List<String> externalLinks = new ArrayList<String>();
 			            			for(ProcessorConfig processorConf: ProcessingFactory.getInstance().getProcessorConfigsForNode(node, credentials)) {
 			            				Metadata nodeTikaMeta = new Metadata();
@@ -185,19 +187,12 @@ public class NodeProcessor implements Runnable {
 			        					}
 			        				
 			        					String nodeTypeStr = nodeTikaMeta.get("NodeType");
-			        					if(null != nodeTypeStr) {
-			        						try {
-			        							logger.debug("!!!!!!!!!!!!! "+nodeTypeStr);
-			        							node.getMetastore().changeNodeType(node.getUri(), NodeType.valueOf(nodeTypeStr));
-			        						} catch(Exception ignored) {
-			        							ignored.printStackTrace();
-			        						}
-			        					} else {
-		        							logger.debug("!!!!!!!!!!!!! is null");
-			        					}
-			        					
+			        					if(null != nodeTypeStr && NodeType.valueOf(nodeTypeStr).equals(NodeType.STRUCTURED_DATA_NODE))
+			        						makeStructured = true;
 			            			}
 
+		            				node.makeNodeStructured(makeStructured);
+			            		
 			            			Map<String, String> properties = new HashMap<String, String>();
 		        			        properties.put(PROCESSING_PROPERTY, "done");
 			            			if(externalLinks.size() > 0) {

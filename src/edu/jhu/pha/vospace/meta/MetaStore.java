@@ -28,7 +28,12 @@ import edu.jhu.pha.vospace.node.VospaceId;
  */
 public interface MetaStore {
 
-	public void changeNodeType(final VospaceId identifier, final NodeType type);
+	/**
+	 * Changes node type to structuredNode or unstructuredNode
+	 * @param identifier The node to change type of
+	 * @param isStructured true makes the node structured; false maked node unstructured.
+	 */
+	public void makeStructured(final VospaceId identifier, final boolean isStructured);
 
     /**
      * Get the node bytes

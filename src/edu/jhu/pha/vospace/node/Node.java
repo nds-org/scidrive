@@ -220,7 +220,7 @@ public abstract class Node implements Cloneable {
 					Map<String, String> properties = this.getMetastore().getProperties(this.getUri());
 					properties.put(LENGTH_PROPERTY, Long.toString(getNodeInfo().getSize()));
 					properties.put(DATE_PROPERTY, dropboxDateFormat.format(getNodeInfo().getMtime()));
-					if(this.getType() == NodeType.DATA_NODE) {
+					if(this.getType() == NodeType.DATA_NODE || this.getType() == NodeType.STRUCTURED_DATA_NODE || this.getType() == NodeType.UNSTRUCTURED_DATA_NODE) {
 						properties.put(CONTENTTYPE_PROPERTY, getNodeInfo().getContentType());
 					}
 					
@@ -432,4 +432,7 @@ public abstract class Node implements Cloneable {
 		return "";
 	}
 
+	public void makeNodeStructured(boolean isStructured) {
+		getMetastore().makeStructured(this.getUri(), isStructured);
+	}
 }

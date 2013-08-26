@@ -34,4 +34,10 @@ public class LinkNode extends DataNode {
 		return NodeType.LINK_NODE;
 	}
 
+	@Override
+	public void makeNodeStructured(boolean isStructured) {
+		throw new AssertionError("Can't change ContainerNode type to DataNode");
+	}
+
+
 }

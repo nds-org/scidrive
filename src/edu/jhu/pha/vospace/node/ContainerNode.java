@@ -400,4 +400,9 @@ public class ContainerNode extends DataNode {
 		getStorage().setNodeSyncTo(getUri().getNodePath().getContainerName(), syncToUrl, syncKey);
     }
 
+    @Override
+	public void makeNodeStructured(boolean isStructured) {
+		throw new AssertionError("Can't change ContainerNode type to DataNode");
+	}
+
 }

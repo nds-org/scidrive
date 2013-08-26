@@ -102,23 +102,7 @@ public class NodesController {
 					header("Content-Length", Long.toString(node.getNodeInfo().getSize())).
 					build();
 		} else {
-			byte[] nodeBytes;
-			switch(node.getType()) {
-				case DATA_NODE:
-					nodeBytes = (byte[])((DataNode)node).export(view, Node.Detail.valueOf(Node.Detail.class, detail));
-					break;
-				case CONTAINER_NODE:
-					nodeBytes = (byte[])((ContainerNode)node).export(view, Node.Detail.valueOf(Node.Detail.class, detail));
-					break;
-				case STRUCTURED_DATA_NODE:
-					nodeBytes = (byte[])((StructuredDataNode)node).export(view, Node.Detail.valueOf(Node.Detail.class, detail));
-					break;
-				case UNSTRUCTURED_DATA_NODE:
-					nodeBytes = (byte[])((UnstructuredDataNode)node).export(view, Node.Detail.valueOf(Node.Detail.class, detail));
-					break;
-				default:
-					nodeBytes = (byte[])node.export(view, Node.Detail.valueOf(Node.Detail.class, detail));
-			}
+			byte[] nodeBytes = (byte[])((DataNode)node).export(view, Node.Detail.valueOf(Node.Detail.class, detail));
 
 			InputStream xmlStream = new ByteArrayInputStream(nodeBytes);
 
@@ -127,11 +111,15 @@ public class NodesController {
 		    serializer.setIndent(4);  // or whatever you like
 		    try {
 				serializer.write(new Builder().build(xmlStream));
+			    byte[] outData = out.toByteArray();
+				return Response.ok(outData).type(type).build();
 			} catch (Exception e) {
 				logger.error("Error parsing the output node XML document: "+e.getMessage());
 				throw new InternalServerErrorException("InternalFault");
+			} finally {
+			    try {out.close();} catch(Exception ignored) {}
+			    try {xmlStream.close();} catch(Exception ignored) {}
 			}
-			return Response.ok(out.toByteArray()).type(type).build();
 		}
 	}
 	

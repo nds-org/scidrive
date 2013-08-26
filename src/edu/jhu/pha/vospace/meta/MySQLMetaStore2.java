@@ -455,7 +455,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
                     	
                     	String mimeType = "";
-                    	if(type == NodeType.DATA_NODE)
+                    	if(type == NodeType.DATA_NODE || type == NodeType.STRUCTURED_DATA_NODE || type == NodeType.UNSTRUCTURED_DATA_NODE)
                     		mimeType = "application/file";
                     	
                         stmt.setString(1, identifier.getNodePath().getNodeRelativeStoragePath());
@@ -493,8 +493,12 @@ public class MySQLMetaStore2 implements MetaStore{
       
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.MetaStore#makeStructured(edu.jhu.pha.vospace.node.VospaceId, boolean)
+	 */
 	@Override
-	public void changeNodeType(final VospaceId identifier, final NodeType type) {
+	public void makeStructured(final VospaceId identifier, final boolean isStructured) {
         DbPoolServlet.goSql("Adding nodeinfo",
         		"update nodes set type = ? where current_rev = 1 and node_id = "+
                 		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
@@ -503,7 +507,7 @@ public class MySQLMetaStore2 implements MetaStore{
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, type.toString());
+                        stmt.setString(1, (isStructured)?NodeType.STRUCTURED_DATA_NODE.toString():NodeType.UNSTRUCTURED_DATA_NODE.toString());
                         stmt.setString(2, identifier.getNodePath().getContainerName());
                         stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath());
                         stmt.setString(4, owner);
