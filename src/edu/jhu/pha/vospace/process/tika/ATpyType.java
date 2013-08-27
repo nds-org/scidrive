@@ -1,20 +1,17 @@
 package edu.jhu.pha.vospace.process.tika;
 
 public class ATpyType {
-	public static final int UNKNOWN = 0;
-	public static final int INT = 1;
-	public static final int FLOAT = 2;
-	public static final int STRING = 3;
+	public enum Type {UNKNOWN, INT, FLOAT, STRING}
 	
-	int kind;
+	Type kind;
 	int itemSize;
 	
-	public ATpyType(int kind, int itemSize) {
+	public ATpyType(Type kind, int itemSize) {
 		this.kind = kind;
 		this.itemSize = itemSize;
 	}
 	
-	public int getKind() {
+	public Type getKind() {
 		return kind;
 	}
 	

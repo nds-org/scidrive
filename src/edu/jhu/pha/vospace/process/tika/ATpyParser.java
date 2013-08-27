@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,9 +24,7 @@ import org.python.util.PythonInterpreter;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
-import edu.jhu.pha.vospace.process.database.Database;
-import edu.jhu.pha.vospace.process.database.SQLShare;
-import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
+import edu.jhu.pha.vospace.process.tika.ATpyType.Type;
 
 
 public class ATpyParser implements Parser {
@@ -83,13 +79,13 @@ public class ATpyParser implements Parser {
 				ATpyType type = table.getColumnType(i);
 				int dataType;
 				switch (type.getKind()) {
-					case ATpyType.STRING: 
+					case STRING: 
 						dataType = DataTypes.STRING; 
 						break;
-					case ATpyType.INT: 
+					case INT: 
 						dataType = DataTypes.INT64;
 						break;
-					case ATpyType.FLOAT:
+					case FLOAT:
 						dataType = DataTypes.DOUBLE;
 						break;
 					default: 
@@ -174,14 +170,16 @@ public class ATpyParser implements Parser {
 				for (int i = 0; i < n; i++) {
 					switch (types[i].get(0).toString().charAt(0)) {
 					case 'i':
-						myTypes[i] = new ATpyType(ATpyType.INT,((Integer) types[i].get(1)));
+					case 'u':
+						myTypes[i] = new ATpyType(Type.INT,((Integer) types[i].get(1)));
 						break;
 					case 'f':
-						myTypes[i] = new ATpyType(ATpyType.FLOAT,((Integer) types[i].get(1)));
+						myTypes[i] = new ATpyType(Type.FLOAT,((Integer) types[i].get(1)));
 						break;
 					case 'S':
 					case 'a':
-						myTypes[i] = new ATpyType(ATpyType.STRING,((Integer) types[i].get(1)));
+					case 'U':
+						myTypes[i] = new ATpyType(Type.STRING,((Integer) types[i].get(1)));
 						break;
 					default:
 						break;
@@ -230,8 +228,8 @@ public class ATpyParser implements Parser {
 //		db.close();
 		ATpyParser parser = new ATpyParser();
 		
-		System.out.println(parser.parseATpy("http://dimmnb/vospace-2.0/data/4201a3bd-495b-4a9c-80eb-d4d16974aa23",
-				"127.0.0.1",8888, "ascii"));
+//		System.out.println(parser.parseATpy("http://dimmnb/vospace-2.0/data/4201a3bd-495b-4a9c-80eb-d4d16974aa23",
+//				"127.0.0.1",8888, "ascii"));
 
 		System.out.println(parser.parseATpy("http://dimmnb/vospace-2.0/data/8950c206-dda2-4d80-ba33-384cb1346743",
 				"127.0.0.1",8888, "vo"));

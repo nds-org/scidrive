@@ -3,6 +3,8 @@ package edu.jhu.pha.vospace.process.tika;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.jhu.pha.vospace.process.tika.ATpyType.Type;
+
 public class ATpyTable {
 	private ATpyType[] columnTypes;
 	private String[] columnNames;
@@ -88,9 +90,9 @@ public class ATpyTable {
 			}
 			String kind = "";
 				switch (columnTypes[i].getKind()) {
-				case ATpyType.INT: kind = "i"; break;
-				case ATpyType.FLOAT: kind = "f"; break;
-				case ATpyType.STRING: kind = "a"; break;
+				case INT: kind = "i"; break;
+				case FLOAT: kind = "f"; break;
+				case STRING: kind = "a"; break;
 				default: break;
 			}
 				
@@ -105,7 +107,7 @@ public class ATpyTable {
 			String row = "";
 			for (int j=0; j<columns; j++) {
 				String value = getStringValue(i,j);
-				if (getColumnType(j).getKind() == ATpyType.STRING) {
+				if (getColumnType(j).getKind() == Type.STRING) {
 					value = "\""+ value.replaceAll("\"", "\\x034")+"\"";
 				}
 				if (!"".equals(row)) {
