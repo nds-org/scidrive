@@ -4,7 +4,7 @@
 		<title>Tables extractor</title>
 		<description>Extracts tabular data from csv\, fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database.</description>
 		<mimetype>application/fits</mimetype>
-		<mimetype>application/fits</mimetype>
+		<mimetype>application/xml</mimetype>
 		<mimetype>text/plain</mimetype>
 		<mimetype>image/tiff</mimetype>
 		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>

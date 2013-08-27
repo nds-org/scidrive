@@ -15,6 +15,8 @@ import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
+import org.apache.tika.mime.MediaTypeRegistry;
+import org.apache.tika.mime.MimeTypes;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.Parser;
 import org.apache.tika.sax.XHTMLContentHandler;
@@ -31,10 +33,12 @@ import edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler;
 
 public class ATpyParser implements Parser {
 	private Set<MediaType> SUPPORTED_TYPES;
+	private static final MediaTypeRegistry MIME_REGISTRY = new MimeTypes().getMediaTypeRegistry();
 	
 	public ATpyParser() {
 		SUPPORTED_TYPES = new HashSet<MediaType>();
 		SUPPORTED_TYPES.add(MediaType.TEXT_PLAIN);
+		SUPPORTED_TYPES.add(MediaType.application("x-votable+xml"));
 	}
 	
 	@Override
@@ -47,66 +51,75 @@ public class ATpyParser implements Parser {
 			ParseContext context) throws IOException, SAXException, TikaException {
 
 		try {
-		ATpyTable table = parseATpy(metadata.get(Metadata.CONTENT_LOCATION),"127.0.0.1",8888);
-		
-        XHTMLContentHandler xhtml = new XHTMLContentHandler(handler, metadata);
-        
-        xhtml.startDocument();
-
-        int nCols = table.getColumns();
-        
-		xhtml.startElement("section","id",String.valueOf(1));
-		xhtml.startElement("table","columns",String.valueOf(nCols));
-
-		xhtml.startElement("th", "info", "columnNames");
-		for (int i=0; i<nCols; i++) {
-    		xhtml.element("td", table.getColumnName(i));
-    	}
-		xhtml.endElement("th");
-
-		xhtml.startElement("th", "info", "columnTypes");
-		for (int i=0; i<nCols; i++) {
-			ATpyType type = table.getColumnType(i);
-			int dataType;
-			switch (type.getKind()) {
-				case ATpyType.STRING: 
-					dataType = DataTypes.STRING; 
-					break;
-				case ATpyType.INT: 
-					dataType = DataTypes.INT64;
-					break;
-				case ATpyType.FLOAT:
-					dataType = DataTypes.DOUBLE;
-					break;
-				default: 
-					dataType = DataTypes.UNKNOWN;
-					break;
+			MediaType fileMediaType = MediaType.parse(metadata.get(Metadata.CONTENT_TYPE));
+			String pyType;
+			if(MIME_REGISTRY.isInstanceOf(fileMediaType, MediaType.TEXT_PLAIN)){
+				pyType = "ascii";
+			} else if(MIME_REGISTRY.isInstanceOf(fileMediaType, MediaType.application("x-votable+xml"))){
+				pyType = "vo";
+			} else {
+				throw new TikaException("Error! Mimetype "+fileMediaType.toString()+" is not suported by AtpyParser");
 			}
-    		String columnType = DataTypes.getCharCode(dataType);
-    		xhtml.element("td", columnType);
-    	}
-		xhtml.endElement("th");
-		
-		List<String[]> rows = table.getRows();
-		
-		for (int r=0; r<rows.size(); r++) {
-			xhtml.startElement("tr");
-			String[] row = rows.get(r);
-			for (int c=0; c<nCols; c++) {
-				String value = row[c];
-				if ("".equals(value)) value = " ";
-				xhtml.element("td", value);
-			}
-			xhtml.endElement("tr");
-		}
 			
-		xhtml.endElement("table");
-		xhtml.endElement("section");
-		xhtml.endDocument();
-		
-        metadata.add(TikaCoreProperties.TYPE, "ATpy");
-		}
-		catch (Exception e) {
+			ATpyTable table = parseATpy(metadata.get(Metadata.CONTENT_LOCATION),"127.0.0.1",8888, pyType);
+			
+	        XHTMLContentHandler xhtml = new XHTMLContentHandler(handler, metadata);
+	        
+	        xhtml.startDocument();
+	
+	        int nCols = table.getColumns();
+	        
+			xhtml.startElement("section","id",String.valueOf(1));
+			xhtml.startElement("table","columns",String.valueOf(nCols));
+	
+			xhtml.startElement("th", "info", "columnNames");
+			for (int i=0; i<nCols; i++) {
+	    		xhtml.element("td", table.getColumnName(i));
+	    	}
+			xhtml.endElement("th");
+	
+			xhtml.startElement("th", "info", "columnTypes");
+			for (int i=0; i<nCols; i++) {
+				ATpyType type = table.getColumnType(i);
+				int dataType;
+				switch (type.getKind()) {
+					case ATpyType.STRING: 
+						dataType = DataTypes.STRING; 
+						break;
+					case ATpyType.INT: 
+						dataType = DataTypes.INT64;
+						break;
+					case ATpyType.FLOAT:
+						dataType = DataTypes.DOUBLE;
+						break;
+					default: 
+						dataType = DataTypes.UNKNOWN;
+						break;
+				}
+	    		String columnType = DataTypes.getCharCode(dataType);
+	    		xhtml.element("td", columnType);
+	    	}
+			xhtml.endElement("th");
+			
+			List<String[]> rows = table.getRows();
+			
+			for (int r=0; r<rows.size(); r++) {
+				xhtml.startElement("tr");
+				String[] row = rows.get(r);
+				for (int c=0; c<nCols; c++) {
+					String value = row[c];
+					if ("".equals(value)) value = " ";
+					xhtml.element("td", value);
+				}
+				xhtml.endElement("tr");
+			}
+				
+			xhtml.endElement("table");
+			xhtml.endElement("section");
+			xhtml.endDocument();
+			
+	        metadata.add(TikaCoreProperties.TYPE, "ATpy");
+		} catch (Exception e) {
 			StringWriter sw = new StringWriter();
 			PrintWriter pw = new PrintWriter(sw);
 			e.printStackTrace(pw);
@@ -114,7 +127,7 @@ public class ATpyParser implements Parser {
 		}
 	}
 
-	private ATpyTable parseATpy(String sourceUrl, String pythonHost, int pythonPort) throws TikaException {
+	private ATpyTable parseATpy(String sourceUrl, String pythonHost, int pythonPort, String type) throws TikaException {
 		String parseFromUrl = "\"\"\""
 				+ "import os, tempfile, urllib2, atpy\n"
 				+ "h,fname = tempfile.mkstemp()\n"
@@ -123,7 +136,7 @@ public class ATpyParser implements Parser {
 				+ "    u = urllib2.urlopen('"+ sourceUrl + "')\n"
 				+ "    f.write(u.read())\n"
 				+ "    f.close()\n"
-				+ "    tbl = atpy.Table(fname,type='ascii')\n"
+				+ "    tbl = atpy.Table(fname,type='"+type+"')\n"
 				+ "finally:\n"
 				//+ "    os.close(h)\n"	
 				+ "    os.remove(fname)\n"
@@ -200,20 +213,28 @@ public class ATpyParser implements Parser {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String sourceUrl = "http://localhost/tmp/ExportTable_dmedv.csv";
-		Parser parser = new ATpyParser();
+//		String sourceUrl = "http://localhost/tmp/ExportTable_dmedv.csv";
+//		Parser parser = new ATpyParser();
+//
+//		Metadata metadata = new Metadata();
+//		metadata.set(Metadata.CONTENT_LOCATION,sourceUrl);
+//		
+//		AsciiTableContentHandler handler = new AsciiTableContentHandler();
+//		
+//		parser.parse((new URL(sourceUrl)).openStream(), handler, metadata, new ParseContext());
+//		
+//		metadata.set(TikaCoreProperties.SOURCE,sourceUrl);
+//		Database db = new SQLShare();
+//		db.setup();
+//		db.update(metadata, (ArrayList)handler.getTables());
+//		db.close();
+		ATpyParser parser = new ATpyParser();
+		
+		System.out.println(parser.parseATpy("http://dimmnb/vospace-2.0/data/4201a3bd-495b-4a9c-80eb-d4d16974aa23",
+				"127.0.0.1",8888, "ascii"));
 
-		Metadata metadata = new Metadata();
-		metadata.set(Metadata.CONTENT_LOCATION,sourceUrl);
+		System.out.println(parser.parseATpy("http://dimmnb/vospace-2.0/data/8950c206-dda2-4d80-ba33-384cb1346743",
+				"127.0.0.1",8888, "vo"));
 		
-		AsciiTableContentHandler handler = new AsciiTableContentHandler();
-		
-		parser.parse((new URL(sourceUrl)).openStream(), handler, metadata, new ParseContext());
-		
-		metadata.set(TikaCoreProperties.SOURCE,sourceUrl);
-		Database db = new SQLShare();
-		db.setup();
-		db.update(metadata, (ArrayList)handler.getTables());
-		db.close();
 	}
 }

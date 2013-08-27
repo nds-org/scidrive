@@ -8,4 +8,12 @@
       <match value="InitialCycleNumber" type="string" offset="0"/>
     </magic>
   </mime-type>
+
+  <mime-type type="application/x-votable+xml">
+    <sub-class-of type="application/xml"/>
+    <root-XML localName="VOTABLE"/>
+    <root-XML localName="VOTABLE" namespaceURI="http://www.ivoa.net/xml/VOTable/v1.1"/>
+    <root-XML localName="VOTABLE" namespaceURI="http://www.ivoa.net/xml/VOTable/v1.2"/>
+    <root-XML localName="VOTABLE" namespaceURI="http://www.ivoa.net/xml/VOTable/v1.3"/>
+  </mime-type>
 </mime-info>
