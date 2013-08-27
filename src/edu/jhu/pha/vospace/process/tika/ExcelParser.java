@@ -18,6 +18,7 @@ package edu.jhu.pha.vospace.process.tika;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -38,9 +39,13 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
 public class ExcelParser implements Parser {
-	private static final Set<MediaType> SUPPORTED_TYPES = Collections.singleton(MediaType.application("vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-	public static final String FITS_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
+	private static final Set<MediaType> SUPPORTED_TYPES = new HashSet<MediaType>();
+	
+	static {
+		SUPPORTED_TYPES.add(MediaType.application("vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+		SUPPORTED_TYPES.add(MediaType.application("vnd.ms-excel"));
+	}
+	
 	@Override
 	public Set<MediaType> getSupportedTypes(ParseContext arg0) {
 		return SUPPORTED_TYPES;

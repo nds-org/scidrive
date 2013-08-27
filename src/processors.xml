@@ -3,7 +3,8 @@
 		<id>fitsprocessor</id>
 		<title>Tables extractor</title>
 		<description>Extracts tabular data from csv\, fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database.</description>
-		<mimetype>application/fits</mimetype>
+		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
+		<mimetype>application/vnd.ms-excel</mimetype>
 		<mimetype>application/fits</mimetype>
 		<mimetype>text/plain</mimetype>
 		<mimetype>image/tiff</mimetype>
