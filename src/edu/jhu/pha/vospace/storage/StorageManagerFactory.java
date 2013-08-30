@@ -24,7 +24,8 @@ import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
  */
 public class StorageManagerFactory {
 
-	private static Class<? extends StorageManager> storageClass = SwiftStorageManager.class;
+//	private static Class<? extends StorageManager> storageClass = SwiftStorageManager.class;
+	private static Class<? extends StorageManager> storageClass = SwiftJcloudsStorageManager.class;
 	
 	private StorageManagerFactory()  {
 	}
