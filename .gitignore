@@ -2,3 +2,8 @@ build
 .project
 .classpath
 bin
+lib/*.jar
+web/WEB-INF/lib
+lib.catalina
+dist
+.settings
