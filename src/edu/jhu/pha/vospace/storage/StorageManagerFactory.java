@@ -27,6 +27,8 @@ public class StorageManagerFactory {
 //	private static Class<? extends StorageManager> storageClass = SwiftStorageManager.class;
 	private static Class<? extends StorageManager> storageClass = SwiftJcloudsStorageManager.class;
 	
+	public static final String CHUNKED_CONTAINER = "scidrive_chunked_uploads";
+	
 	private StorageManagerFactory()  {
 	}
 

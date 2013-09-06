@@ -98,6 +98,7 @@ import edu.jhu.pha.vospace.process.NodeProcessor;
 import edu.jhu.pha.vospace.process.ProcessorConfig;
 import edu.jhu.pha.vospace.process.ProcessingFactory;
 import edu.jhu.pha.vospace.rest.JobDescription;
+import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 import edu.jhu.pha.vosync.exception.BadRequestException;
 import edu.jhu.pha.vosync.exception.ForbiddenException;
 import edu.jhu.pha.vosync.exception.InternalServerErrorException;
@@ -1093,10 +1094,10 @@ public class DropboxService {
 			
 			String chunkNumberString = String.format("%07d", newChunk.getChunkNum());
 			
-			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"/"+chunkNumberString));
+			identifier = new VospaceId(new NodePath("/"+StorageManagerFactory.CHUNKED_CONTAINER+"/"+uploadId+"/"+chunkNumberString));
 			DataNode node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
 
-			node.getStorage().createContainer(new NodePath("/"+conf.getString("chunked_container")));
+			node.getStorage().createContainer(new NodePath("/"+StorageManagerFactory.CHUNKED_CONTAINER));
 			node.getStorage().putBytes(identifier.getNodePath(), fileDataInp);
 			
 			NodeInfo info = new NodeInfo();

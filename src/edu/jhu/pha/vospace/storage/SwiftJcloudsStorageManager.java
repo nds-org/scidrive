@@ -94,7 +94,6 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 	private RestContext<CommonSwiftClient, CommonSwiftAsyncClient> swift;
 
 	
-	private FilesClient cli;
 	private static final Configuration conf = SettingsServlet.getConfig();
 	private static final Logger logger = Logger.getLogger(SwiftJcloudsStorageManager.class);
 	
@@ -153,18 +152,18 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 	public SwiftJcloudsStorageManager(String username) {
 		this.credentials = UserHelper.getDataStoreCredentials(username);
 
-	      Iterable<Module> modules = ImmutableSet.<Module> of(
-	    		  new Log4JLoggingModule());
-	      
-	      String provider = "swift";
+		Iterable<Module> modules = ImmutableSet.<Module> of(
+				new Log4JLoggingModule());
 
-	      BlobStoreContext context = ContextBuilder.newBuilder(provider)
-	            .endpoint(conf.getString("storage.url"))
-	            .credentials(credentials.getUsername(),credentials.getApikey())
-	            .modules(modules)
-	            .buildView(BlobStoreContext.class);
-	      storage = context.getBlobStore();
-	      swift = context.unwrap();
+		String provider = "swift";
+
+		BlobStoreContext context = ContextBuilder.newBuilder(provider)
+				.endpoint(conf.getString("storage.url"))
+				.credentials(credentials.getUsername(),credentials.getApikey())
+				.modules(modules)
+				.buildView(BlobStoreContext.class);
+		storage = context.getBlobStore();
+		swift = context.unwrap();
 	}
 
 	/**
@@ -177,7 +176,7 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 	@Override
 	public void copyBytes(NodePath oldNodePath, NodePath newNodePath, boolean keepBytes) {
 //		try {
-//			FilesObjectMetaData meta = getClient().getObjectMetaData(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
+//			MutableObjectInfoWithMetadata meta = swift.getApi().getObjectInfo(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
 //			try {
 //				// if != null then exists manifest for chunked upload
 //				if(null != meta.getManifestPrefix() && keepBytes){
@@ -274,11 +273,11 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 	 */
 	@Override
 	public void putBytes(NodePath npath, InputStream stream) {
-		MutableObjectInfoWithMetadata objMeta = new MutableObjectInfoWithMetadataImpl();
-		objMeta.setContainer(npath.getContainerName());
-		objMeta.setName(npath.getNodeRelativeStoragePath());
-		objMeta.setContentType("application/file");
-		swift.getApi().putObject(npath.getContainerName(), new SwiftObjectImpl(objMeta));
+		SwiftObject obj = swift.getApi().newSwiftObject();
+		obj.getInfo().setName(npath.getNodeRelativeStoragePath());
+		obj.setPayload(stream);
+		obj.getInfo().setContentType("application/file");
+		swift.getApi().putObject(npath.getContainerName(), obj);
 	}
 
 	/**
@@ -336,7 +335,7 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 //			NodePath path = new NodePath(meta.getManifestPrefix());
 //			List<FilesObject> segmList = getClient().listObjects(path.getContainerName(), path.getNodeRelativeStoragePath(), '/');
 //			for(FilesObject segm: segmList) {
-//				getClient().deleteObject(conf.getString("chunked_container"), segm.getName());
+//				getClient().deleteObject(StorageManagerFactory.CHUNKED_CONTAINER, segm.getName());
 //				logger.debug("Deleted segm "+segm.getName());
 //			}
 //		}
@@ -345,6 +344,7 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 
 	@Override
 	public void setNodeSyncTo(String container, String syncTo, String syncKey) {
+		throw new AssertionError("Unsupported");
 //		try {
 //			getClient().setSyncTo(container, syncTo, syncKey);
 //		} catch (FilesAuthorizationException e) {
@@ -372,16 +372,15 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 			nodeInfo.setSize(contInfo.getBytes());
 			nodeInfo.setContentType("application/directory");
     	} else { // info for a node inside a container
-//    		try {
-    		// TODO process not found node?
-    			MutableObjectInfoWithMetadata nodeMeta = swift.getApi().getObjectInfo(npath.getContainerName(), npath.getNodeRelativeStoragePath());
+			if(!swift.getApi().objectExists(npath.getContainerName(), npath.getNodeRelativeStoragePath())) {
+		    	nodeInfo.setSize(0);
+		    	nodeInfo.setContentType("application/file");
+		    	logger.debug("Info for non-existent object");
+			} else {
+				MutableObjectInfoWithMetadata nodeMeta = swift.getApi().getObjectInfo(npath.getContainerName(), npath.getNodeRelativeStoragePath());
 		    	nodeInfo.setSize(nodeMeta.getBytes());
 		    	nodeInfo.setContentType(nodeMeta.getContentType());
-//    		} catch(FilesNotFoundException e) {
-//		    	nodeInfo.setSize(0);
-//		    	nodeInfo.setContentType("application/file");
-//		    	logger.debug("Info for non-existent object");
-//    		}
+			}
     	}
 
 	}
@@ -392,71 +391,82 @@ public class SwiftJcloudsStorageManager implements StorageManager, Closeable {
 	 */
 	@Override
 	public void putChunkedBytes(NodePath nodePath, String chunkedId) {
-//		try {
-//			String manifest = conf.getString("chunked_container")+"/"+chunkedId;
-//			try {
-//				removeObjectSegments(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath());
-//				getClient().updateObjectManifest(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath(), manifest);
-//			} catch(FilesNotFoundException ex) {
-//				getClient().createManifestObject(nodePath.getContainerName(), "application/file", nodePath.getNodeRelativeStoragePath(), manifest, new Hashtable<String, String>());
-//			}
-//		} catch (HttpException e) {
-//			throw new InternalServerErrorException(e);
-//		} catch (IOException e) {
-//			throw new InternalServerErrorException(e);
-//		}
-//		updateCredentials();
+		try {
+			String manifest = StorageManagerFactory.CHUNKED_CONTAINER+"/"+chunkedId;
+			try {
+				removeObjectSegments(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath());
+				swift.getApi().
+				swift.getApi().putObjectManifest(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath(), manifest);
+			} catch(FilesNotFoundException ex) {
+				getClient().createManifestObject(nodePath.getContainerName(), "application/file", nodePath.getNodeRelativeStoragePath(), manifest, new Hashtable<String, String>());
+			}
+		} catch (HttpException e) {
+			throw new InternalServerErrorException(e);
+		} catch (IOException e) {
+			throw new InternalServerErrorException(e);
+		}
+		updateCredentials();
 	}
 
-	   private void init() {
-		      Iterable<Module> modules = ImmutableSet.<Module> of(
-		    		  new Log4JLoggingModule());
-		      
-		      String provider = "swift";
-//		      String identity = "dimm:dimm"; // tenantName:userName
-//		      String password = "crystal"; // demo account uses ADMIN_PASSWORD too
+	private void init() {
+		Iterable<Module> modules = ImmutableSet.<Module> of(
+				new Log4JLoggingModule());
 
-		      String identity = "2ZtyHZPBV4:2ZtyHZPBV4"; // tenantName:userName
-		      String password = "vUBFIM4IhgyKX8p"; // demo account uses ADMIN_PASSWORD too
+		String provider = "swift";
+//      String identity = "dimm:dimm"; // tenantName:userName
+//      String password = "crystal"; // demo account uses ADMIN_PASSWORD too
 
-		      BlobStoreContext context = ContextBuilder.newBuilder(provider)
-		            .endpoint("http://vobox.pha.jhu.edu:8081/auth/v1.0")
-		            .credentials(identity, password)
-		            .modules(modules)
-		            .buildView(BlobStoreContext.class);
-		      storage = context.getBlobStore();
-		      swift = context.unwrap();
-		   }
+		String identity = "2ZtyHZPBV4:2ZtyHZPBV4"; // tenantName:userName
+		String password = "vUBFIM4IhgyKX8p"; // demo account uses ADMIN_PASSWORD too
 
-		   private void listContainers() {
-		      System.out.println("List Containers");
-		      Set<ContainerMetadata> containers = swift.getApi().listContainers();
+		BlobStoreContext context = ContextBuilder.newBuilder(provider)
+				.endpoint("http://vobox.pha.jhu.edu:8081/auth/v1.0")
+				.credentials(identity, password)
+				.modules(modules)
+				.buildView(BlobStoreContext.class);
+		storage = context.getBlobStore();
+		swift = context.unwrap();
+	}
 
-		      for (ContainerMetadata container: containers) {
-//		    	 swift.getApi().listObjects(arg0, arg1);
-		         System.out.println("  " + container);
-		      }
-		   }
+   private void listContainers() {
+	      System.out.println("List Containers");
+	      Set<ContainerMetadata> containers = swift.getApi().listContainers();
 
-		   public void close() {
-		      closeQuietly(storage.getContext());
-		   }
+	      for (ContainerMetadata container: containers) {
+//				    	 swift.getApi().listObjects(arg0, arg1);
+	         System.out.println("  " + container);
+	      }
+	   }
+
+   private void listChunks() {
+	      System.out.println("List Containers");
+	      Set<ContainerMetadata> containers = swift.getApi().listContainers();
+
+	      for (ContainerMetadata container: containers) {
+//				    	 swift.getApi().listObjects(arg0, arg1);
+	         System.out.println("  " + container);
+	      }
+	   }
+
+   public void close() {
+      closeQuietly(storage.getContext());
+   }
 
 	
-	public static void main(String[] s) throws IOException, HttpException {
-	      SwiftJcloudsStorageManager jCloudsSwift = new SwiftJcloudsStorageManager();
+   public static void main(String[] s) throws IOException, HttpException {
+	   SwiftJcloudsStorageManager jCloudsSwift = new SwiftJcloudsStorageManager();
 
-	      try {
-	         jCloudsSwift.init();
-	         jCloudsSwift.listContainers();
-	         jCloudsSwift.close();
-	      }
-	      catch (Exception e) {
-	         e.printStackTrace();
-	      }
-	      finally {
-	         jCloudsSwift.close();
-	      }
-	}
+	   try {
+		   jCloudsSwift.init();
+		   jCloudsSwift.listContainers();
+		   jCloudsSwift.close();
+	   }
+	   catch (Exception e) {
+		   e.printStackTrace();
+	   }
+	   finally {
+		   jCloudsSwift.close();
+	   }
+   }
 	
 }

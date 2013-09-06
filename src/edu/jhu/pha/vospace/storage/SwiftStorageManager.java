@@ -417,7 +417,7 @@ public class SwiftStorageManager implements StorageManager {
 			NodePath path = new NodePath(meta.getManifestPrefix());
 			List<FilesObject> segmList = getClient().listObjects(path.getContainerName(), path.getNodeRelativeStoragePath(), '/');
 			for(FilesObject segm: segmList) {
-				getClient().deleteObject(conf.getString("chunked_container"), segm.getName());
+				getClient().deleteObject(StorageManagerFactory.CHUNKED_CONTAINER, segm.getName());
 				logger.debug("Deleted segm "+segm.getName());
 			}
 		}
@@ -492,7 +492,7 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public void putChunkedBytes(NodePath nodePath, String chunkedId) {
 		try {
-			String manifest = conf.getString("chunked_container")+"/"+chunkedId;
+			String manifest = StorageManagerFactory.CHUNKED_CONTAINER+"/"+chunkedId;
 			try {
 				removeObjectSegments(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath());
 				getClient().updateObjectManifest(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath(), manifest);

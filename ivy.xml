@@ -36,6 +36,9 @@
         <dependency org="org.agmip.thirdparty" name="ximpleware-vtd-xml" rev="2.11" conf="compile->default"/>
         <dependency org="xom" name="xom" rev="1.2.5" conf="compile->default"/>
 
+        <dependency org="org.apache.jclouds.api" name="swift" rev="1.6.1-incubating" conf="compile->default"/>
+        <dependency org="org.apache.jclouds.driver" name="jclouds-log4j" rev="1.6.1-incubating" conf="compile->default"/>
+
         <!-- FITS parsing -->
         <dependency org="org.apache.sanselan" name="sanselan" rev="0.97-incubator" conf="compile->default"/>
         <dependency org="org.apache.axis2" name="axis2-kernel" rev="1.6.2" conf="compile->default">
