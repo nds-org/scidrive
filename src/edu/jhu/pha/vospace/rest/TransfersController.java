@@ -60,7 +60,7 @@ import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
-import edu.jhu.pha.vospace.oauth.VoboxUser;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 
@@ -97,7 +97,7 @@ public class TransfersController {
     public Response transferNodePost(String xmlNode) {
 		logger.debug("Got new job");
 
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		UUID jobUID = submitJob(xmlNode, user.getName());
 
@@ -460,7 +460,7 @@ public class TransfersController {
 	@Produces(MediaType.TEXT_PLAIN)
 	@RolesAllowed({"user"})
 	public String getTransfersQueue() {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 	    return DbPoolServlet.goSql("Get transfers queue",
 	    		"select id, state, direction, starttime, endtime, target from jobs where login = ?",
 	            new SqlWorker<String>() {

@@ -55,7 +55,7 @@ import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.StructuredDataNode;
 import edu.jhu.pha.vospace.node.UnstructuredDataNode;
 import edu.jhu.pha.vospace.node.VospaceId;
-import edu.jhu.pha.vospace.oauth.VoboxUser;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 /**
  * Provides the REST service for /nodes/ path: the functions for manipulating the nodes content and metadata
@@ -79,7 +79,7 @@ public class NodesController {
 	@GET @Path("{path:.+}")
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getNodeXml(@PathParam("path") String fullPath, @QueryParam("uri") String uri, @DefaultValue("max") @QueryParam("detail") String detail, @DefaultValue("xml") @QueryParam("view") String view) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
@@ -133,7 +133,7 @@ public class NodesController {
 	@PUT @Path("{path:.+}")
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response createNode(@PathParam("path") String fullPath, byte[] nodeBytes) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		VospaceId identifier;
 		try {
@@ -175,7 +175,7 @@ public class NodesController {
 	@DELETE @Path("{path:.+}")
 	@RolesAllowed({"user", "rwshareuser"})
     public Response deleteNode(@PathParam("path") String fullPath) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		try {
 			String username = user.getName();
@@ -199,7 +199,7 @@ public class NodesController {
 	@Produces(MediaType.TEXT_XML)
 	@RolesAllowed({"user", "rwshareuser"})
     public Response setNode(@PathParam("path") String fullPath, @Context HttpHeaders headers, byte[] nodeBytes) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		VospaceId identifier;
 		try {

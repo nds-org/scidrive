@@ -44,7 +44,7 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.Token.USER_ROLES;
-import edu.jhu.pha.vospace.rest.VoboxOAuthProvider.Consumer;
+import edu.jhu.pha.vospace.rest.SciDriveOAuthProvider.Consumer;
 
 /**
  *
@@ -131,7 +131,7 @@ public class MySQLOAuthProvider2 {
             	                    rs.getString("token_secret"), 
             	                    rs.getString("consumer_key"), 
             	                    rs.getString("callback_url"),
-            	                    new VoboxUser(
+            	                    new SciDriveUser(
             	                    		rs.getString("identity"),
             	                    		rs.getString("container_name"),
             	                    		rs.getBoolean("accessor_write_permission")

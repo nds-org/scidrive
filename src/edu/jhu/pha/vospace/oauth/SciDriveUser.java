@@ -2,13 +2,13 @@ package edu.jhu.pha.vospace.oauth;
 
 import java.security.Principal;
 
-public class VoboxUser implements Principal {
+public class SciDriveUser implements Principal {
 
 	private String name;
 	private String rootContainer;
 	private boolean writeEnabled;
 
-	public VoboxUser(String name, String rootContainer, boolean writeEnabled) {
+	public SciDriveUser(String name, String rootContainer, boolean writeEnabled) {
 		this.name = name;
 		this.rootContainer = rootContainer;
 		this.writeEnabled = writeEnabled;

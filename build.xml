@@ -1,4 +1,4 @@
-<project xmlns:ivy="antlib:org.apache.ivy.ant" name="vobox" default="dist" basedir=".">
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="scidrive" default="dist" basedir=".">
   <property file="build.properties"/>
   <property file="${user.home}/build.properties"/>
 

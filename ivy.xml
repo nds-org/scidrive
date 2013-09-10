@@ -1,5 +1,5 @@
 <ivy-module version="2.0">
-    <info organisation="edu.jhu.pha" module="vobox"/>
+    <info organisation="edu.jhu.pha" module="scidrive"/>
     <configurations>
         <conf name="catalina"/>
         <conf name="compile"/>

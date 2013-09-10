@@ -41,7 +41,7 @@ import edu.jhu.pha.vospace.process.tika.SimulationParser;
 public class SimulationProcessor extends Processor {
 
 	private static Logger logger = Logger.getLogger(SimulationProcessor.class);
-	private final static String SIM_EXCHANGE = "sdsc.vobox.simulation";
+	private final static String SIM_EXCHANGE = "sdsc.scidrive.simulation";
     
 	private final static String SIM_ID_PROPERTY = "ivo://ivoa.net/vospace/core#simulation_id";
 	private final static String SIM_DATASET_ID_PROPERTY = "ivo://ivoa.net/vospace/core#simulation_dataset";

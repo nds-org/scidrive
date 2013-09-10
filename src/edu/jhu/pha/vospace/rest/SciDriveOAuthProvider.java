@@ -16,7 +16,7 @@ import edu.jhu.pha.vospace.oauth.MySQLOAuthProvider2;
 import edu.jhu.pha.vospace.oauth.Token;
 
 @Provider
-public class VoboxOAuthProvider implements OAuthProvider {
+public class SciDriveOAuthProvider implements OAuthProvider {
 
     @Override
     public OAuthConsumer getConsumer(String consumerKey) {

@@ -93,7 +93,7 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.UserHelper;
-import edu.jhu.pha.vospace.oauth.VoboxUser;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.process.NodeProcessor;
 import edu.jhu.pha.vospace.process.ProcessorConfig;
 import edu.jhu.pha.vospace.process.ProcessingFactory;
@@ -124,7 +124,7 @@ public class DropboxService {
 	@POST
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response copy(@PathParam("op") String operation, @FormParam("root") String root, @FormParam("from_path") String fromPath, @FormParam("to_path") String toPath) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		boolean keepBytes = operation.equals("copy");
 		
@@ -166,7 +166,7 @@ public class DropboxService {
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response createFolder(@FormParam("root") String root, @FormParam("path") String path) {
 		logger.debug("Creating folder "+path);
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		if(null == root || root.isEmpty())
 			throw new BadRequestException("Not found parameter root");
@@ -193,7 +193,7 @@ public class DropboxService {
 	@POST
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response delete(@FormParam("root") String root, @FormParam("path") String path) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		if(null == root || root.isEmpty())
 			throw new BadRequestException("Not found parameter root");
@@ -222,7 +222,7 @@ public class DropboxService {
 	@GET @Path("account/info")
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getAccountInfo() {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		try {
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
@@ -268,7 +268,7 @@ public class DropboxService {
 	@PUT @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})
 	public Response setAccountService(InputStream serviceCredInpStream, @PathParam("processor") String processor) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		try {
 			ObjectMapper mapper = new ObjectMapper();
@@ -283,7 +283,7 @@ public class DropboxService {
 	@DELETE @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})
 	public Response disableAccountService(@PathParam("processor") String processor) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		UserHelper.updateUserService(user.getName(), processor, null);
 		return Response.ok().build();
 	}
@@ -291,7 +291,7 @@ public class DropboxService {
 	@GET @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})
 	public Response getAccountService(@PathParam("processor") String processor) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		JsonNode node = UserHelper.getUserServices(user.getName());
 		String cred = (node.get(processor) == null)?"{}":node.get(processor).toString();
 		return Response.ok(cred).build();
@@ -320,7 +320,7 @@ public class DropboxService {
 	@GET @Path("files/{root:dropbox|sandbox}/{path:.+}")
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response getFile(@PathParam("root") String root, @PathParam("path") String fullPath) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
@@ -356,7 +356,7 @@ public class DropboxService {
 	@GET @Path("regions/{path:.+}")
 	@RolesAllowed({"user"})
 	public Response getFileRegions(@PathParam("path") String fullPath) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		VospaceId identifier;
 		try {
@@ -401,7 +401,7 @@ public class DropboxService {
 			@QueryParam("count") @DefaultValue("-1") int count,
 			@QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {
 		logger.debug(includeDeleted);
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
@@ -447,7 +447,7 @@ public class DropboxService {
 	@Produces(MediaType.APPLICATION_JSON)
 	@RolesAllowed({"user"})
 	public byte[] getTransfersInfo() {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		return DbPoolServlet.goSql("Get transfers queue",
 	    		"select id, state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ? order by starttime DESC",
@@ -515,7 +515,7 @@ public class DropboxService {
 	/*TODO Test the method */
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response postFile(@PathParam("root") String root, @PathParam("path") String fullPath, @FormDataParam("file") InputStream fileDataInp, @FormDataParam("file") FormDataContentDisposition fileDetail, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		if(!user.isWriteEnabled()) {
 			throw new ForbiddenException("ReadOnly");
@@ -584,7 +584,7 @@ public class DropboxService {
 	@PUT @Path("files_put/{root:dropbox|sandbox}/{path:.+}")
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response putFile(@PathParam("root") String root, @PathParam("path") String fullPath, InputStream fileDataInp, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		VospaceId identifier;
 		try {
@@ -660,7 +660,7 @@ public class DropboxService {
 	@GET
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public byte[] search(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("query") String query, @QueryParam("file_limit") @DefaultValue("1000") int fileLimit, @QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 
 		if(null == query || query.length() < 3){
@@ -730,7 +730,7 @@ public class DropboxService {
 	@GET
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response contSearch(@QueryParam("query") String queryStr) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		try {
 			Directory directory = FSDirectory.open(new File(conf.getString("lucene.index")));
@@ -770,7 +770,7 @@ public class DropboxService {
 	@PUT @Path("regions_put/{path:.+}")
 	@RolesAllowed({"user"})
 	public Response putFileRegions(@PathParam("path") String fullPath, InputStream regionsInpStream) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		VospaceId identifier;
 		
@@ -834,7 +834,7 @@ public class DropboxService {
 	@PUT @Path("shares/{root:dropbox|sandbox}/{path:.+}")
 	@RolesAllowed({"user"})
 	public byte[] putShares(@PathParam("root") String root, @PathParam("path") String fullPath, @QueryParam("group") String group, @DefaultValue("false") @QueryParam("write_perm") Boolean write_perm) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		VospaceId identifier;
 		try {
@@ -876,7 +876,7 @@ public class DropboxService {
 	@GET @Path("shares")
 	@RolesAllowed({"user"})
 	public byte[] getShares() {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
     	ByteArrayOutputStream byteOut = null;
     	try {
@@ -923,7 +923,7 @@ public class DropboxService {
 	@DELETE @Path("shares/{share_id:.+}")
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response deleteShare(@PathParam("share_id") final String share_id) {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		DbPoolServlet.goSql("Remove share",
         		"delete container_shares from container_shares "+
@@ -1025,7 +1025,7 @@ public class DropboxService {
 	@GET
 	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
 	public Response media(@PathParam("root") String root, @PathParam("path") String fullPath) {
-		VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		VospaceId identifier;
 		try {
@@ -1070,7 +1070,7 @@ public class DropboxService {
 	@PUT
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response chunkedUpload(@QueryParam("upload_id") String uploadId, @QueryParam("offset") long offset, InputStream fileDataInp) {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		VoSyncMetaStore voMeta = new VoSyncMetaStore(user.getName());
 
 		logger.debug("New chunk: "+uploadId+" "+offset);
@@ -1122,7 +1122,7 @@ public class DropboxService {
 	@POST
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response commitChunkedUpload(@PathParam("root") String root, @PathParam("path") String fullPath, @FormParam("upload_id") String uploadId, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
-		final VoboxUser user = ((VoboxUser)security.getUserPrincipal());
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(user.getName());
 		
 		if(null == uploadId || !(vosyncMeta.chunkedExists(uploadId))) {

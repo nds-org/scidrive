@@ -6,7 +6,7 @@
 # http://code.google.com/p/sequel-pro/
 #
 # Host: swiftnode01 (MySQL 5.6.12-log)
-# Database: vobox
+# Database: scidrive
 # Generation Time: 2013-09-06 20:22:39 +0000
 # ************************************************************
 
