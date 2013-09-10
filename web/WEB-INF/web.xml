@@ -32,7 +32,7 @@
 	    </init-param>
 	    <init-param>
 	    	<param-name>com.sun.jersey.config.property.oauth.provider</param-name>
-	    	<param-value>edu.jhu.pha.vospace.rest.VoboxOAuthProvider</param-value>
+	    	<param-value>edu.jhu.pha.vospace.rest.SciDriveOAuthProvider</param-value>
 	    </init-param>
 	    <init-param>
 			<param-name>com.sun.jersey.spi.container.ResourceFilters</param-name>
