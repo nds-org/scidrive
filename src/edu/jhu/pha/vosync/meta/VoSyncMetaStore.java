@@ -33,7 +33,7 @@ public class VoSyncMetaStore {
                         	if(resSet.wasNull())
                         		chunkNum = 0;
 
-                        	int chunkPos = resSet.getInt(2);
+                        	long chunkPos = resSet.getLong(2);
                         	if(resSet.wasNull())
                         		chunkPos = 0;
                         	
