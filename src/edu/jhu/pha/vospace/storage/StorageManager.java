@@ -83,6 +83,8 @@ public interface StorageManager {
 	 */
     public void remove(NodePath nodePath, boolean removeChunks);
     
+    public void removeObjectSegment(String chunkedId);
+    
     public void setNodeSyncTo(String container, String syncTo, String syncKey); 
 
     /**

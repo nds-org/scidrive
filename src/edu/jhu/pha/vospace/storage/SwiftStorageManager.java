@@ -398,8 +398,9 @@ public class SwiftStorageManager implements StorageManager {
 	}
 
 	/**
-	 * @param npath
-	 * @param obj
+	 * Removes existing object's segments
+	 * @param containerName
+	 * @param objectName
 	 * @throws IOException
 	 * @throws FilesNotFoundException
 	 * @throws HttpException
@@ -422,7 +423,26 @@ public class SwiftStorageManager implements StorageManager {
 			}
 		}
 	}
-	
+
+	@Override
+	public void removeObjectSegment(String chunkedId) {
+		try {
+			List<FilesObject> segmList = getClient().listObjects(conf.getString("chunked_container"), chunkedId, '/');
+			for(FilesObject segm: segmList) {
+				try {
+					getClient().deleteObject(conf.getString("chunked_container"), segm.getName());
+				} catch (Exception ignored) {}
+				logger.debug("Deleted segm "+segm.getName());
+			}
+		} catch(FilesException e) {
+			throw new InternalServerErrorException(e);
+		} catch (IOException e) {
+			throw new InternalServerErrorException(e);
+		} catch (HttpException e) {
+			throw new InternalServerErrorException(e);
+		}
+	}
+
 
 	@Override
 	public void setNodeSyncTo(String container, String syncTo, String syncKey) {

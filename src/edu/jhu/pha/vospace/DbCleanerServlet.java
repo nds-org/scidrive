@@ -36,18 +36,22 @@ import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.storage.StorageManager;
+import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 
 public class DbCleanerServlet extends HttpServlet {
 	
 	private static final long serialVersionUID = -6837095401346471188L;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
 
-    private ScheduledFuture<?> nodesCleanerHandle, dbCleanerHandle;
+    private ScheduledFuture<?> nodesCleanerHandle, dbCleanerHandle, chunksCleanerHandle;
     
     private final int NODE_EXPIRY_INTERVAL = SettingsServlet.getConfig().getInt("node_expiry", 10);
     private final int NODES_RUN_PERIOD = SettingsServlet.getConfig().getInt("cleaner_period", 1);
     private final int DB_RUN_PERIOD = SettingsServlet.getConfig().getInt("db_cleaner_period", 12);
+    private final int CHUNK_EXPIRY_INTERVAL = SettingsServlet.getConfig().getInt("chunk_expiry", 1440);
+    private final int CHUNK_RUN_PERIOD = SettingsServlet.getConfig().getInt("chunk_period", 1);
 
     private static final Logger logger = Logger.getLogger(DbCleanerServlet.class);
     
@@ -57,12 +61,15 @@ public class DbCleanerServlet extends HttpServlet {
         nodesCleanerHandle = scheduler.scheduleAtFixedRate(nodescleaner, (long)(Math.random()*NODES_RUN_PERIOD), NODES_RUN_PERIOD, MINUTES);
         final Runnable dbcleaner = new DBCleaner();
         dbCleanerHandle = scheduler.scheduleAtFixedRate(dbcleaner, (long)(Math.random()*DB_RUN_PERIOD), DB_RUN_PERIOD, HOURS);
+        final Runnable chunkscleaner = new ChunksRemover();
+        chunksCleanerHandle = scheduler.scheduleAtFixedRate(chunkscleaner, (long)(Math.random()*CHUNK_RUN_PERIOD), CHUNK_RUN_PERIOD, HOURS);
     }
 
     @Override
     public void destroy() {
     	nodesCleanerHandle.cancel(true);
     	dbCleanerHandle.cancel(true);
+    	chunksCleanerHandle.cancel(true);
     	scheduler.shutdownNow();
     	logger.info("Cleaner is terminating");
     }
@@ -115,6 +122,48 @@ public class DbCleanerServlet extends HttpServlet {
                             	return false;
                             }
                         }
+                );
+        	}
+        }
+    }
+
+    private class ChunksRemover implements Runnable {
+        @Override
+		public void run() {
+        	boolean res = true;
+        	while(res) {
+            	res = DbPoolServlet.goSql("Cleaning chunks",
+        			"select `identity`, `chunked_name` from (select `chunked_name`, max(`mtime`) `maxtime`, `identity` from chunked_uploads "+ 
+        			"JOIN user_identities ON chunked_uploads.`user_id` = user_identities.`user_id` "+
+        			"where `node_id` is NULL group by `chunked_name`) a WHERE `maxtime` < (NOW() - INTERVAL "+CHUNK_EXPIRY_INTERVAL+" MINUTE) limit 1", 
+                    new SqlWorker<Boolean>() {
+                        @Override
+                        public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                            ResultSet resSet = stmt.executeQuery();
+                            if(resSet.next()) {
+                            	final String username = resSet.getString("identity");
+                            	final String chunkedName = resSet.getString("chunked_name");
+                            	logger.debug("Removing "+chunkedName+" chunks of user "+username);
+                            	
+                            	StorageManager storage = StorageManagerFactory.getStorageManager(username);
+                            	storage.removeObjectSegment(resSet.getString("chunked_name"));
+
+                            	DbPoolServlet.goSql("Deleting unused chunked upload",
+                            		"delete from chunked_uploads where chunked_name = ?", 
+                                    new SqlWorker<Boolean>() {
+                                        @Override
+                                        public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                                        	stmt.setString(1, chunkedName);
+                                        	stmt.executeUpdate();
+                                        	return true;
+                                        }
+                                    }
+                    			);
+                            	return true;
+                            }
+                        	return false;
+                        }
+                    }
                 );
         	}
         }
