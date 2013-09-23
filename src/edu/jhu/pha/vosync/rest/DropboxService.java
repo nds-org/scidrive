@@ -450,7 +450,7 @@ public class DropboxService {
 		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		return DbPoolServlet.goSql("Get transfers queue",
-	    		"select id, state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ? order by starttime DESC",
+	    		"select state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ? order by starttime DESC",
 	            new SqlWorker<byte[]>() {
 	                @Override
 	                public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -469,7 +469,6 @@ public class DropboxService {
 		        			while(resSet.next()) {
 		        				
 		        				g2.writeStartObject();
-		        				g2.writeStringField("id", resSet.getString("id"));
 		        				g2.writeStringField("state", resSet.getString("state"));
 		        				g2.writeStringField("direction", resSet.getString("direction"));
 		        				g2.writeStringField("starttime", (null != resSet.getTimestamp("starttime")?resSet.getTimestamp("starttime").toString():""));
