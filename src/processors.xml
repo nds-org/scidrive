@@ -1,7 +1,7 @@
 <fileprocessors>
 	<processor>
 		<id>fitsprocessor</id>
-		<title>Tables extractor</title>
+		<title>CasJobs/MyDB</title>
 		<description>Extracts tabular data from csv\, fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database.</description>
 		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
 		<mimetype>application/vnd.ms-excel</mimetype>
@@ -19,7 +19,7 @@
 	</processor>
 	<processor>
 		<id>sqlshareprocessor</id>
-		<title>Tables extractor (SQLShare)</title>
+		<title>SQLShare</title>
 		<description>Extracts tabular data from plain text files using NumPY library and stores it in connected 
 		    &lt;a href=&quot;http://sqlshare.escience.washington.edu&quot;&gt;SQLShare&lt;/a&gt; database. 
 		    You can obtain your API key by visiting 
@@ -36,7 +36,7 @@
 	</processor>
 	<processor>
 		<id>simprocessor</id>
-		<title>Simulations parser</title>
+		<title>ENZO simulations</title>
 		<description>Extracts the simulation ID and simulation datasets ID from ENZO simulations and stores these in file metadata.</description>
 		<mimetype>application/enzoparameterfile</mimetype>
 		<mimetype>application/enzosimulation</mimetype>
