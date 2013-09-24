@@ -7,6 +7,8 @@ protocols to access the data. The primary data storage platform is [OpenStack SW
 The project is based on Jersey REST framework and provides the REST service allowing to store the data in a cloud storage.
 The service allows extracting metadata from known filetypes to store it in 3rd-party services.
 
+There are public service and web portal running at http://www.scidrive.org
+
 Quick start
 -----------
 1. Install OpenStack SWIFT cluster using [SWIFT](https://launchpad.net/swift) binaries with SWAuth authentication
