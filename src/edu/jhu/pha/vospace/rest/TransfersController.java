@@ -397,19 +397,19 @@ public class TransfersController {
 			xw.writeEntity("target").writeText(job.getTarget()).endEntity();
 			switch(job.getDirection()){
 				case PULLFROMVOSPACE:
-					xw.writeEntity("vos:direction").writeText("pullFromVoSpace").endEntity();
+					xw.writeEntity("direction").writeText("pullFromVoSpace").endEntity();
 					break;
 				case PULLTOVOSPACE:
-					xw.writeEntity("vos:direction").writeText("pullToVoSpace").endEntity();
+					xw.writeEntity("direction").writeText("pullToVoSpace").endEntity();
 					break;
 				case PUSHFROMVOSPACE:
-					xw.writeEntity("vos:direction").writeText("pushFromVoSpace").endEntity();
+					xw.writeEntity("direction").writeText("pushFromVoSpace").endEntity();
 					break;
 				case PUSHTOVOSPACE:
-					xw.writeEntity("vos:direction").writeText("pushToVoSpace").endEntity();
+					xw.writeEntity("direction").writeText("pushToVoSpace").endEntity();
 					break;
 				case LOCAL:
-					xw.writeEntity("vos:direction").writeText(job.getDirectionTarget()).endEntity();
+					xw.writeEntity("direction").writeText(job.getDirectionTarget()).endEntity();
 					break;
 			}
 			for(String view: job.getViews())
