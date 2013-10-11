@@ -504,7 +504,7 @@ public class MyDB implements Database {
 						if (table.getColumnTypes()[i].charAt(0) == 'A') {
 							s = databaseFormat.formatCharString(s);
 						}
-						else if (s.trim().isEmpty()) {
+						else if (s.trim().isEmpty() || "nan".equals(s.trim().toLowerCase())) {
 							s = "NULL";
 						}
 						rowValues.append(s);
