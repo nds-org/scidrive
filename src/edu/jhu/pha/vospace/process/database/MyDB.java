@@ -430,10 +430,12 @@ public class MyDB implements Database {
 	}
 	
 	private void updateResourceTables(int resourceId, Metadata metadata, ArrayList<AsciiTable> tables) throws DatabaseException {
-
+		String resourceName = metadata.get(TikaCoreProperties.TITLE);
 		for (AsciiTable table : tables) {
 			int tableId = table.getTableId();
-			String tableName = "Table_"+resourceId+"_"+tableId;
+			
+			//String tableName = "Table_"+resourceId+"_"+tableId;
+			String tableName = "T_"+resourceName.replaceAll("\\W", "_")+"_"+resourceId+"_"+tableId;
 			
 			String updateResourceTablesQuery = 
 				"INSERT INTO "+databaseFormat.formatObjectName(RESOURCE_TABLES_TABLE_NAME)
