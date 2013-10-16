@@ -17,7 +17,10 @@ package edu.jhu.pha.vospace.oauth;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -44,6 +47,7 @@ import org.openid4java.message.ax.FetchResponse;
 import edu.jhu.pha.vospace.BaseServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+import edu.jhu.pha.vospace.oauth.UserHelper.UserField;
 
 /** A simple implementation of an OpenID relying party, specialized for VOSpace & VAO OpenID.
  *  For more sample code, see OpenID4Java's sample code or the USVAO SSO example
@@ -52,14 +56,11 @@ public class AuthorizationServlet extends BaseServlet {
 	private static final long serialVersionUID = -1847330043709412488L;
 
 	private static final Logger logger = Logger.getLogger(AuthorizationServlet.class);
-
-    private static final String ALIAS_CERTIFICATE = "certificate",
-            AX_URL_CERTIFICATE = "http://sso.usvao.org/schema/credential/x509";
     
 	private static Configuration conf = SettingsServlet.getConfig();
     
 	private static ConsumerAssociationStore assocStore = new OpenidConsumerAssociationStore();
-	private static NonceVerifier nonceVer = new OpenidNonceVerifier(50000);
+	private static NonceVerifier nonceVer = new OpenidNonceVerifier(5000);
 	
     @Override
     /** Handle GET & POST the same way, because OpenID response may be a URL redirection (GET)
@@ -73,7 +74,7 @@ public class AuthorizationServlet extends BaseServlet {
         handle(req, resp);
     }
 
-    @Override public String getErrorPage() { return "index.jsp"; }
+    @Override public String getErrorPage() { return ""; }
 
     private void handle(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException
@@ -96,36 +97,25 @@ public class AuthorizationServlet extends BaseServlet {
                 handleOpenidResponse(request, response);
             } else { // initial login
             	logger.debug("Initiate");
-//            	String userName = checkCertificate(request);
-//            	if(null != userName){ // made X.509 authentication
-//            		logger.debug("Certificate checked. Username: "+userName);
-//
-//                    if (!UserHelper.userExists(userName)) {
-//                        UserHelper.addDefaultUser(userName);
-//                    }
-//
-//            		authorizeRequestToken(request, response, userName);
-//            	} else { // need to do openid
-            		logger.debug("OpenID init");
-	                String provider = request.getParameter("provider");
-	                String idLess = getIdentityless(provider);
-	                
-	                // set cookie for cases when user came directly to authorize from 3rd party application
-	                if(null != request.getParameter("oauth_token")){
-	                	OauthCookie cookie = new OauthCookie();
-	                	cookie.setRequestToken(request.getParameter("oauth_token"));
-	                	cookie.setCallbackUrl(request.getParameter("oauth_callback"));
-	                	cookie.setRegion(conf.getString("region"));
-	                	cookie.setShareId(request.getParameter("share"));
-	                	response.addCookie(new Cookie(OauthCookie.COOKIE_NAME, cookie.toString()));
-	                	logger.debug("Created third party app cookie.");
-	                }
-	                
-	                String error = initiateOpenid(request, response, idLess);
-	                if (error != null)
-	                    throw new Oops(error);
-            	}
-//            } 
+        		logger.debug("OpenID init");
+                String provider = request.getParameter("provider");
+                String idLess = getIdentityless(provider);
+                
+                // set cookie for cases when user came directly to authorize from 3rd party application
+                if(null != request.getParameter("oauth_token")){
+                	OauthCookie cookie = new OauthCookie();
+                	cookie.setRequestToken(request.getParameter("oauth_token"));
+                	cookie.setCallbackUrl(request.getParameter("oauth_callback"));
+                	cookie.setRegion(conf.getString("region"));
+                	cookie.setShareId(request.getParameter("share"));
+                	response.addCookie(new Cookie(OauthCookie.COOKIE_NAME, cookie.toString()));
+                	logger.debug("Created third party app cookie.");
+                }
+                
+                String error = initiateOpenid(request, response, idLess);
+                if (error != null)
+                    throw new Oops(error);
+            }
         }
         // for local error-reporting, use a private Exception class, Oops (see below)
         catch(Oops e) {
@@ -133,39 +123,7 @@ public class AuthorizationServlet extends BaseServlet {
         }
     }
 
-//    private String checkCertificate(HttpServletRequest request) {
-//    	java.security.cert.X509Certificate[] certs =
-//    		(java.security.cert.X509Certificate[]) request.getAttribute(
-//    				"javax.servlet.request.X509Certificate");
-//
-//    	if(null != certs){
-//    		if (certs[0] != null) {
-//    			String dn = certs[0].getSubjectX500Principal().getName();
-//    			try {
-//    				LdapName ldn = new LdapName(dn);
-//    				Iterator<Rdn> rdns = ldn.getRdns().iterator();
-//    				String org = null, cn = null;
-//    				while (rdns.hasNext()) {
-//    					Rdn rdn = (Rdn) rdns.next();
-//    					if (rdn.getType().equalsIgnoreCase("O"))
-//    						org = (String) rdn.getValue();
-//    					else if (rdn.getType().equalsIgnoreCase("CN"))
-//    						cn = (String) rdn.getValue();
-//    				}
-//    				if (cn != null){
-//    					return cn;
-//    				} else {
-//    					logger.error("Error authenticating the user: cn not found in certificate.");
-//    					throw new PermissionDeniedException("401 Unauthorized");
-//    				}
-//    			} catch (javax.naming.InvalidNameException e) {
-//    			}
-//    		}
-//    	}
-//    	return null;
-//    }
-    
-    private void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
+    private static void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
             throws IOException, Oops {
         ConsumerManager manager = new ConsumerManager();
         manager.setAssociations(assocStore); 
@@ -186,7 +144,7 @@ public class AuthorizationServlet extends BaseServlet {
     }
 
     /** OpenID authentication succeeded. */
-    private void handleAuthenticated
+    private static void handleAuthenticated
             (VerificationResult verification, HttpServletRequest request, HttpServletResponse response)
             throws IOException, Oops {
 
@@ -203,20 +161,13 @@ public class AuthorizationServlet extends BaseServlet {
                 if (!(ext instanceof FetchResponse))
                     throw new Oops("Unexpected attribute exchange response: " + ext.getClass());
                 FetchResponse fetch = (FetchResponse) ext;
-                // store credential, if it was returned
-//                String certUrl = fetch.getAttributeValue(ALIAS_CERTIFICATE);
-//                if (certUrl != null && !certUrl.isEmpty()) {
-//	                logger.debug("For user \"" + username + "\" storing cert \"" + certUrl + "\".");
-//	                UserHelper.setCertificate(username, certUrl);
-//                }
-              String emailUrl = fetch.getAttributeValue("Email");
-              System.out.println(emailUrl);
-              if (emailUrl != null && !emailUrl.isEmpty()) {
-                UserHelper.updateEmail(id, emailUrl);
-              }
-              
-              
-              
+                Map<UserField, String> userFieldsReceived = new HashMap<UserField, String>();
+                for(UserField userField: UserHelper.UserField.values()) {
+                	String valueReceived = fetch.getAttributeValue(userField.toString());
+                	if(null != valueReceived && !valueReceived.isEmpty())
+                		userFieldsReceived.put(userField, valueReceived);
+            	}
+                UserHelper.updateUser(id, userFieldsReceived);
             }
         } catch (MessageException e) { // we don't expect this to happen
             logger.warn(e);
@@ -234,7 +185,7 @@ public class AuthorizationServlet extends BaseServlet {
 	 * @throws IOException
 	 * @throws Oops
 	 */
-	private void authorizeRequestToken(HttpServletRequest request, HttpServletResponse response, String username)
+	private static void authorizeRequestToken(HttpServletRequest request, HttpServletResponse response, String username)
 			throws Oops {
 
         String token = null, callbackUrl = null;
@@ -315,7 +266,7 @@ public class AuthorizationServlet extends BaseServlet {
 
     /** Initiate OpenID authentication.  Return null if successful and no further action is necessary;
      *  return an error message if there was a problem. */
-    private String initiateOpenid(HttpServletRequest request, HttpServletResponse response, String idLess)
+    private static String initiateOpenid(HttpServletRequest request, HttpServletResponse response, String idLess)
             throws IOException
     {
         ConsumerManager manager = new ConsumerManager();
@@ -331,8 +282,9 @@ public class AuthorizationServlet extends BaseServlet {
             AuthRequest authRequest = manager.authenticate(discovered, returnUrl);
 
             FetchRequest fetch = FetchRequest.createFetchRequest();
-//          fetch.addAttribute(ALIAS_CERTIFICATE, AX_URL_CERTIFICATE, true);
-            fetch.addAttribute("Email", "http://schema.openid.net/contact/email", true);
+            for(UserField userField: UserHelper.UserField.values()) {
+            	fetch.addAttribute(userField.toString(), userField.getOpenidField(), true);
+            }
             authRequest.addExtension(fetch);
             response.sendRedirect(authRequest.getDestinationUrl(true));
         } catch (DiscoveryException e) {
@@ -365,11 +317,11 @@ public class AuthorizationServlet extends BaseServlet {
         }
     }
 
-    private boolean isShareRequest(HttpServletRequest request) {
+    private static boolean isShareRequest(HttpServletRequest request) {
         return !isBlank(request.getParameter("share"));
     }
     
-    private boolean isOpenIdResponse(HttpServletRequest request) {
+    private static boolean isOpenIdResponse(HttpServletRequest request) {
         return !isBlank(request.getParameter("openid.ns"));
     }
 }

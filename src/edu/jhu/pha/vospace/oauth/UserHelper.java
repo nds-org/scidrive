@@ -16,19 +16,14 @@
 package edu.jhu.pha.vospace.oauth;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
@@ -52,95 +47,31 @@ import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
 public class UserHelper {
 	private static final Logger logger = Logger.getLogger(UserHelper.class);
 	
-    /** Download a certificate from <tt>certUrl</tt> and save it for the named user in the database.
-     *  If the user doesn't already exist, throw an exception. */
-    public static void setCertificate(final String username, String certUrl) throws IOException {
-        // 1. make sure user exists
-        if (!userExists(username))
-            throw new IllegalStateException("Unknown user \"" + username + "\".");
-
-        // 2. get certificate from URL
-        final byte[] bytes = getBytesFromUrl(certUrl);
-        logger.debug("Retrieved input stream from " + certUrl);
-
-        // 3. save to db
-        DbPoolServlet.goSql("setting certificate for " + username,
-                "update users set certificate = ? where user_id = (select user_id from user_identities where identity = ?)",
-                new SqlWorker<Void>() {
-                    @Override
-                    public Void go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        // should we try stmt.setBinaryStream() instead?
-                        stmt.setBytes(1, bytes);
-                        stmt.setString(2, username);
-                        stmt.executeUpdate();
-                        logger.debug("Streamed certificate to database.");
-                        return null;
-                    }
-                });
-    }
-
-    public static void updateEmail(final String username, final String email) {
-        DbPoolServlet.goSql("setting email for " + username,
-            "update user_identities set email = ? where identity = ?",
+    public static void updateUser(final String username, final Map<UserField, String> field_vals) {
+    	if(field_vals.size() == 0)
+    		return;
+    	
+    	StringBuffer queryFields = new StringBuffer();
+    	for(UserField fieldType: field_vals.keySet()) {
+    		if(queryFields.length() > 0)
+    			queryFields.append(",");
+    		queryFields.append(fieldType.getDbField()+" = ? ");
+    	}
+    	
+        DbPoolServlet.goSql("setting fields for " + username,
+            "update user_identities set "+queryFields+" where identity = ?",
             new SqlWorker<Boolean>() {
                 @Override
                 public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                    stmt.setString(1, email);
-                    stmt.setString(2, username);
+                	int fieldCount=1;
+                	for(UserField fieldType: field_vals.keySet()) {
+                		stmt.setString(fieldCount++, field_vals.get(fieldType));
+                	}
+            		stmt.setString(fieldCount++, username);
                     stmt.executeUpdate();
                     return true;
                 }
             });
-    }
-    
-    private static InputStream getInputStreamFromUrl(String urlString) throws IOException {
-        URL url = new URL(urlString);
-        if (!url.getProtocol().toLowerCase().startsWith("http"))
-            throw new UnsupportedOperationException
-                    ("URL \"" + urlString + "\" has an unsupported protocol, \"" + url.getProtocol() + "\".");
-        else {
-            HttpURLConnection urlConn = (HttpURLConnection) new URL(urlString).openConnection();
-            urlConn.setConnectTimeout(10000); // millis -- 10 seconds
-            urlConn.setRequestMethod("GET");
-            urlConn.connect();
-            return urlConn.getInputStream();
-        }
-    }
-
-    private static byte[] getBytesFromUrl(String urlString) throws IOException {
-        InputStream in = null;
-        try {
-            in = getInputStreamFromUrl(urlString);
-            return getBytes(in);
-        } finally {
-        	DbPoolServlet.close(in);
-        }
-    }
-
-    private static byte[] getBytes(InputStream in) throws IOException {
-        List<byte[]> chunks = new ArrayList<byte[]>();
-        int sum = 0;
-        while(true) {
-            byte[] chunk = new byte[1024];
-            int n = in.read(chunk);
-            // if n == 0, was it a stall?  We'll keep going.
-            if (n < 0)
-                break;
-            else if (n > 0) {
-                sum += n;
-                // make sure all chunks are all the way full
-                if (n < chunk.length)
-                    chunk = Arrays.copyOf(chunk, n);
-                chunks.add(chunk);
-            }
-        }
-        byte[] result = new byte[sum];
-        int n = 0;
-        for (byte[] chunk : chunks) {
-            System.arraycopy(chunk, 0, result, n, chunk.length);
-            n += chunk.length;
-        }
-        return result;
     }
 
     /** Retrieve a user's certificate as a blob from the database. Null if it doesn't exist.
@@ -415,5 +346,20 @@ public class UserHelper {
             throw new IllegalStateException("Error parsing user's credentials");
 		}
 	}
+
+	public enum UserField {
+		EMAIL("email", "http://schema.openid.net/contact/email"), 
+		FIRST_NAME("first_name", "http://schema.openid.net/namePerson/first"), 
+		LAST_NAME("last_name", "http://schema.openid.net/namePerson/last"),
+		ORGANIZATION("organization", "http://sso.usvao.org/schema/institution");
+		private String dbField;
+		private String openidField;
+		private UserField(String dbField, String openidField) 	{
+			this.dbField = dbField;	
+			this.openidField = openidField;	
+		}
+		public String getDbField() 			{	return this.dbField;	}
+		public String getOpenidField() 		{	return this.openidField;	}
+	};
 
 }

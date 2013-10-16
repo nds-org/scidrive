@@ -63,7 +63,7 @@ public class MySQLOAuthProvider2 {
     public static synchronized Token getRequestToken(final String tokenStr) {
         
     	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
-        		"select request_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission "+
+        		"select request_token, token_secret, consumer_key, callback_url, container_name "+
         				"from oauth_accessors "+
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
@@ -105,8 +105,7 @@ public class MySQLOAuthProvider2 {
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
         				"left outer join container_shares on oauth_accessors.share_key = container_shares.share_key "+
-        				"left outer join users on users.user_id = containers.user_id "+
-        				"left outer join user_identities on users.user_id = user_identities.user_id "+
+        				"left outer join user_identities on oauth_accessors.identity_id = user_identities.identity_id "+
         				"where access_token = ? limit 1",
                 new SqlWorker<Token>() {
                     @Override
@@ -319,24 +318,30 @@ public class MySQLOAuthProvider2 {
 				}
 
 		        DbPoolServlet.goSql("Mark oauth token as authorized",
-		        		"update oauth_accessors set container_id = (select container_id from containers join user_identities on containers.user_id = user_identities.user_id where identity = ? and container_name = ?), authorized = 1 where request_token = ?;",
+		        		"update oauth_accessors set container_id = (select container_id from containers join user_identities on containers.user_id = user_identities.user_id where identity = ? and container_name = ?), " +
+		        		"identity_id = (select identity_id from user_identities where identity = ?), " +
+		        		"authorized = 1 where request_token = ?;",
 		                new SqlWorker<Integer>() {
 		                    @Override
 		                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
 		            			stmt.setString(1, userId);
 		            			stmt.setString(2, default_root_container);
-		            			stmt.setString(3, requestToken.getToken());
+		            			stmt.setString(3, userId);
+		            			stmt.setString(4, requestToken.getToken());
 		                        return stmt.executeUpdate();
 		                    }
 		                }
 		        );
 			} else { // the container is already set up (sharing)
 	            DbPoolServlet.goSql("Mark oauth token as authorized",
-	            		"update oauth_accessors set authorized = 1 where request_token = ?;",
+	            		"update oauth_accessors set authorized = 1, " +
+		        		"identity_id = (select identity_id from user_identities where identity = ?), " +
+	            		" where request_token = ?;",
 	                    new SqlWorker<Integer>() {
 	                        @Override
 	                        public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
-	                			stmt.setString(1, requestToken.getToken());
+	                			stmt.setString(1, userId);
+	                			stmt.setString(2, requestToken.getToken());
 	                            return stmt.executeUpdate();
 	                        }
 	                    }

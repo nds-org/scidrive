@@ -56,13 +56,5 @@ public abstract class BaseServlet extends HttpServlet {
         }
     }
 
-    /** Fetch the current OAuth access token from the database. */
-    /*public OAuthAccessor getAccessor(HttpServletRequest request)
-            throws IOException, OAuthProblemException
-    {
-        OAuthMessage requestMessage = OAuthServlet.getMessage(request, null);
-        return MySQLOAuthProvider.getAccessor(requestMessage.getToken());
-    }*/
-
     public static boolean isBlank(String s) { return s == null || s.trim().length() == 0; }
 }
