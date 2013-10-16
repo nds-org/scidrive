@@ -308,9 +308,6 @@ public class MySQLOAuthProvider2 {
 		try {
 			if(null == requestToken.getAttributes().getFirst("root_container")) { // No predefined one (can be predefined for sharing); in this case set the default one
 				final String default_root_container = ((Consumer)requestToken.getConsumer()).getAttributes().getFirst("container");
-		        if (!UserHelper.userExists(userId)) {
-		            UserHelper.addDefaultUser(userId);
-		        }
 
 				//First check if the root node exists
 				VospaceId identifier = new VospaceId(new NodePath(default_root_container));

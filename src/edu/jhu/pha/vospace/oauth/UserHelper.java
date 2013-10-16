@@ -79,6 +79,20 @@ public class UserHelper {
                 });
     }
 
+    public static void updateEmail(final String username, final String email) {
+        DbPoolServlet.goSql("setting email for " + username,
+            "update user_identities set email = ? where identity = ?",
+            new SqlWorker<Boolean>() {
+                @Override
+                public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    stmt.setString(1, email);
+                    stmt.setString(2, username);
+                    stmt.executeUpdate();
+                    return true;
+                }
+            });
+    }
+    
     private static InputStream getInputStreamFromUrl(String urlString) throws IOException {
         URL url = new URL(urlString);
         if (!url.getProtocol().toLowerCase().startsWith("http"))

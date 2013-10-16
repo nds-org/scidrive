@@ -17,12 +17,7 @@ package edu.jhu.pha.vospace.oauth;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Vector;
-
-import javax.naming.ldap.LdapName;
-import javax.naming.ldap.Rdn;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -31,13 +26,20 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.openid4java.OpenIDException;
+import org.openid4java.association.AssociationSessionType;
+import org.openid4java.consumer.ConsumerAssociationStore;
 import org.openid4java.consumer.ConsumerManager;
+import org.openid4java.consumer.NonceVerifier;
 import org.openid4java.consumer.VerificationResult;
 import org.openid4java.discovery.DiscoveryException;
 import org.openid4java.discovery.DiscoveryInformation;
 import org.openid4java.message.AuthRequest;
+import org.openid4java.message.MessageException;
+import org.openid4java.message.MessageExtension;
 import org.openid4java.message.ParameterList;
+import org.openid4java.message.ax.AxMessage;
 import org.openid4java.message.ax.FetchRequest;
+import org.openid4java.message.ax.FetchResponse;
 
 import edu.jhu.pha.vospace.BaseServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
@@ -56,6 +58,9 @@ public class AuthorizationServlet extends BaseServlet {
     
 	private static Configuration conf = SettingsServlet.getConfig();
     
+	private static ConsumerAssociationStore assocStore = new OpenidConsumerAssociationStore();
+	private static NonceVerifier nonceVer = new OpenidNonceVerifier(50000);
+	
     @Override
     /** Handle GET & POST the same way, because OpenID response may be a URL redirection (GET)
      *  or a form submission (POST). */
@@ -91,16 +96,16 @@ public class AuthorizationServlet extends BaseServlet {
                 handleOpenidResponse(request, response);
             } else { // initial login
             	logger.debug("Initiate");
-            	String userName = checkCertificate(request);
-            	if(null != userName){ // made X.509 authentication
-            		logger.debug("Certificate checked. Username: "+userName);
-
-                    if (!UserHelper.userExists(userName)) {
-                        UserHelper.addDefaultUser(userName);
-                    }
-
-            		authorizeRequestToken(request, response, userName);
-            	} else { // need to do openid
+//            	String userName = checkCertificate(request);
+//            	if(null != userName){ // made X.509 authentication
+//            		logger.debug("Certificate checked. Username: "+userName);
+//
+//                    if (!UserHelper.userExists(userName)) {
+//                        UserHelper.addDefaultUser(userName);
+//                    }
+//
+//            		authorizeRequestToken(request, response, userName);
+//            	} else { // need to do openid
             		logger.debug("OpenID init");
 	                String provider = request.getParameter("provider");
 	                String idLess = getIdentityless(provider);
@@ -120,7 +125,7 @@ public class AuthorizationServlet extends BaseServlet {
 	                if (error != null)
 	                    throw new Oops(error);
             	}
-            } 
+//            } 
         }
         // for local error-reporting, use a private Exception class, Oops (see below)
         catch(Oops e) {
@@ -128,42 +133,45 @@ public class AuthorizationServlet extends BaseServlet {
         }
     }
 
-    private String checkCertificate(HttpServletRequest request) {
-    	java.security.cert.X509Certificate[] certs =
-    		(java.security.cert.X509Certificate[]) request.getAttribute(
-    				"javax.servlet.request.X509Certificate");
-
-    	if(null != certs){
-    		if (certs[0] != null) {
-    			String dn = certs[0].getSubjectX500Principal().getName();
-    			try {
-    				LdapName ldn = new LdapName(dn);
-    				Iterator<Rdn> rdns = ldn.getRdns().iterator();
-    				String org = null, cn = null;
-    				while (rdns.hasNext()) {
-    					Rdn rdn = (Rdn) rdns.next();
-    					if (rdn.getType().equalsIgnoreCase("O"))
-    						org = (String) rdn.getValue();
-    					else if (rdn.getType().equalsIgnoreCase("CN"))
-    						cn = (String) rdn.getValue();
-    				}
-    				if (cn != null){
-    					return cn;
-    				} else {
-    					logger.error("Error authenticating the user: cn not found in certificate.");
-    					throw new PermissionDeniedException("401 Unauthorized");
-    				}
-    			} catch (javax.naming.InvalidNameException e) {
-    			}
-    		}
-    	}
-    	return null;
-    }
+//    private String checkCertificate(HttpServletRequest request) {
+//    	java.security.cert.X509Certificate[] certs =
+//    		(java.security.cert.X509Certificate[]) request.getAttribute(
+//    				"javax.servlet.request.X509Certificate");
+//
+//    	if(null != certs){
+//    		if (certs[0] != null) {
+//    			String dn = certs[0].getSubjectX500Principal().getName();
+//    			try {
+//    				LdapName ldn = new LdapName(dn);
+//    				Iterator<Rdn> rdns = ldn.getRdns().iterator();
+//    				String org = null, cn = null;
+//    				while (rdns.hasNext()) {
+//    					Rdn rdn = (Rdn) rdns.next();
+//    					if (rdn.getType().equalsIgnoreCase("O"))
+//    						org = (String) rdn.getValue();
+//    					else if (rdn.getType().equalsIgnoreCase("CN"))
+//    						cn = (String) rdn.getValue();
+//    				}
+//    				if (cn != null){
+//    					return cn;
+//    				} else {
+//    					logger.error("Error authenticating the user: cn not found in certificate.");
+//    					throw new PermissionDeniedException("401 Unauthorized");
+//    				}
+//    			} catch (javax.naming.InvalidNameException e) {
+//    			}
+//    		}
+//    	}
+//    	return null;
+//    }
     
     private void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
             throws IOException, Oops {
         ConsumerManager manager = new ConsumerManager();
-        manager.setAllowStateless(false);
+        manager.setAssociations(assocStore); 
+        manager.setNonceVerifier(nonceVer); 
+        manager.setMinAssocSessEnc(AssociationSessionType.DH_SHA256);
+        manager.setAllowStateless(true);
         ParameterList params = new ParameterList(request.getParameterMap());
         try {
             VerificationResult verification = manager.verify(request.getRequestURL().toString(), params, null);
@@ -185,33 +193,38 @@ public class AuthorizationServlet extends BaseServlet {
         // the user's OpenID
         String id = verification.getVerifiedId().getIdentifier();
 
-        // Is the user known to us?
-        //String username = getUsername(id);
-        String username = id;
-	        
-        // OpenID attribute exchange -- retrieve certificate
-        // !!!!!!!!!! Uncomment to retrieve the user's certificate
+        if (!UserHelper.userExists(id)) {
+            UserHelper.addDefaultUser(id);
+        }
         
-        /*try {
+        try {
             MessageExtension ext = verification.getAuthResponse().getExtension(AxMessage.OPENID_NS_AX);
             if (ext != null) {
                 if (!(ext instanceof FetchResponse))
                     throw new Oops("Unexpected attribute exchange response: " + ext.getClass());
                 FetchResponse fetch = (FetchResponse) ext;
                 // store credential, if it was returned
-                String certUrl = fetch.getAttributeValue(ALIAS_CERTIFICATE);
-                if (certUrl != null && !certUrl.isEmpty()) {
-	                logger.debug("For user \"" + username + "\" storing cert \"" + certUrl + "\".");
-	                UserHelper.setCertificate(username, certUrl);
-                }
+//                String certUrl = fetch.getAttributeValue(ALIAS_CERTIFICATE);
+//                if (certUrl != null && !certUrl.isEmpty()) {
+//	                logger.debug("For user \"" + username + "\" storing cert \"" + certUrl + "\".");
+//	                UserHelper.setCertificate(username, certUrl);
+//                }
+              String emailUrl = fetch.getAttributeValue("Email");
+              System.out.println(emailUrl);
+              if (emailUrl != null && !emailUrl.isEmpty()) {
+                UserHelper.updateEmail(id, emailUrl);
+              }
+              
+              
+              
             }
         } catch (MessageException e) { // we don't expect this to happen
             logger.warn(e);
             throw new Oops("Unable to fetch OpenID Attributes: " + e.getMessage());
-        }*/
+        }
 
         // TODO: handle case where access token is already present
-        authorizeRequestToken(request, response, username);
+        authorizeRequestToken(request, response, id);
     }
 
 	/**
@@ -306,7 +319,9 @@ public class AuthorizationServlet extends BaseServlet {
             throws IOException
     {
         ConsumerManager manager = new ConsumerManager();
-        manager.setAllowStateless(false);
+        manager.setAssociations(assocStore); 
+        manager.setNonceVerifier(nonceVer); 
+        manager.setAllowStateless(true);
         try {
             List discoveries = manager.discover(idLess);
             DiscoveryInformation discovered = manager.associate(discoveries);
@@ -315,11 +330,10 @@ public class AuthorizationServlet extends BaseServlet {
                 returnUrl = returnUrl.substring(0, returnUrl.indexOf('?'));
             AuthRequest authRequest = manager.authenticate(discovered, returnUrl);
 
-            // attribute request: get Certificate (could also get name)
             FetchRequest fetch = FetchRequest.createFetchRequest();
-            fetch.addAttribute(ALIAS_CERTIFICATE, AX_URL_CERTIFICATE, true);
+//          fetch.addAttribute(ALIAS_CERTIFICATE, AX_URL_CERTIFICATE, true);
+            fetch.addAttribute("Email", "http://schema.openid.net/contact/email", true);
             authRequest.addExtension(fetch);
-
             response.sendRedirect(authRequest.getDestinationUrl(true));
         } catch (DiscoveryException e) {
             logger.warn("Exception during OpenID discovery.", e);

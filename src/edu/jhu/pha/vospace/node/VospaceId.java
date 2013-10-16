@@ -19,6 +19,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.text.ParseException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -96,7 +97,12 @@ public class VospaceId {
 	}
 	
 	private static URI toUri(String path, String uri) throws URISyntaxException {
-		return new URI("vos", "//"+uri+"!vospace"+path, null);
+		try {
+			return new URI("vos", "//"+uri+"!vospace"+URLEncoder.encode(path, "UTF-8"), null);
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 	
 	/**
@@ -127,7 +133,7 @@ public class VospaceId {
 	}
 	
 	public String toString() {
-		return this.getId().toASCIIString();
+		return this.getId().toString();
 	}
 	
 	public VospaceId getParent() throws URISyntaxException {
