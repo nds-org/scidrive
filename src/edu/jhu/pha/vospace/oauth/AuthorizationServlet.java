@@ -39,6 +39,7 @@ import org.openid4java.discovery.DiscoveryInformation;
 import org.openid4java.message.AuthRequest;
 import org.openid4java.message.MessageException;
 import org.openid4java.message.MessageExtension;
+import org.openid4java.message.Parameter;
 import org.openid4java.message.ParameterList;
 import org.openid4java.message.ax.AxMessage;
 import org.openid4java.message.ax.FetchRequest;
@@ -250,12 +251,19 @@ public class AuthorizationServlet extends BaseServlet {
             	logger.debug("Redirecting user to "+callbackUrl);
             	response.sendRedirect(callbackUrl);
             } else {
-                response.setContentType("text/plain");
-                PrintWriter out = response.getWriter();
-                out.println("You have successfully authorized " 
-                        + ".\nPlease close this browser window and click continue"
-                        + " in the client.");
-                out.close();
+            	logger.debug(request.getHeader("Accept"));
+            	if(request.getHeader("Accept").contains("text/html")){
+                    response.setContentType("text/html");
+                    PrintWriter out = response.getWriter();
+                    out.println("<html><head><script type='text/javascript'>window.close();</script></head></html>");
+                    out.close();
+            	} else {
+                    response.setContentType("text/plain");
+                    PrintWriter out = response.getWriter();
+					out.println("You have successfully authorized " 
+					+ ".\nPlease close this browser window and click continue"
+					+ " in the client.");
+            	}
             }
         } catch (IOException e) {
         	logger.error("Error performing the token authorization "+e.getMessage());
@@ -273,6 +281,7 @@ public class AuthorizationServlet extends BaseServlet {
         manager.setAssociations(assocStore); 
         manager.setNonceVerifier(nonceVer); 
         manager.setAllowStateless(true);
+        
         try {
             List discoveries = manager.discover(idLess);
             DiscoveryInformation discovered = manager.associate(discoveries);
@@ -286,6 +295,7 @@ public class AuthorizationServlet extends BaseServlet {
             	fetch.addAttribute(userField.toString(), userField.getOpenidField(), true);
             }
             authRequest.addExtension(fetch);
+            
             response.sendRedirect(authRequest.getDestinationUrl(true));
         } catch (DiscoveryException e) {
             logger.warn("Exception during OpenID discovery.", e);
