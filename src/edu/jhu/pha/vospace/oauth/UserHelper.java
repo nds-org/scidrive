@@ -23,6 +23,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -345,6 +347,28 @@ public class UserHelper {
 		} catch (Exception e) {
             throw new IllegalStateException("Error parsing user's credentials");
 		}
+	}
+
+	public static List<String> getUserIdentities(final String username) {
+        return DbPoolServlet.goSql("Retrieving user's identities",
+                "select B.identity from user_identities A inner join user_identities B on A.user_id = B.user_id WHERE A.identity = ?",
+                new SqlWorker<List<String>>() {
+                    @Override
+                    public List<String> go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    	List<String> userIdentities = new ArrayList<String>();
+                        stmt.setString(1, username);
+                        ResultSet rs = stmt.executeQuery();
+                        while (rs.next()) {
+                        	userIdentities.add(rs.getString("identity"));
+                        } 
+
+                        if(userIdentities.isEmpty())
+                            throw new IllegalStateException("No result from query.");
+                        
+                        return userIdentities;
+                    }
+                }
+        );
 	}
 
 	public enum UserField {

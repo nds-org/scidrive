@@ -220,7 +220,7 @@ public class DropboxService {
 	}
 
 	@GET @Path("account/info")
-	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
+	@RolesAllowed({"user", "rwshareuser"})
 	public Response getAccountInfo() {
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		try {
@@ -264,7 +264,63 @@ public class DropboxService {
 			throw new InternalServerErrorException(ex.getMessage());
 		}
 	}
+
+	@GET @Path("account/info/identities")
+	@RolesAllowed({"user"})
+	public Response getAccountAliases() {
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+		try {
+	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
 	
+//			AccountInfo info = UserHelper.getAccountInfo(user.getName());
+			
+			g2.writeStartObject();
+			
+			g2.writeArrayFieldStart("identities");
+			List<String> userIdentities = UserHelper.getUserIdentities(user.getName());
+			for(String identity: userIdentities) {
+				g2.writeString(identity);
+			}
+			g2.writeEndArray();
+
+			g2.close();
+			byteOut.close();
+	
+			return Response.ok(byteOut.toByteArray()).build();
+		} catch(IOException ex) {
+			throw new InternalServerErrorException(ex.getMessage());
+		}
+	}
+
+	@DELETE @Path("account/info/identity")
+	@RolesAllowed({"user"})
+	public Response deleteAccountAlias(@QueryParam("identity") String identity) {
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+		try {
+	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
+	
+//			AccountInfo info = UserHelper.getAccountInfo(user.getName());
+			
+			g2.writeStartObject();
+			
+			g2.writeArrayFieldStart("identities");
+			List<String> userIdentities = UserHelper.getUserIdentities(user.getName());
+			for(String alias: userIdentities) {
+				g2.writeString(alias);
+			}
+			g2.writeEndArray();
+
+			g2.close();
+			byteOut.close();
+	
+			return Response.ok(byteOut.toByteArray()).build();
+		} catch(IOException ex) {
+			throw new InternalServerErrorException(ex.getMessage());
+		}
+	}
+
 	@PUT @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})
 	public Response setAccountService(InputStream serviceCredInpStream, @PathParam("processor") String processor) {
