@@ -21,7 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -32,11 +35,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
+import javax.servlet.http.Cookie;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -45,9 +50,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -70,6 +78,15 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.util.TokenBuffer;
+import org.openid4java.OpenIDException;
+import org.openid4java.association.AssociationSessionType;
+import org.openid4java.consumer.ConsumerManager;
+import org.openid4java.consumer.VerificationResult;
+import org.openid4java.message.MessageException;
+import org.openid4java.message.MessageExtension;
+import org.openid4java.message.ParameterList;
+import org.openid4java.message.ax.AxMessage;
+import org.openid4java.message.ax.FetchResponse;
 
 import com.sun.jersey.core.header.FormDataContentDisposition;
 import com.sun.jersey.multipart.FormDataParam;
@@ -92,8 +109,11 @@ import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.AuthorizationServlet;
+import edu.jhu.pha.vospace.oauth.OauthCookie;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
+import edu.jhu.pha.vospace.oauth.UserHelper.UserField;
 import edu.jhu.pha.vospace.process.NodeProcessor;
 import edu.jhu.pha.vospace.process.ProcessorConfig;
 import edu.jhu.pha.vospace.process.ProcessingFactory;
@@ -320,6 +340,88 @@ public class DropboxService {
 			throw new InternalServerErrorException(ex.getMessage());
 		}
 	}
+
+	@PUT @Path("account/info/identity")
+	public Response addAccountAlias(@Context UriInfo uriInfo, @HeaderParam("Accept") String acceptParam, @QueryParam("provider") String provider) {
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+        String idLess = AuthorizationServlet.getIdentityless(provider);
+        
+        // set cookie for cases when user came directly to authorize from 3rd party application
+        OauthCookie cookie = new OauthCookie();
+        //cookie.setCallbackUrl("");
+       	logger.debug("Created third party app cookie.");
+       	try {
+            String redirectUrl = AuthorizationServlet.initiateOpenid(uriInfo.getRequestUri().toString(), idLess);
+			ResponseBuilder response = Response.ok().entity(redirectUrl);
+            response.cookie(new NewCookie(OauthCookie.COOKIE_NAME, cookie.toString()));
+        	logger.debug("Created OpenID request for user "+user.getName());
+            return response.build();
+       	} catch(OpenIDException ex) {
+       		throw new InternalServerErrorException(ex);
+       	}
+	}
+	
+	@GET @Path("account/info/identity") //OpenID response
+	public Response addAccountAliasResponse(@Context UriInfo uriInfo, @HeaderParam("Accept") String acceptParam, @QueryParam("provider") String provider) {
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+        ConsumerManager manager = new ConsumerManager();
+        manager.setAssociations(AuthorizationServlet.assocStore); 
+        manager.setNonceVerifier(AuthorizationServlet.nonceVer); 
+        manager.setMinAssocSessEnc(AssociationSessionType.DH_SHA256);
+        manager.setAllowStateless(true);
+        
+        Map<String, String> params = new HashMap<String, String>();
+        for(String curParamKey: uriInfo.getQueryParameters().keySet()) {
+        	params.put(curParamKey, uriInfo.getQueryParameters().get(curParamKey).get(0));
+        }
+        
+        try {
+        	logger.debug(uriInfo.getRequestUri().toString());
+            VerificationResult verification = manager.verify(uriInfo.getRequestUri().toString(), new ParameterList(params), null);
+            if (null == verification.getVerifiedId() || !AuthorizationServlet.isBlank(verification.getStatusMsg()))
+                throw new ForbiddenException("OpenID authentication failed. " + ((null != verification.getStatusMsg())?verification.getStatusMsg():""));
+            // We're authenticated!  Now approve the request token.
+
+            logger.debug("Verified! "+verification.getVerifiedId());
+            System.out.println(verification.getStatusMsg());
+            
+            String id = verification.getVerifiedId().getIdentifier();
+
+            Map<UserField, String> userFieldsReceived = new HashMap<UserField, String>();
+            MessageExtension ext = verification.getAuthResponse().getExtension(AxMessage.OPENID_NS_AX);
+            if (ext != null) {
+                if (!(ext instanceof FetchResponse))
+                    throw new InternalServerErrorException("Unexpected attribute exchange response: " + ext.getClass());
+                FetchResponse fetch = (FetchResponse) ext;
+                for(UserField userField: UserHelper.UserField.values()) {
+                	String valueReceived = fetch.getAttributeValue(userField.toString());
+                	if(null != valueReceived && !valueReceived.isEmpty())
+                		userFieldsReceived.put(userField, valueReceived);
+            	}
+            }
+            
+            UserHelper.addUserAlias(user.getName(), id, userFieldsReceived);
+            logger.debug("Updated user "+user.getName()+" with alias "+id);
+            
+            ResponseBuilder response = Response.ok();
+            
+        	if(null != acceptParam && acceptParam.contains("text/html")){
+        		response.type(MediaType.TEXT_HTML_TYPE);
+        		response.entity("<html><head><script type='text/javascript'>window.close();</script></head></html>");
+        	} else {
+                response.type(MediaType.TEXT_PLAIN_TYPE);
+                response.entity("You have successfully authorized " 
+				+ ".\nPlease close this browser window and click continue"
+				+ " in the client.");
+        	}
+
+        	return response.build();
+        } catch (OpenIDException e) {
+            logger.info("Exception verifying OpenID response.", e);
+            throw new InternalServerErrorException("Unable to verify OpenID response: " + e.getMessage());
+        }
+	}
+
 
 	@PUT @Path("account/service/{processor:.+}")
 	@RolesAllowed({"user"})

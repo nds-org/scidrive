@@ -160,6 +160,25 @@ public class UserHelper {
                 });
 	}
 
+    static public boolean addUserAlias(final String username, final String alias, final Map<UserField, String> userFields) {
+		return DbPoolServlet.goSql("Add user alias",
+				"insert into user_identities (user_id, identity, email, first_name, last_name, organization) " +
+				"select users.user_id, ?, ?, ?, ?, ? from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    	stmt.setString(1, username);
+                    	stmt.setString(2, userFields.containsKey(UserField.EMAIL)?userFields.get(UserField.EMAIL):null);
+                    	stmt.setString(3, userFields.containsKey(UserField.FIRST_NAME)?userFields.get(UserField.FIRST_NAME):null);
+                    	stmt.setString(4, userFields.containsKey(UserField.LAST_NAME)?userFields.get(UserField.LAST_NAME):null);
+                    	stmt.setString(5, userFields.containsKey(UserField.ORGANIZATION)?userFields.get(UserField.ORGANIZATION):null);
+                    	stmt.setString(6, username);
+                        stmt.executeUpdate();
+                        return true;
+                    }
+		});
+    }
+	
     static public boolean addDefaultUser(final String username) {
 		DbPoolServlet.goSql("Add new user",
          		"insert into users values ()",

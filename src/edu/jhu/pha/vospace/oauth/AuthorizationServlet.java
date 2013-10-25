@@ -60,8 +60,8 @@ public class AuthorizationServlet extends BaseServlet {
     
 	private static Configuration conf = SettingsServlet.getConfig();
     
-	private static ConsumerAssociationStore assocStore = new OpenidConsumerAssociationStore();
-	private static NonceVerifier nonceVer = new OpenidNonceVerifier(5000);
+	public static ConsumerAssociationStore assocStore = new OpenidConsumerAssociationStore();
+	public static NonceVerifier nonceVer = new OpenidNonceVerifier(5000);
 	
     @Override
     /** Handle GET & POST the same way, because OpenID response may be a URL redirection (GET)
@@ -113,9 +113,13 @@ public class AuthorizationServlet extends BaseServlet {
                 	logger.debug("Created third party app cookie.");
                 }
                 
-                String error = initiateOpenid(request, response, idLess);
-                if (error != null)
-                    throw new Oops(error);
+                try {
+					String redirectUrl = initiateOpenid(request.getRequestURL().toString(), idLess);
+					response.sendRedirect(redirectUrl);
+				} catch (OpenIDException e) {
+					e.printStackTrace();
+                    throw new Oops(e.toString());
+				}
             }
         }
         // for local error-reporting, use a private Exception class, Oops (see below)
@@ -124,7 +128,7 @@ public class AuthorizationServlet extends BaseServlet {
         }
     }
 
-    private static void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
+    public static void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
             throws IOException, Oops {
         ConsumerManager manager = new ConsumerManager();
         manager.setAssociations(assocStore); 
@@ -273,9 +277,10 @@ public class AuthorizationServlet extends BaseServlet {
 	}
 
     /** Initiate OpenID authentication.  Return null if successful and no further action is necessary;
-     *  return an error message if there was a problem. */
-    private static String initiateOpenid(HttpServletRequest request, HttpServletResponse response, String idLess)
-            throws IOException
+     *  return an error message if there was a problem. 
+     * @throws OpenIDException */
+    public static String initiateOpenid(String requestUrl, String idLess)
+            throws OpenIDException
     {
         ConsumerManager manager = new ConsumerManager();
         manager.setAssociations(assocStore); 
@@ -285,7 +290,7 @@ public class AuthorizationServlet extends BaseServlet {
         try {
             List discoveries = manager.discover(idLess);
             DiscoveryInformation discovered = manager.associate(discoveries);
-            String returnUrl = request.getRequestURL().toString();
+            String returnUrl = requestUrl;
             if (returnUrl.indexOf('?') > 0)
                 returnUrl = returnUrl.substring(0, returnUrl.indexOf('?'));
             AuthRequest authRequest = manager.authenticate(discovered, returnUrl);
@@ -296,20 +301,17 @@ public class AuthorizationServlet extends BaseServlet {
             }
             authRequest.addExtension(fetch);
             
-            response.sendRedirect(authRequest.getDestinationUrl(true));
+            return authRequest.getDestinationUrl(true);
         } catch (DiscoveryException e) {
             logger.warn("Exception during OpenID discovery.", e);
-            return "Unable to contact OpenID provider: " + e.getMessage();
-        } catch (OpenIDException e) {
-            logger.warn("Exception processing authentication request.", e);
+            throw new OpenIDException("Unable to contact OpenID provider: " + e.getMessage());
         }
-        return null; // no errors
     }
 
     /** The URL to use for identityless authentication for a provider.  Not all providers support it
      * -- we will need to do something fancier with discovery etc. for the general case, although
      * this will work fine with VAO SSO. */
-    private static String getIdentityless(String providerName) {
+    public static String getIdentityless(String providerName) {
         if (isBlank(providerName))
             throw new IllegalArgumentException("No provider specified.  Try provider=vao.");
         if(null != conf.getString(providerName+".identityless.url"))
