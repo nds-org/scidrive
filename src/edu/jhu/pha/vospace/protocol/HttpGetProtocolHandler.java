@@ -18,7 +18,11 @@ package edu.jhu.pha.vospace.protocol;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FilenameUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -29,6 +33,8 @@ import edu.jhu.pha.vospace.jobs.JobException;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodeType;
+import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.rest.JobDescription;
 
 /**
@@ -37,6 +43,7 @@ import edu.jhu.pha.vospace.rest.JobDescription;
 public class HttpGetProtocolHandler implements ProtocolHandler {
 
 	private static final Logger logger = Logger.getLogger(HttpGetProtocolHandler.class);
+	private static final Pattern fileNamePattern = Pattern.compile("filename=\"(.*?)\"");
 	
 	/*
 	 * (non-Javadoc)
@@ -66,10 +73,30 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 			
 			if(response.getStatusLine().getStatusCode() == 200) {
 				fileInp = response.getEntity().getContent();
-				
+
+				logger.debug("Auto node: "+job.getTargetId().toString().endsWith("/.auto"));
+
 				//TODO make also for container
-				DataNode targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), job.getUsername());
-				targetNode.setData(fileInp);
+				String fileName = FilenameUtils.getName(getFileUrl);
+
+				Header dispositionHeader = response.getFirstHeader("content-disposition");
+				if(null != dispositionHeader && dispositionHeader.getValue().indexOf("filename") > 0){
+					Matcher matcher = fileNamePattern.matcher(dispositionHeader.getValue());
+					if (matcher.find())	{
+					    fileName = matcher.group(1);
+					}
+				}
+				
+				if(job.getTargetId().toString().endsWith("/.auto") && null != fileName){
+					logger.debug("Auto node success "+fileName);
+					VospaceId newId = new VospaceId(job.getTargetId().toString().replaceFirst(".auto", fileName));
+					DataNode targetNode = (DataNode)NodeFactory.createNode(newId, job.getUsername(), NodeType.DATA_NODE);
+					targetNode.setNode(null);
+					targetNode.setData(fileInp);
+				} else {
+					DataNode targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), job.getUsername());
+					targetNode.setData(fileInp);
+				}
 			} else {
 				logger.error("Error processing job "+job.getId()+": "+response.getStatusLine().getStatusCode()+" "+response.getStatusLine().getReasonPhrase());
 				throw new JobException("Error processing job "+job.getId()+": "+response.getStatusLine().getStatusCode()+" "+response.getStatusLine().getReasonPhrase());
