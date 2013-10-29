@@ -31,6 +31,8 @@ import org.apache.log4j.Logger;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.jobs.JobException;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
+import edu.jhu.pha.vospace.meta.MetaStore;
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodeType;
@@ -61,7 +63,7 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException, URISyntaxException{
 		String getFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpget"));
-		
+		MetaStore store = MetaStoreFactory.getMetaStore(job.getUsername());
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		
 		HttpGet get = new HttpGet(getFileUrl);
@@ -94,7 +96,13 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 					targetNode.setNode(null);
 					targetNode.setData(fileInp);
 				} else {
-					DataNode targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), job.getUsername());
+					DataNode targetNode;
+					if(!store.isStored(job.getTargetId())) {
+						targetNode = NodeFactory.createNode(job.getTargetId(), job.getUsername(), NodeType.DATA_NODE);
+						targetNode.setNode(null);						
+					} else {
+						targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), job.getUsername());
+					}
 					targetNode.setData(fileInp);
 				}
 			} else {
