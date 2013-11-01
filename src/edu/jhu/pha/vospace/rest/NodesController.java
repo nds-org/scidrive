@@ -137,7 +137,7 @@ public class NodesController {
 		
 		VospaceId identifier;
 		try {
-			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
+			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()).resolve());
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
 		}

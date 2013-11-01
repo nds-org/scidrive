@@ -140,20 +140,23 @@ public class TransferThread implements Callable<STATE> {
 		} catch(URISyntaxException ex) {
 			throw new BadRequestException("The parent node is not valid.");
 		}
-		
+		//TODO check logic: when container is removed but not purged and want to create datanode with same name
 		// Existence
 		if (store.isStored(target)) {
 			if (transfer.getDirection().equals(DIRECTION.PUSHTOVOSPACE) || transfer.getDirection().equals(DIRECTION.PULLTOVOSPACE)) {
 				// Container
 				Node targetNode = NodeFactory.getNode(target, transfer.getUsername());
+
 				if (targetNode.getType().equals(NodeType.CONTAINER_NODE)) 
 					throw new BadRequestException("Data cannot be uploaded to a container."); 
+				
+				if(targetNode.getNodeInfo().isDeleted()) {
+					targetNode.markRemoved(false);
+				}
+
 			}
 		} else {
 			if (!external) throw new ConflictException("A Node does not exist with the requested URI");
-			Node newNode = NodeFactory.createNode(target, transfer.getUsername(), NodeType.DATA_NODE);
-			newNode.setNode(null);
-			
 		}
 		if (!external && store.isStored(direction)) {
 			Node directionNode = NodeFactory.getNode(direction, transfer.getUsername());

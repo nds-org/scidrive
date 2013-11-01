@@ -56,7 +56,7 @@ public class VospaceId {
 			
 		try {
 			String pathStr = URLDecoder.decode(StringUtils.substringAfter(idStr, "!vospace"), "UTF-8");
-			this.nodePath = new NodePath(pathStr).resolve();
+			this.nodePath = new NodePath(pathStr);
 		} catch (UnsupportedEncodingException e) {
 			// should not happen
 			logger.error(e.getMessage());
