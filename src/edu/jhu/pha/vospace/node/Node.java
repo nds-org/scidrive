@@ -33,6 +33,8 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import com.rabbitmq.client.MessageProperties;
+
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.BadRequestException;
@@ -145,7 +147,7 @@ public abstract class Node implements Cloneable {
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
     			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
+				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", MessageProperties.PERSISTENT_TEXT_PLAIN, jobSer);
 
 				if(!keepBytes) {
 					Map<String,Object> oldNodeData = new HashMap<String,Object>();

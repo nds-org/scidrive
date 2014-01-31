@@ -36,6 +36,8 @@ import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.util.TokenBuffer;
 
+import com.rabbitmq.client.MessageProperties;
+
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
@@ -154,7 +156,7 @@ public class DataNode extends Node implements Cloneable {
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
     			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
+				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", MessageProperties.PERSISTENT_TEXT_PLAIN, jobSer);
 		    	
 		    	return true;
 			}
@@ -225,7 +227,7 @@ public class DataNode extends Node implements Cloneable {
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
     			channel.basicPublish(conf.getString("vospace.exchange.nodechanged"), "", null, jobSer);
-				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", null, jobSer);
+				channel.basicPublish(conf.getString("process.exchange.nodeprocess"), "", MessageProperties.PERSISTENT_TEXT_PLAIN, jobSer);
 		    	
 		    	return true;
 			}
