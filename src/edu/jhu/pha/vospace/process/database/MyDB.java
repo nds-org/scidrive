@@ -483,7 +483,7 @@ public class MyDB implements Database {
 			int BATCH_SIZE = 250;
 			ArrayList<String[]> rows = table.getRows();
 			
-			while (startRow < (rows.size()-1)) {
+			while (startRow < rows.size()) {
 				StringBuilder insertRowQuery = new StringBuilder();
 				insertRowQuery.append("INSERT INTO "+databaseFormat.formatObjectName(tableName)+" ");
 				int n;
