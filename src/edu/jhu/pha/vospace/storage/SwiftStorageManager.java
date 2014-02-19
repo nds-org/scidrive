@@ -532,14 +532,90 @@ public class SwiftStorageManager implements StorageManager {
 		FilesClient cli = new FilesClient(getHttpClient(), 
 				"jhNn3gnKfs:jhNn3gnKfs",
 				"h1NC_Xcc0nEaPPv",
-				"http://zinc26.pha.jhu.edu:8081/auth/v1.0", null
+				"http://zinc26.pha.jhu.edu:8081/v1/AUTH_24b79d0aadf04c9eb19dd9aeb5706caa", null
 				, 1000);
-		cli.login();
+		//cli.login();*/
 		
-		for(FilesObject fo: cli.listObjectsStartingWith("test", "ccc/", null, -1, null)) {
-			System.out.println(fo.getName());
-			
-		}
+		//Container Info
+				//List<FilesContainerInfo> Containers = cli.listKsContainersInfo(-1,"E","X");
+				//System.out.println(Containers);
+				
+				//Create Container
+				//cli.createKsContainer("ABC");
+				
+				//Account Info
+				FilesAccountInfo f = cli.getKsAccountInfo();
+				System.out.println(f.getBytesUsed());
+				System.out.println(f.getContainerCount());
+				
+				//Container Info
+				/*FilesContainerInfo f = cli.getKsContainerInfo("first_cont");
+				System.out.println(f.getName());
+				System.out.println(f.getObjectCount());
+				System.out.println(f.getTotalSize());
+				System.out.println(f.getSyncTo());*/
+				
+				//Delete Container
+				/*if(cli.deleteKsContainer("Test2")){
+					System.out.println("deleted");
+				}*/
+				
+				//Update Account Metadata
+				/*Map<String, String> map = new HashMap<String, String>();
+				map.put("Creator", "Dima");
+
+				if(cli.updateKsAccountMetadata(map)){
+					System.out.println("updated");
+				}*/
+				
+				//Delete Account Metadata
+				/*Map<String, String> map = new HashMap<String, String>();
+				map.put("Creator", "");
+
+				if(cli.updateKsAccountMetadata(map)){
+					System.out.println("updated");
+				}*/
+				
+				
+				//Update Container Metadata
+				/*Map<String, String> map = new HashMap<String, String>();
+				map.put("Creator", "Dima");
+				if(cli.updateKsContainerMetadata("first_cont",map)){
+					System.out.println("updated!");
+				}*/
+				
+				//Delete Container Metadata
+						/*Map<String, String> map = new HashMap<String, String>();
+						map.put("Creator", "");
+						if(cli.updateKsContainerMetadata("first_cont",map)){
+							System.out.println("updated!");
+						}*/
+				
+				//List Objects
+				//List<FilesObject> Objects = cli.listKsObjectsStartingWith("first_cont",null,null,-1,null,null,null);
+				//System.out.println(Objects.get(0).getName());
+				
+				
+				//Get Object Data
+				/*byte[] obj = cli.getKsObject("XYZ","Testobj2");
+				String s = new String(obj);
+				System.out.println(s);*/
+				
+				//Store Object
+				/*Map<String, String> map = new HashMap<String, String>();
+				map.put("Creator", "Shradha");
+				File f = new File("C:\\Users\\pinkyanup\\Desktop\\Test file.docx");
+				InputStream b = new FileInputStream(f);
+				String tag = cli.storeKsStreamedObject("XYZ",b,"text","Testobj1",map);
+				System.out.println(tag);*/
+				
+				//Copy Object
+				/*String tag = cli.copyKsObject("Test1","Testobj","XYZ","Movedobj");
+				System.out.println(tag);*/
+				
+				//Delete Object
+				//cli.deleteKsObject("XYZ","Movedobj");
+		
 		
 	}
 	

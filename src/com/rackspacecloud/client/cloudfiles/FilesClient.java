@@ -28,6 +28,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.EncoderException;
 import org.apache.commons.codec.net.URLCodec;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.text.StrTokenizer;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -57,12 +58,19 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HTTP;
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.map.DeserializationConfig;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.rackspacecloud.client.cloudfiles.wrapper.RequestEntityWrapper;
+
+import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 
 /**
  * 
@@ -117,8 +125,8 @@ public class FilesClient
     private String password = null;
     private String account = null;
     private String authenticationURL;
-    private int connectionTimeOut;
-    private String storageURL = null;
+    private static int connectionTimeOut;
+    private static String storageURL = null;
     private String cdnManagementURL = null;
     private String authToken = null;
     private boolean isLoggedin = false;
@@ -126,11 +134,13 @@ public class FilesClient
     private boolean snet = false;
     private String snetAddr = "https://snet-";
  
-    private HttpClient client = null;
+    private static HttpClient client = null;
+	private static	String getFileUrl = "http://zinc26.pha.jhu.edu:8081/v1/AUTH_24b79d0aadf04c9eb19dd9aeb5706caa";
+   	private static String strToken = "dca45d793ca547b5b815f1057bb5257f";
+   
+    public static Logger logger = Logger.getLogger(FilesClient.class); 
 
-    private static Logger logger = Logger.getLogger(FilesClient.class); 
-
-    /**
+	/**
      * @param client    The HttpClient to talk to Swift
      * @param username  The username to log in to 
      * @param password  The password
@@ -207,9 +217,10 @@ public class FilesClient
         		password);
 
         FilesResponse response = new FilesResponse(client.execute(method));
-        
+
         if (response.loginSuccess())
         {
+        	
             isLoggedin   = true;
             if(usingSnet() || envSnet()){
             	storageURL = snetAddr + response.getStorageURL().substring(8);
@@ -357,7 +368,7 @@ public class FilesClient
     						count = Integer.parseInt(data.getTextContent());
     					}
     					else {
-    						logger.debug("Unexpected container-info tag:" + data.getNodeName());
+    						logger.debug("Unexpected c	ontainer-info tag:" + data.getNodeName());
     					}
     				}
     				if (name != null) {
@@ -387,7 +398,9 @@ public class FilesClient
     			method.abort();
     	}
     }
-
+    
+    
+    
     /**
      * List the containers available in an account.
      *
@@ -3251,8 +3264,542 @@ public String storeObjectAs(String container, String name, HttpEntity entity, Ma
 	    	}
 	    	
 		}
+
+		public static List<FilesContainerInfo> listKsContainersInfo(int limit, String marker, String endMarker) throws IOException, HttpException, FilesAuthorizationException, FilesException
+	    {
+			
+	    	HttpGet method = null;
+
+	    	LinkedList<NameValuePair> parameters = new LinkedList<NameValuePair>();
+	       		if(limit > 0) {
+	    			parameters.add(new BasicNameValuePair("limit", String.valueOf(limit)));
+	    		}
+	       		if(marker != null) {
+	    			parameters.add(new BasicNameValuePair("marker", marker));
+	    		}
+	       		if(endMarker != null){
+	       			parameters.add(new BasicNameValuePair("end_marker", endMarker));
+	       		}
+	       		parameters.add(new BasicNameValuePair("format", "json"));
+	       		
+	    		String uri = makeURI(getFileUrl, parameters);
+	    		
+	     		method = new HttpGet(uri);
+	    		method.addHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	    		FilesResponse response = new FilesResponse(client.execute(method));
+	    		if (response.getStatusCode() == HttpStatus.SC_OK)
+	    		{
+
+	    			ArrayList<FilesContainerInfo> containerList = new ArrayList<FilesContainerInfo>();
+	       		
+	       			JsonFactory jsonFactory = new JsonFactory();
+	       			JsonParser jp = jsonFactory.createJsonParser(IOUtils.toString(response.getResponseBodyAsStream()));
+	       			ObjectMapper mapper = new ObjectMapper();
+	       			mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+	       			TypeReference ref = new TypeReference<List<FilesContainerInfo>>(){};
+	       			containerList = mapper.readValue(jp, ref);
+	       			System.out.println(containerList);
+	       			return containerList;
+	       			
+	    		}		
+	    		else if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT)
+	    		{	
+	    			return new ArrayList<FilesContainerInfo>();
+	    		}
+	    		else if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND)
+	    		{
+	    			throw new FilesNotFoundException("Account not Found", response.getResponseHeaders(), response.getStatusLine());
+	    		}
+	    		else {
+	    			throw new FilesException("Unexpected Return Code", response.getResponseHeaders(), response.getStatusLine());
+	    		}
+
+	    }
 		
-		private String makeURI(String base, List<NameValuePair> parameters) {
+		public static void createKsContainer(String name) throws IOException, HttpException, FilesAuthorizationException, FilesException
+	    {
+	    		if (isValidContainerName(name))
+	    		{
+	    			HttpPut method = new HttpPut(getFileUrl+"/"+sanitizeForURI(name));
+	    			method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	    			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	     			
+	    			try {
+	    				
+	    				FilesResponse response = new FilesResponse(client.execute(method));    	
+	    				
+	 
+		    			if (response.getStatusCode() == HttpStatus.SC_CREATED)
+		    			{
+		    				return;
+		    			}
+		    			else if (response.getStatusCode() == HttpStatus.SC_ACCEPTED)
+		    			{	
+		    				throw new FilesContainerExistsException(name, response.getResponseHeaders(), response.getStatusLine());
+		    			}
+		    			else {
+		    				throw new FilesException("Unexpected Response", response.getResponseHeaders(), response.getStatusLine());
+		    			}
+	    			}
+	    			finally {
+	    				method.abort();
+	    			}
+	    		}
+	    		else
+	    		{
+	    			throw new FilesInvalidNameException(name);
+	    		}
+	    	}
+		
+	    public static FilesContainerInfo getKsContainerInfo (String container) throws IOException, HttpException, FilesException
+	    {
+	    	
+	    		if (isValidContainerName(container))
+	    		{
+
+	    			HttpHead method = null;
+	    			
+	    			try {
+	    				method = new HttpHead(getFileUrl+"/"+sanitizeForURI(container));
+	    				method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	    				method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	    				FilesResponse response = new FilesResponse(client.execute(method));
+
+	    				if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT)
+	    				{
+	    					int objCount = response.getContainerObjectCount();
+	    					long objSize  = response.getContainerBytesUsed();
+	    					String syncTo = response.getContainerSyncTo();
+	    					return new FilesContainerInfo(container, objCount, objSize, syncTo);
+	    				}
+	    				else if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND)
+	    				{
+	    					throw new FilesNotFoundException("Container not found: " + container, response.getResponseHeaders(), response.getStatusLine());
+	    				}
+	    				else {
+	    					throw new FilesException("Unexpected result from server", response.getResponseHeaders(), response.getStatusLine());
+	    				}
+	    			}
+	    			finally {
+	    				if (method != null) method.abort();
+	    			}
+	    		}
+	    		else
+	    		{
+	    			throw new FilesInvalidNameException(container);
+	    		}
+	    	
+	    }		
+	    
+	    public static boolean deleteKsContainer(String name) throws IOException, HttpException, FilesAuthorizationException, FilesInvalidNameException, FilesNotFoundException, FilesContainerNotEmptyException
+	    {
+	    	
+	    		if (isValidContainerName(name))
+	    		{
+	    			HttpDelete method = new HttpDelete(getFileUrl+"/"+sanitizeForURI(name));
+	    			
+	    			try {
+	    				method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	    	   			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	        			FilesResponse response = new FilesResponse(client.execute(method));
+
+	    	       		if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT)
+	        			{
+	        				logger.debug ("Container Deleted : "+name);
+	        				return true;
+	        			}
+	        			else if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND)
+	        			{
+	        				logger.debug ("Container does not exist !");
+	           				throw new FilesNotFoundException("You can't delete an non-empty container", response.getResponseHeaders(), response.getStatusLine());
+	        			}
+	        			else if (response.getStatusCode() == HttpStatus.SC_CONFLICT)
+	        			{
+	        				logger.debug ("Container is not empty, can not delete a none empty container !");
+	        				throw new FilesContainerNotEmptyException("You can't delete an non-empty container", response.getResponseHeaders(), response.getStatusLine());
+	        			}
+	    			}
+	    			finally {
+	    				method.abort();
+	    			}
+	    		}
+	    		else
+	    		{
+	           		throw new FilesInvalidNameException(name);
+	    		}
+	    	
+			
+	    	return false;
+	    }
+	    
+	    public static FilesAccountInfo getKsAccountInfo() throws IOException, HttpException, FilesAuthorizationException, FilesException
+	    {
+
+	     		HttpHead method = null;
+				
+	     		try {
+	     			method = new HttpHead(getFileUrl);
+	     			method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	     			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	     			FilesResponse response = new FilesResponse(client.execute(method));
+	 
+	     			if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT)
+	     			{
+	     				int nContainers = response.getAccountContainerCount();
+	     				long totalSize  = response.getAccountBytesUsed();
+	     				return new FilesAccountInfo(totalSize,nContainers);
+	     			}
+	     			else {
+	     				throw new FilesException("Unexpected return from server", response.getResponseHeaders(), response.getStatusLine());
+	     			}
+	     		}
+	     		finally {
+	     			if (method != null) method.abort();
+	     		}
+	     	
+	     }	
+	    
+	    public static boolean updateAccountMetadata(Map<String,String> metadata) throws FilesAuthorizationException, 
+				HttpException, IOException, FilesInvalidNameException {
+
+		    	HttpPost method = null;
+		    	
+		    	try {
+			    	method = new HttpPost(getFileUrl);
+			   		method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+			   		method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+			   		if (!(metadata == null || metadata.isEmpty())) {
+			   			for(String key:metadata.keySet())
+			   				method.setHeader("X-Account-Meta-"+key, 
+			   					sanitizeForURI(metadata.get(key)));
+			   		}
+			   		FilesResponse response = (FilesResponse) client.execute(method);
+		    		return true;
+		    	} finally {
+		    		if (method != null) 
+		    			method.abort();
+		    	}
+		    	
+			}
+	    
+	    public static boolean updateContainerMetadata(String name, Map<String,String> metadata) throws FilesAuthorizationException, 
+		HttpException, IOException, FilesInvalidNameException {
+
+		FilesResponse response;
+		HttpPost method = null;
+
+		try {
+	    	method = new HttpPost(getFileUrl+"/"+sanitizeForURI(name));
+	   		method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	   		method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	   		if (!(metadata == null || metadata.isEmpty())) {
+	   			for(String key:metadata.keySet())
+	   				method.setHeader("X-Container-Meta-"+key, 
+	   					sanitizeForURI(metadata.get(key)));
+	   		}
+			HttpResponse resp = client.execute(method);
+			response = new FilesResponse(resp);
+
+			
+			return true;
+		} finally {
+			if (method != null) 
+				method.abort();
+		}
+		
+	}
+	    
+	    public static List<FilesObject> listObjectsStartingWith (String container, String startsWith, String path, int limit, String marker, String end_marker, Character delimiter) throws IOException, FilesException
+	    {
+		
+		HttpGet method = null;
+
+			LinkedList<NameValuePair> parameters = new LinkedList<NameValuePair>();
+			parameters.add(new BasicNameValuePair ("format", "json"));
+			if (startsWith != null) {
+				parameters.add(new BasicNameValuePair (FilesConstants.LIST_CONTAINER_NAME_QUERY, startsWith));    		}
+	   		if(path != null) {
+				parameters.add(new BasicNameValuePair("path", path));
+			}
+	   		if(limit > 0) {
+				parameters.add(new BasicNameValuePair("limit", String.valueOf(limit)));
+			}
+	   		if(marker != null) {
+				parameters.add(new BasicNameValuePair("marker", marker));
+			}
+	   		if(end_marker != null) {
+				parameters.add(new BasicNameValuePair("marker", end_marker));
+			}
+	   		if (delimiter != null) {
+	   			parameters.add(new BasicNameValuePair("delimiter", delimiter.toString()));
+	   		}
+	   		
+	   		String uri = parameters.size() > 0 ? makeURI(getFileUrl+"/"+sanitizeForURI(container), parameters) : storageURL;
+	   		method = new HttpGet(uri);
+			method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+			FilesResponse response = new FilesResponse(client.execute(method));
+			
+	  		if (response.getStatusCode() == HttpStatus.SC_OK)
+			{
+	   			ArrayList <FilesObject> objectList = new ArrayList<FilesObject>();
+	   			
+	   			JsonFactory jsonFactory = new JsonFactory();
+	   			JsonParser jp = jsonFactory.createJsonParser(IOUtils.toString(response.getResponseBodyAsStream()));
+	   			ObjectMapper mapper = new ObjectMapper();
+	   			mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+	   			TypeReference ref = new TypeReference<List<FilesObject>>(){};
+	   			objectList = mapper.readValue(jp, ref);
+	   			return objectList;
+			}		
+			else if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT)
+			{	
+				logger.debug ("Container "+container+" has no Objects");
+				return new ArrayList<FilesObject>();
+			}
+			else if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND)
+			{
+				throw new FilesNotFoundException("Container was not found", response.getResponseHeaders(), response.getStatusLine());
+			}
+			else {
+				throw new FilesException("Unexpected Server Result", response.getResponseHeaders(), response.getStatusLine());
+			}
+		}
+
+	    public static byte[] getKsObject (String container, String objName) throws IOException, HttpException, FilesAuthorizationException, FilesInvalidNameException, FilesNotFoundException
+	    {
+	    		if (isValidContainerName(container) && isValidObjectName(objName))
+	    		{
+	    			HttpGet method = new HttpGet(getFileUrl+"/"+sanitizeForURI(container)+"/"+sanitizeForURI(objName));
+	    			method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	    			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	     			
+	    			try {
+	    				FilesResponse response = new FilesResponse(client.execute(method));
+
+	    				if (response.getStatusCode() == HttpStatus.SC_OK)
+	    				{	
+	    					logger.debug ("Object data retreived  : "+objName);
+	    					return response.getResponseBody();
+	    				}	
+	    				else if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND)
+	    				{
+	    					throw new FilesNotFoundException("Container: " + container + " did not have object " + objName, 
+										 response.getResponseHeaders(), response.getStatusLine());
+	    				}
+	    			}
+	    			finally {
+	    				method.abort();
+	    			}
+	    		}
+	    		else
+	    		{
+	    			if (!isValidObjectName(objName)) {
+	    				throw new FilesInvalidNameException(objName);
+	    			}
+	    			else {
+	    				throw new FilesInvalidNameException(container);
+	    			}
+	    		}
+	    	return null;
+	    }
+	    
+	    public static String storeKsStreamedObject(String container, InputStream data, String contentType, String name, Map<String,String> metadata) throws IOException, HttpException, FilesException
+	    {
+	 			String objName	 =  name;
+				if (isValidContainerName(container) && isValidObjectName(objName))
+	    		{
+					HttpPut method = new HttpPut(getFileUrl+"/"+sanitizeForURI(container)+"/"+sanitizeForURI(objName));
+
+	     			method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	    			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	    			InputStreamEntity entity = new InputStreamEntity(data, -1);
+	    			entity.setChunked(true);
+	    			entity.setContentType(contentType);
+	    			method.setEntity(entity);
+	    			for(String key : metadata.keySet()) {
+	       				method.setHeader(FilesConstants.X_OBJECT_META + key, sanitizeForURI(metadata.get(key)));
+	    			}
+	    			method.removeHeaders("Content-Length");
+	  
+	    			
+	    			try {
+	        			FilesResponse response = new FilesResponse(client.execute(method));
+	        			
+	        			if (response.getStatusCode() == HttpStatus.SC_CREATED)
+	        			{
+	        				return response.getResponseHeader(FilesConstants.E_TAG).getValue();
+	        			}
+	        			else {
+	        				logger.error(response.getStatusLine());
+	        				throw new FilesException("Unexpected result", response.getResponseHeaders(), response.getStatusLine());
+	        			}
+	    			}
+	    			finally {	
+	    				method.abort();
+	    			}
+	    		}
+	    		else
+	    		{
+	    			if (!isValidObjectName(objName)) {
+	    				throw new FilesInvalidNameException(objName);
+	    			}
+	    			else {
+	    				throw new FilesInvalidNameException(container);
+	    			}
+	    		}
+	    	}
+	    
+	    public static String copyKsObject(String sourceContainer,
+	            String sourceObjName,
+	            String destContainer,
+	            String destObjName) throws HttpException, IOException {
+	    	
+	    	String etag = null;
+
+	    	if (isValidContainerName(sourceContainer) &&
+	    			isValidObjectName(sourceObjName) &&
+	    			isValidContainerName(destContainer) &&
+	    			isValidObjectName(destObjName)) {
+
+	    		HttpPut method = null;
+	    		
+	    		try {
+	    			String sourceURI = sanitizeForURI(sourceContainer) +
+	    					"/" + sanitizeForURI(sourceObjName);
+	    			String destinationURI = sanitizeForURI(destContainer) +
+	    					"/" + sanitizeForURI(destObjName);
+
+	    			method = new HttpPut(getFileUrl + "/" + destinationURI);
+	    			method.getParams().setIntParameter("http.socket.timeout",
+	                                      connectionTimeOut);
+	    			method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	    			method.setHeader(FilesConstants.X_COPY_FROM, sourceURI);
+
+	    			FilesResponse response = new FilesResponse(client.execute(
+	    					method));
+
+	    			if (response.getStatusCode() == HttpStatus.SC_CREATED) {
+	    				etag = response.getResponseHeader(FilesConstants.E_TAG)
+	    						.getValue();
+
+	    			} 
+	    			else {
+	    				throw new FilesException("Unexpected status from server",
+	                                response.getResponseHeaders(),
+	                                response.getStatusLine());
+	    				}
+
+	    		} finally {
+	    			if (method != null) {
+	    				method.abort();
+	    			}
+	    		}
+	    	} else {
+	    		if (!isValidContainerName(sourceContainer)) {
+	    			throw new FilesInvalidNameException(sourceContainer);
+	    		} else if (!isValidObjectName(sourceObjName)) {
+	    			throw new FilesInvalidNameException(sourceObjName);
+	    		} else if (!isValidContainerName(destContainer)) {
+	    			throw new FilesInvalidNameException(destContainer);
+	    		} else {
+	    			throw new FilesInvalidNameException(destObjName);
+	    		}
+	    		}
+	     
+		return etag;
+		}
+	 
+	    public static void deleteKsObject (String container, String objName) throws IOException, FilesNotFoundException, HttpException, FilesException
+	    {
+
+	    		if (isValidContainerName(container) && isValidObjectName(objName))
+	    		{
+	    			HttpDelete method = null;
+	    			
+	    			try {
+	    				method = new HttpDelete(getFileUrl+"/"+sanitizeForURI(container)+"/"+sanitizeForURI(objName));
+	    				method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	    				method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	    				FilesResponse response = new FilesResponse(client.execute(method));
+	    				
+	           			if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+	           				method.abort();
+	           				method = new HttpDelete(storageURL+"/"+sanitizeForURI(container)+"/"+sanitizeForURI(objName));
+	            			method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	        				method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+	        				method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+	        				response = new FilesResponse(client.execute(method));
+	        			}
+
+
+	    				if (response.getStatusCode() == HttpStatus.SC_NO_CONTENT)
+	    				{
+	    					logger.debug ("Object Deleted : "+objName);
+	    				}
+	    				else if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND)
+	    				{
+	    					throw new FilesNotFoundException("Object was not found " + objName, response.getResponseHeaders(), response.getStatusLine());
+	    				}
+	    				else {
+	    					throw new FilesException("Unexpected status from server", response.getResponseHeaders(), response.getStatusLine());
+	    				}
+	    			}
+	    			finally {
+	    				if (method != null) method.abort();
+	    			}
+	    		}
+	    		else
+	    		{
+	    			if (!isValidObjectName(objName)) {
+	    				throw new FilesInvalidNameException(objName);
+	    			}
+	    			else {
+	    				throw new FilesInvalidNameException(container);
+	    			}
+	    		}
+	    	}
+	    
+	    public boolean updateKsObjectMetadata(String container, String object, 
+				Map<String,String> metadata) throws FilesAuthorizationException, 
+				HttpException, IOException, FilesInvalidNameException {
+				
+	    		FilesResponse response;
+				
+		    	if (!isValidContainerName(container))
+		    		throw new FilesInvalidNameException(container);	
+		    	if (!isValidObjectName(object))
+					throw new FilesInvalidNameException(object);
+		    	
+		    	String postUrl = getFileUrl + "/"+FilesClient.sanitizeForURI(container) +
+		    		"/"+FilesClient.sanitizeForURI(object);
+		    	
+		    	HttpPost method = null;
+		    	try {
+			    	method = new HttpPost(postUrl);
+					
+			   		method.getParams().setIntParameter("http.socket.timeout", connectionTimeOut);
+			   		method.setHeader(FilesConstants.X_AUTH_TOKEN, strToken);
+			   		if (!(metadata == null || metadata.isEmpty())) {
+			   			for(String key:metadata.keySet())
+			   				method.setHeader(FilesConstants.X_OBJECT_META+key, 
+			   					FilesClient.sanitizeForURI(metadata.get(key)));
+			   		}
+		    		HttpResponse resp = client.execute(method);
+		    		response = new FilesResponse(resp);
+		    		if (response.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+		    			method.abort(); 
+		    		}
+		    		
+		    		return true;
+		    	} finally {
+		    		if (method != null) 
+		    			method.abort();
+		    	}
+		    	
+			}
+	    
+		private static String makeURI(String base, List<NameValuePair> parameters) {
 			return base + "?" + URLEncodedUtils.format(parameters, "UTF-8");
 		}
 		
