@@ -79,6 +79,10 @@ public class FilesObject
         this.container = container;
         this.client = client;
     }
+    
+    public FilesObject(){
+    	
+    }
 
     /**
      * @return The object's name on the server

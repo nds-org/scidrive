@@ -35,15 +35,20 @@ public class FilesContainerInfo
      * @param containerCount The number of objects in the container
      * @param totalSize      The total size of the container (in bytes)
      */
-    FilesContainerInfo(String name, int containerCount, long totalSize, String syncTo)
+    public FilesContainerInfo(String name, int containerCount, long totalSize, String syncTo)
     {
     	this.name = name;
         this.objectCount = containerCount;
         this.totalSize = totalSize;
         this.syncTo = syncTo;
     }
+    
+    public FilesContainerInfo()
+    {
+    }
+    
 
-    public String getSyncTo() {
+   public String getSyncTo() {
 		return syncTo;
 	}
 

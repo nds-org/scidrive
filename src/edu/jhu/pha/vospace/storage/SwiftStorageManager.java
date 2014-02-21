@@ -16,6 +16,8 @@
 package edu.jhu.pha.vospace.storage;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -25,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.http.HttpException;
@@ -65,14 +68,18 @@ import edu.jhu.pha.vospace.oauth.UserHelper;
 public class SwiftStorageManager implements StorageManager {
 
 	private FilesClient cli;
-	private static final Configuration conf = SettingsServlet.getConfig();
+	private final static Configuration conf = SettingsServlet.getConfig();
 	private static final Logger logger = Logger.getLogger(SwiftStorageManager.class);
 	
 	private SwiftJsonCredentials credentials;
 	
-	private final String username;
+	//private final String username;
 	
 	private final int CONNECT_TIMEOUT = 600000;
+	
+	private final String AUTH_TOKEN = "29212414e78145e7a1d1b3cf7ddaa2ef";
+	private final String storageURL = "http://zinc26.pha.jhu.edu:8081/v1/AUTH_24b79d0aadf04c9eb19dd9aeb5706caa";
+	
 	
 	//HTTP client
 	private static PoolingClientConnectionManager cm = null;
@@ -147,7 +154,7 @@ public class SwiftStorageManager implements StorageManager {
 	/**
 	 * Default constructor
 	 */
-	public SwiftStorageManager(String username) {
+	/*public SwiftStorageManager(String username) {
 		this.username = username;
 		this.credentials = UserHelper.getDataStoreCredentials(username);
 
@@ -176,6 +183,13 @@ public class SwiftStorageManager implements StorageManager {
 		}
 
 	
+	}*/
+
+
+
+
+	public SwiftStorageManager() {
+		cli = new FilesClient(getHttpClient(), AUTH_TOKEN, CONNECT_TIMEOUT);
 	}
 
 	/**
@@ -188,16 +202,16 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public void copyBytes(NodePath oldNodePath, NodePath newNodePath, boolean keepBytes) {
 		try {
-			FilesObjectMetaData meta = getClient().getObjectMetaData(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
+			FilesObjectMetaData meta = getClient().getKsObjectMetaData(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
 			try {
 				// if != null then exists manifest for chunked upload
 				if(null != meta.getManifestPrefix() && keepBytes){
 					throw new BadRequestException("Copying files with segments is not supported.");
 				}
-
-				getClient().copyObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath(), newNodePath.getContainerName(), newNodePath.getNodeRelativeStoragePath());
+				getClient().copyKsObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath(), newNodePath.getContainerName(), newNodePath.getNodeRelativeStoragePath());
+				
 				if(!keepBytes)
-					getClient().deleteObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
+					getClient().deleteKsObject(oldNodePath.getContainerName(), oldNodePath.getNodeRelativeStoragePath());
 			} catch (FilesInvalidNameException e) {
 				throw new NotFoundException("Node Not Found");
 			} catch (HttpException e) {
@@ -211,7 +225,7 @@ public class SwiftStorageManager implements StorageManager {
 			throw new InternalServerErrorException(ex.getMessage());
 		}
 		
-		updateCredentials();
+		//updateCredentials();
 	}
 	
 	/**
@@ -221,23 +235,14 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public void createContainer(NodePath npath) {
 		try {
-			if(!npath.getNodeRelativeStoragePath().isEmpty()) { // creating a node inside a first level container
-				/*if(!getClient().containerExists(npath.getContainerName()))
-					throw new NotFoundException("Container "+npath.getContainerName()+" not found.");
-				
-				if(!getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath()).isEmpty())
-					throw new BadRequestException("Node "+npath.getNodeRelativeStoragePath()+" already exists.");
-
-				logger.debug("Creating full path "+npath.getContainerName()+", "+npath.getNodeRelativeStoragePath());
-				getClient().createFullPath(npath.getContainerName(), npath.getNodeRelativeStoragePath());*/
-			} else { // creating first level container (bucket)
+			if(npath.getNodeRelativeStoragePath().isEmpty()) {// creating first level container (bucket)
 				if(!npath.getContainerName().isEmpty() /*is empty when creating the root node for new user */ && 
 						!getClient().containerExists(npath.getContainerName())){
 					logger.debug("Creating container "+npath.getContainerName());
-					getClient().createContainer(npath.getContainerName());
+					getClient().createKsContainer(npath.getContainerName());
 				}
 			}
-    		updateCredentials();
+    		//updateCredentials();
 
 		} catch (FilesException ex) {
 			throw new InternalServerErrorException(ex);
@@ -256,8 +261,8 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public InputStream getBytes(NodePath npath) {
 		try {
-			InputStream inp = getClient().getObjectAsStream(npath.getContainerName(), npath.getNodeRelativeStoragePath());
-			updateCredentials();
+			InputStream inp = getClient().getKsObjectAsStream(npath.getContainerName(), npath.getNodeRelativeStoragePath());
+			//updateCredentials();
 			return inp;
 		} catch (FilesAuthorizationException e) {
 			throw new InternalServerErrorException(e);
@@ -277,8 +282,8 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public long getBytesUsed() {
 		try {
-			long bytesUsed = getClient().getAccountInfo().getBytesUsed();
-			updateCredentials();
+			long bytesUsed = getClient().getKsAccountInfo().getBytesUsed();
+			//updateCredentials();
 			return bytesUsed;
 		} catch (FilesAuthorizationException e) {
 			throw new InternalServerErrorException(e);
@@ -314,7 +319,7 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public String getNodeSyncAddress(String container) {
 		try {
-			return getClient().getContainerInfo(container).getSyncTo();
+			return getClient().getKsContainerInfo(container).getSyncTo();
 		} catch (FilesAuthorizationException e) {
 			throw new InternalServerErrorException(e);
 		} catch (FilesException e) {
@@ -336,13 +341,13 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public void putBytes(NodePath npath, InputStream stream) {
 		try {
-			getClient().storeStreamedObject(npath.getContainerName(), stream, "application/file", npath.getNodeRelativeStoragePath(), new Hashtable<String, String>());
+			getClient().storeKsStreamedObject(npath.getContainerName(), stream, "application/file", npath.getNodeRelativeStoragePath(), new Hashtable<String, String>());
 		} catch (HttpException e) {
 			throw new InternalServerErrorException(e);
 		} catch (IOException e) {
 			throw new InternalServerErrorException(e);
 		}
-		updateCredentials();
+		//updateCredentials();
 	}
 
 	/**
@@ -356,33 +361,33 @@ public class SwiftStorageManager implements StorageManager {
 		
 		try {
 			if (npath.getNodeRelativeStoragePath().isEmpty()) {
-				List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), PAGE_SIZE);
+				List<FilesObject> contContent = getClient().listKsObjects(npath.getContainerName(), PAGE_SIZE);
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
 						try { 
 							if(removeChunks) removeObjectSegments(npath.getContainerName(), obj.getName());
-							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
+							getClient().deleteKsObject(npath.getContainerName(), obj.getName()); 
 						} catch (Exception e) {}
 					}
-					contContent = getClient().listObjects(npath.getContainerName(), PAGE_SIZE);
+					contContent = getClient().listKsObjects(npath.getContainerName(), PAGE_SIZE);
 				}
-				try { getClient().deleteContainer(npath.getContainerName()); } catch (Exception e) {}
+				try { getClient().deleteKsContainer(npath.getContainerName()); } catch (Exception e) {}
 			} else {
 				//List<FilesObject> contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
-				List<FilesObject> contContent = getClient().listObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null);
+				List<FilesObject> contContent = getClient().listKsObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null,null, null);
 				while(!contContent.isEmpty()) {
 					for(FilesObject obj: contContent) {
 						try {
 							if(removeChunks) removeObjectSegments(npath.getContainerName(), obj.getName());
-							getClient().deleteObject(npath.getContainerName(), obj.getName()); 
+							getClient().deleteKsObject(npath.getContainerName(), obj.getName()); 
 						} catch (Exception e) {}
 					}
 					//contContent = getClient().listObjects(npath.getContainerName(), npath.getNodeRelativeStoragePath(), 100);
-					contContent = getClient().listObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null);
+					contContent = getClient().listKsObjectsStartingWith(npath.getContainerName(), npath.getNodeRelativeStoragePath()+"/", null, PAGE_SIZE, null,null,null);
 				}
 				try {
 					if(removeChunks) removeObjectSegments(npath.getContainerName(), npath.getNodeRelativeStoragePath());
-					getClient().deleteObject(npath.getContainerName(), npath.getNodeRelativeStoragePath()); 
+					getClient().deleteKsObject(npath.getContainerName(), npath.getNodeRelativeStoragePath()); 
 				} catch (Exception e) {}
 			}
 		} catch(FilesNotFoundException e) {
@@ -394,7 +399,7 @@ public class SwiftStorageManager implements StorageManager {
 		} catch (IOException e) {
 			throw new InternalServerErrorException(e);
 		}
-		updateCredentials();
+		//updateCredentials();
 	}
 
 	/**
@@ -412,13 +417,13 @@ public class SwiftStorageManager implements StorageManager {
 			throws IOException, FilesNotFoundException, HttpException,
 			FilesAuthorizationException, FilesInvalidNameException,
 			FilesException {
-		FilesObjectMetaData meta = getClient().getObjectMetaData(containerName, objectName);
+		FilesObjectMetaData meta = getClient().getKsObjectMetaData(containerName, objectName);
 		// if != null then exists manifest for chunked upload
 		if(null != meta.getManifestPrefix()){
 			NodePath path = new NodePath(meta.getManifestPrefix());
-			List<FilesObject> segmList = getClient().listObjects(path.getContainerName(), path.getNodeRelativeStoragePath(), '/');
+			List<FilesObject> segmList = getClient().listKsObjects(path.getContainerName(), path.getNodeRelativeStoragePath(), '/');
 			for(FilesObject segm: segmList) {
-				getClient().deleteObject(conf.getString("chunked_container"), segm.getName());
+				getClient().deleteKsObject(conf.getString("chunked_container"), segm.getName());
 				logger.debug("Deleted segm "+segm.getName());
 			}
 		}
@@ -427,10 +432,10 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public void removeObjectSegment(String chunkedId) {
 		try {
-			List<FilesObject> segmList = getClient().listObjects(conf.getString("chunked_container"), chunkedId, '/');
+			List<FilesObject> segmList = getClient().listKsObjects(conf.getString("chunked_container"), chunkedId, '/');
 			for(FilesObject segm: segmList) {
 				try {
-					getClient().deleteObject(conf.getString("chunked_container"), segm.getName());
+					getClient().deleteKsObject(conf.getString("chunked_container"), segm.getName());
 				} catch (Exception ignored) {}
 				logger.debug("Deleted segm "+segm.getName());
 			}
@@ -447,7 +452,7 @@ public class SwiftStorageManager implements StorageManager {
 	@Override
 	public void setNodeSyncTo(String container, String syncTo, String syncKey) {
 		try {
-			getClient().setSyncTo(container, syncTo, syncKey);
+			getClient().setKsSyncTo(container, syncTo, syncKey);
 		} catch (FilesAuthorizationException e) {
 			throw new InternalServerErrorException(e);
 		} catch (FilesException e) {
@@ -459,32 +464,32 @@ public class SwiftStorageManager implements StorageManager {
 		}
 	}
 
-	private void updateCredentials() {
+	/*private void //updateCredentials() {
 		if(!(cli.getAuthToken().equals(credentials.getAuthtoken()) && cli.getStorageURL().equals(credentials.getStorageurl()))) {
 			credentials.setStorageurl(cli.getStorageURL());
 			credentials.setAuthtoken(cli.getAuthToken());
 			logger.debug("Added token to DB");
 			UserHelper.setDataStoreCredentials(username, credentials.toString());
 		}
-	}
+	}*/
 
 	@Override
 	public void updateNodeInfo(NodePath npath, NodeInfo nodeInfo) {
 		try {
 			if(npath.isRoot(false)) { // root node
-		    	FilesAccountInfo accountInfo = getClient().getAccountInfo();
+		    	FilesAccountInfo accountInfo = getClient().getKsAccountInfo();
 				nodeInfo.setSize(accountInfo.getBytesUsed());
 				nodeInfo.setContentType("application/directory");
 	    	} else if(npath.getNodeStoragePathArray().length == 1) { // container info
 				if(!getClient().containerExists(npath.getContainerName()))
 					return;
 				
-				FilesContainerInfo contInfo = getClient().getContainerInfo(npath.getContainerName());
+				FilesContainerInfo contInfo = getClient().getKsContainerInfo(npath.getContainerName());
 				nodeInfo.setSize(contInfo.getTotalSize());
 				nodeInfo.setContentType("application/directory");
 	    	} else { // info for a node inside a container
 	    		try {
-			    	FilesObjectMetaData nodeMeta = getClient().getObjectMetaData(npath.getContainerName(), npath.getNodeRelativeStoragePath());
+			    	FilesObjectMetaData nodeMeta = getClient().getKsObjectMetaData(npath.getContainerName(), npath.getNodeRelativeStoragePath());
 			    	nodeInfo.setSize(Long.parseLong(nodeMeta.getContentLength()));
 			    	nodeInfo.setContentType(nodeMeta.getMimeType());
 	    		} catch(FilesNotFoundException e) {
@@ -502,7 +507,7 @@ public class SwiftStorageManager implements StorageManager {
 			ex.printStackTrace();
 			throw new InternalServerErrorException(ex);
 		}
-		updateCredentials();
+		////updateCredentials();
 	}
 
 	/**
@@ -515,32 +520,50 @@ public class SwiftStorageManager implements StorageManager {
 			String manifest = conf.getString("chunked_container")+"/"+chunkedId;
 			try {
 				removeObjectSegments(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath());
-				getClient().updateObjectManifest(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath(), manifest);
+				getClient().updateKsObjectManifest(nodePath.getContainerName(), nodePath.getNodeRelativeStoragePath(), manifest);
 			} catch(FilesNotFoundException ex) {
-				getClient().createManifestObject(nodePath.getContainerName(), "application/file", nodePath.getNodeRelativeStoragePath(), manifest, new Hashtable<String, String>());
+				getClient().createKsManifestObject(nodePath.getContainerName(), "application/file", nodePath.getNodeRelativeStoragePath(), manifest, new Hashtable<String, String>());
 			}
 		} catch (HttpException e) {
 			throw new InternalServerErrorException(e);
 		} catch (IOException e) {
 			throw new InternalServerErrorException(e);
 		}
-		updateCredentials();
+		////updateCredentials();
 	}
 
 	public static void main(String[] s) throws IOException, HttpException {
-		//{"username":"","apikey":"","storageurl":","authtoken":""}
-		FilesClient cli = new FilesClient(getHttpClient(), 
-				"jhNn3gnKfs:jhNn3gnKfs",
-				"h1NC_Xcc0nEaPPv",
-				"http://zinc26.pha.jhu.edu:8081/auth/v1.0", null
-				, 1000);
-		cli.login();
+
+		SwiftStorageManager ssm = new SwiftStorageManager();
 		
-		for(FilesObject fo: cli.listObjectsStartingWith("test", "ccc/", null, -1, null)) {
-			System.out.println(fo.getName());
-			
-		}
-		
+				//Create Container
+				/*NodePath n1 = new NodePath("L");
+				ssm.createContainer(n1);*/
+				
+				//Account Info
+				//System.out.println(ssm.getBytesUsed());
+				
+				//Container Info
+				//System.out.println(ssm.getNodeSyncAddress("first_cont"));
+				
+				//Get Object Data
+				
+				/*NodePath n = new NodePath("Test1/Testobj");
+				SwiftStorageManager ssm = new SwiftStorageManager();
+				InputStream is = ssm.getBytes(n);
+				System.out.println(is.read());*/
+				
+				//Store Object
+				/*NodePath n = new NodePath("L/Newobj");
+				File f = new File("C:\\Users\\pinkyanup\\Desktop\\Test file.docx");
+				InputStream b = new FileInputStream(f);
+				ssm.putBytes(n, b);*/
+				
+				//Copy Object
+				/*NodePath n1 = new NodePath("Test1/Testobj");
+				NodePath n2 = new NodePath("S/Movedobj");
+				ssm.copyBytes(n1, n2, true);*/
+				
 	}
 	
 }
