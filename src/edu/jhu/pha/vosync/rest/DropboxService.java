@@ -183,6 +183,9 @@ public class DropboxService {
 
 		Node node = NodeFactory.createNode(identifier, user.getName(), NodeType.CONTAINER_NODE);
 		
+		if(node.getNodeInfo().isDeleted())
+			node.getNodeInfo().setDeleted(false);
+		
 		node.createParent();
 		node.setNode(null);
 
