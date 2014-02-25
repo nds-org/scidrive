@@ -6,8 +6,8 @@
 # http://code.google.com/p/sequel-pro/
 #
 # Host: swiftnode01 (MySQL 5.6.12-log)
-# Database: scidrive
-# Generation Time: 2013-09-06 20:22:39 +0000
+# Database: vobox
+# Generation Time: 2014-02-25 01:16:37 +0000
 # ************************************************************
 
 
@@ -139,6 +139,7 @@ CREATE TABLE `nodes` (
   PRIMARY KEY (`node_id`),
   KEY `container_id` (`container_id`),
   KEY `parent_node_id` (`parent_node_id`),
+  KEY `path` (`path`,`container_id`),
   CONSTRAINT `container_id` FOREIGN KEY (`container_id`) REFERENCES `containers` (`container_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `nodes_ibfk_1` FOREIGN KEY (`parent_node_id`) REFERENCES `nodes` (`node_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -162,6 +163,8 @@ CREATE TABLE `oauth_accessors` (
   UNIQUE KEY `access_token` (`access_token`),
   KEY `container_id` (`container_id`),
   KEY `share_key` (`share_key`),
+  KEY `consumer_id` (`consumer_id`),
+  CONSTRAINT `oauth_accessors_ibfk_3` FOREIGN KEY (`consumer_id`) REFERENCES `oauth_consumers` (`consumer_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `oauth_accessors_ibfk_1` FOREIGN KEY (`container_id`) REFERENCES `containers` (`container_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `oauth_accessors_ibfk_2` FOREIGN KEY (`share_key`) REFERENCES `container_shares` (`share_key`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -202,6 +205,32 @@ CREATE TABLE `oauth_nonces` (
   `timestamp` bigint(20) unsigned NOT NULL DEFAULT '0',
   `nonce` varchar(50) NOT NULL DEFAULT '',
   PRIMARY KEY (`timestamp`,`nonce`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+# Dump of table openid_associations
+# ------------------------------------------------------------
+
+CREATE TABLE `openid_associations` (
+  `opurl` varchar(255) NOT NULL DEFAULT '',
+  `handle` varchar(255) NOT NULL DEFAULT '',
+  `type` varchar(255) NOT NULL DEFAULT '',
+  `mackey` varchar(255) NOT NULL DEFAULT '',
+  `expdate` datetime NOT NULL,
+  PRIMARY KEY (`handle`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+# Dump of table openid_nonces
+# ------------------------------------------------------------
+
+CREATE TABLE `openid_nonces` (
+  `opurl` varchar(255) NOT NULL DEFAULT '',
+  `nonce` varchar(255) NOT NULL DEFAULT '',
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`opurl`,`nonce`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 

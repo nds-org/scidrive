@@ -57,6 +57,7 @@ public class DbPoolServlet extends HttpServlet {
 		pool.setMinEvictableIdleTimeMillis(6*60*60*1000);
 		pool.setTimeBetweenEvictionRunsMillis(30*60*1000);
 		pool.setNumTestsPerEvictionRun(-1);
+		pool.setTestOnBorrow(true); // !!!!!!!!!! test connection before giving it
 
 		DriverManagerConnectionFactory cf = new DriverManagerConnectionFactory(conf.getString("db.url"), conf.getString("db.login"), conf.getString("db.password"));
 
