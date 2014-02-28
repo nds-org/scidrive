@@ -77,8 +77,8 @@ public class SwiftStorageManager implements StorageManager {
 	
 	private final int CONNECT_TIMEOUT = 600000;
 	
-	private final String AUTH_TOKEN = "29212414e78145e7a1d1b3cf7ddaa2ef";
-	private final String storageURL = "http://zinc26.pha.jhu.edu:8081/v1/AUTH_24b79d0aadf04c9eb19dd9aeb5706caa";
+	private String AUTH_TOKEN = "d378105f2cd540a7aded7118fd96ada8";
+	private String storageURL;
 	
 	
 	//HTTP client
@@ -154,43 +154,14 @@ public class SwiftStorageManager implements StorageManager {
 	/**
 	 * Default constructor
 	 */
-	/*public SwiftStorageManager(String username) {
-		this.username = username;
-		this.credentials = UserHelper.getDataStoreCredentials(username);
+	public SwiftStorageManager(String username) {
+		this.storageURL = "http://zinc26.pha.jhu.edu:8081/v1/AUTH_"+username;
 
-		try {
-			cli = new FilesClient(getHttpClient(), credentials.getUsername(),credentials.getApikey(),conf.getString("storage.url"), null, CONNECT_TIMEOUT);
-			
-			if(null != credentials.getStorageurl() && null != credentials.getAuthtoken()){
-				cli.login(credentials.getAuthtoken(), credentials.getStorageurl(), null);
-			} else {
-				cli.login();
-				credentials.setStorageurl(cli.getStorageURL());
-				credentials.setAuthtoken(cli.getAuthToken());
-				logger.debug("Added token to DB");
-				UserHelper.setDataStoreCredentials(username, credentials.toString());
-			}
-				
-		} catch (JsonParseException ex) {
-			ex.printStackTrace();
-			throw new InternalServerErrorException(ex);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new InternalServerErrorException(e, "Error reading credentials from db.");
-		} catch (HttpException ex) {
-			ex.printStackTrace();
-			throw new InternalServerErrorException(ex);
-		}
+		cli = new FilesClient(getHttpClient(), this.storageURL, AUTH_TOKEN, CONNECT_TIMEOUT);
 
 	
-	}*/
-
-
-
-
-	public SwiftStorageManager() {
-		cli = new FilesClient(getHttpClient(), AUTH_TOKEN, CONNECT_TIMEOUT);
 	}
+
 
 	/**
 	 * 
@@ -532,38 +503,6 @@ public class SwiftStorageManager implements StorageManager {
 		////updateCredentials();
 	}
 
-	public static void main(String[] s) throws IOException, HttpException {
 
-		SwiftStorageManager ssm = new SwiftStorageManager();
-		
-				//Create Container
-				/*NodePath n1 = new NodePath("L");
-				ssm.createContainer(n1);*/
-				
-				//Account Info
-				//System.out.println(ssm.getBytesUsed());
-				
-				//Container Info
-				//System.out.println(ssm.getNodeSyncAddress("first_cont"));
-				
-				//Get Object Data
-				
-				/*NodePath n = new NodePath("Test1/Testobj");
-				SwiftStorageManager ssm = new SwiftStorageManager();
-				InputStream is = ssm.getBytes(n);
-				System.out.println(is.read());*/
-				
-				//Store Object
-				/*NodePath n = new NodePath("L/Newobj");
-				File f = new File("C:\\Users\\pinkyanup\\Desktop\\Test file.docx");
-				InputStream b = new FileInputStream(f);
-				ssm.putBytes(n, b);*/
-				
-				//Copy Object
-				/*NodePath n1 = new NodePath("Test1/Testobj");
-				NodePath n2 = new NodePath("S/Movedobj");
-				ssm.copyBytes(n1, n2, true);*/
-				
-	}
 	
 }

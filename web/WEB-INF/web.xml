@@ -23,25 +23,17 @@
 		</init-param>
 		<init-param>
 		     <param-name>com.sun.jersey.spi.container.ContainerRequestFilters</param-name>
-		     <!-- <param-value>com.sun.jersey.oauth.server.api.OAuthServerFilter</param-value> -->
-		     <param-value>edu.jhu.pha.vospace.oauth.MyOAuthServerFilter</param-value>
+		     <!-- <param-value>edu.jhu.pha.vospace.oauth.MyOAuthServerFilter</param-value> -->
+		     <param-value>edu.jhu.pha.vospace.keystone.SciServerAuthFilter</param-value>
 		 </init-param>
 	    <init-param>
 	        <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>
 	        <param-value>edu.jhu.pha.vospace.rest.OptionsFilter</param-value>
 	    </init-param>
 	    <init-param>
-	    	<param-name>com.sun.jersey.config.property.oauth.provider</param-name>
-	    	<param-value>edu.jhu.pha.vospace.rest.SciDriveOAuthProvider</param-value>
-	    </init-param>
-	    <init-param>
 			<param-name>com.sun.jersey.spi.container.ResourceFilters</param-name>
 			<param-value>com.sun.jersey.api.container.filter.RolesAllowedResourceFilterFactory</param-value>
 		</init-param> 
-		<init-param>
-			<param-name>com.sun.jersey.config.property.oauth.ignorePathPattern</param-name>
-			<param-value>request_token|access_token|authorize</param-value>
-		</init-param>
 		<init-param>
          <param-name>com.sun.jersey.config.feature.DisableWADL</param-name>
          <param-value>true</param-value>

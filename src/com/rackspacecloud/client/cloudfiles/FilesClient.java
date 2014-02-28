@@ -135,7 +135,7 @@ public class FilesClient
     private String snetAddr = "https://snet-";
  
     private static HttpClient client = null;
-	private static	String getFileUrl = "http://zinc26.pha.jhu.edu:8081/v1/AUTH_24b79d0aadf04c9eb19dd9aeb5706caa";
+	private static	String getFileUrl;
    	private static String strToken;
    
     public static Logger logger = Logger.getLogger(FilesClient.class); 
@@ -147,39 +147,39 @@ public class FilesClient
      * @param account   The Cloud Files account to use
      * @param connectionTimeOut  The connection timeout, in ms.
      */
-   public FilesClient(HttpClient client, String username, String password, String authUrl, String account, int connectionTimeOut) {
-        this.client = client;
-        this.username = username;
-        this.password = password;
-        this.account = account;
-        if(authUrl == null) {
-            authUrl = FilesUtil.getProperty("auth_url");
-        }
-        if(account != null && account.length() > 0) {
-            this.authenticationURL = authUrl + VERSION + "/" + account + FilesUtil.getProperty("auth_url_post");
-        }
-        else {
-            this.authenticationURL = authUrl;
-        }
-        this.connectionTimeOut = connectionTimeOut;
-
-        setUserAgent(FilesConstants.USER_AGENT);
-
-        if(logger.isDebugEnabled()) {
-            logger.debug("UserName: " + this.username);
-            logger.debug("AuthenticationURL: " + this.authenticationURL);
-            logger.debug("ConnectionTimeOut: " + this.connectionTimeOut);
-        }
-     }
-
-    public FilesClient(HttpClient client, String authToken, int connectionTimeOut) {
+//   public FilesClient(HttpClient client, String username, String password, String authUrl, String account, int connectionTimeOut) {
+//        this.client = client;
+//        this.username = username;
+//        this.password = password;
+//        this.account = account;
+//        if(authUrl == null) {
+//            authUrl = FilesUtil.getProperty("auth_url");
+//        }
+//        if(account != null && account.length() > 0) {
+//            this.authenticationURL = authUrl + VERSION + "/" + account + FilesUtil.getProperty("auth_url_post");
+//        }
+//        else {
+//            this.authenticationURL = authUrl;
+//        }
+//        this.connectionTimeOut = connectionTimeOut;
+//
+//        setUserAgent(FilesConstants.USER_AGENT);
+//
+//        if(logger.isDebugEnabled()) {
+//            logger.debug("UserName: " + this.username);
+//            logger.debug("AuthenticationURL: " + this.authenticationURL);
+//            logger.debug("ConnectionTimeOut: " + this.connectionTimeOut);
+//        }
+//     }
+//
+    public FilesClient(HttpClient client, String getFileUrl, String strToken, int connectionTimeOut) {
     	this.client = client;
     	/*if(authUrl == null) {
             authUrl = FilesUtil.getProperty("auth_url");
         }*/
     	
-    	this.authenticationURL = getFileUrl;
-    	this.strToken = authToken;
+    	this.getFileUrl = getFileUrl;
+    	this.strToken = strToken;
     	this.connectionTimeOut = connectionTimeOut;
     	
     	

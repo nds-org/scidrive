@@ -1,0 +1,151 @@
+/*******************************************************************************
+ * Copyright 2013 Johns Hopkins University
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
+package edu.jhu.pha.vospace.keystone;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.sql.Blob;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import edu.jhu.pha.vospace.DbPoolServlet;
+import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.api.AccountInfo;
+import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+import edu.jhu.pha.vospace.node.ContainerNode;
+import edu.jhu.pha.vospace.node.Node;
+import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.node.NodePath;
+import edu.jhu.pha.vospace.node.NodeType;
+import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.storage.StorageManager;
+import edu.jhu.pha.vospace.storage.StorageManagerFactory;
+import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
+
+public class UserHelper {
+	private static final Logger logger = Logger.getLogger(UserHelper.class);
+	
+    static public boolean addDefaultUser(final String username) {
+		DbPoolServlet.goSql("Add new user",
+         		"insert into users values ()",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.executeUpdate();
+                        
+                        ResultSet rs = stmt.getGeneratedKeys();
+
+                        if(rs.next()) {
+                               final int user_id = rs.getInt(1);
+                               
+	                       		return DbPoolServlet.goSql("Add user identity",
+	                             		"insert into user_identities (user_id, identity) values (?, ?)",
+	                                    new SqlWorker<Boolean>() {
+	                                        @Override
+	                                        public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	                                        	stmt.setInt(1, user_id);
+	                                        	stmt.setString(2, username);
+	                                            return stmt.execute();
+	                                        }
+	                                    }
+	                            );
+                               
+                               
+                        }
+                        return false;
+                    }
+                },
+                Statement.RETURN_GENERATED_KEYS
+        );
+
+		try {
+			logger.debug("Creating new toor node");
+			VospaceId identifier = new VospaceId(new NodePath("/"));
+			Node node = NodeFactory.createNode(identifier, username, NodeType.CONTAINER_NODE);
+			if(!node.isStoredMetadata()){
+				node.setNode(null);
+				ContainerNode firstNode = (ContainerNode)NodeFactory.createNode(identifier.appendPath(new NodePath("/first_container")), username, NodeType.CONTAINER_NODE);
+				firstNode.setNode(null);
+			}
+			logger.debug("new toor node was created");
+		} catch(URISyntaxException ex) {
+			logger.error("Error creating root node for user: "+ex.getMessage());
+			return false;
+		}
+		
+		return true;
+	}
+
+    
+	public static AccountInfo getAccountInfo(final String username) {
+		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
+                "select hardlimit, softlimit from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?;",
+                new SqlWorker<AccountInfo>() {
+                    @Override
+                    public AccountInfo go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, username);
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next()){
+                            AccountInfo info = new AccountInfo();
+                            info.setUsername(username);
+                            info.setHardLimit(rs.getInt("hardlimit"));
+                            info.setSoftLimit(rs.getInt("softlimit"));
+                        	return info;
+                        } else {
+                            throw new IllegalStateException("No result from query.");
+                        }
+                    }
+                }
+        );
+
+		StorageManager storage = StorageManagerFactory.getStorageManager(username); 
+		info.setBytesUsed(storage.getBytesUsed());
+		
+		return info;
+	}
+    
+    /** Does the named user exist? */
+    public static boolean userExists(final String username) {
+        return DbPoolServlet.goSql("Checking whether user \"" + username + "\" exists in DB.",
+                "select count(identity) from user_identities where identity = ?;",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, username);
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next())
+                            return rs.getInt(1) > 0;
+                        else
+                            throw new IllegalStateException("No result from query.");
+                    }
+                }
+        );
+    }
+}
