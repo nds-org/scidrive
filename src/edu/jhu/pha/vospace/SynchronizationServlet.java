@@ -35,6 +35,7 @@ import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public class SynchronizationServlet extends HttpServlet {
 	
@@ -64,7 +65,7 @@ public class SynchronizationServlet extends HttpServlet {
 
                                 while(resSet.next()) {
                                 	String containerName = resSet.getString("container");
-                                	String username = resSet.getString("owner");
+                                	SciDriveUser username = SciDriveUser.fromName(resSet.getString("owner"));
                                 	String region = resSet.getString("region");
                                 	
                                 	try {
@@ -74,7 +75,7 @@ public class SynchronizationServlet extends HttpServlet {
 	                                	
 	                                	pstmt.setString(1, newNode.getStorage().getStorageUrl()+"/"+containerName);
 	                                	pstmt.setString(2, containerName);
-	                                	pstmt.setString(3, username);
+	                                	pstmt.setString(3, username.getName());
 	                                	pstmt.setString(4, region);
 	                                	pstmt.execute();
                                 	} catch(Exception ex) {
@@ -97,7 +98,7 @@ public class SynchronizationServlet extends HttpServlet {
                                 ResultSet resSet = stmt.executeQuery();
                                 while(resSet.next()) {
                                 	String containerName = resSet.getString("container");
-                                	String username = resSet.getString("owner");
+                                	SciDriveUser username = SciDriveUser.fromName(resSet.getString("owner"));
                                 	String syncRegion = resSet.getString("syncregion");
                                 	String syncUrl = resSet.getString("syncurl");
                                 	String syncKey = resSet.getString("synckey");

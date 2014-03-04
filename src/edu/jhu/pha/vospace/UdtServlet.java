@@ -40,6 +40,7 @@ import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 import edu.jhu.pha.vospace.storage.StorageManager;
@@ -121,19 +122,20 @@ public class UdtServlet extends HttpServlet implements Runnable {
 				if(null == job)
 					throw new NotFoundException("The job "+jobId+" is not found.");
 
+            	SciDriveUser username = SciDriveUser.fromName(job.getUsername());
+
 				switch(job.getDirection()) {
 				case PULLFROMVOSPACE: {
 					
 					JobsProcessor.modifyJobState(job, STATE.RUN);
 					
 					logger.debug("Sending node through UDT: "+job.getTarget());
-					
-					StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
+					StorageManager backend = StorageManagerFactory.getStorageManager(username);
 
 					InputStream dataInp = backend.getBytes(job.getTargetId().getNodePath());
 					
 					try {
-						Node node = NodeFactory.getNode(job.getTargetId(), job.getUsername());
+						Node node = NodeFactory.getNode(job.getTargetId(), username);
 						//long size = Long.parseLong(backend.getNodeSize(job.getTargetId().getNodePath()));
 						long size = node.getNodeInfo().getSize();
 						
@@ -175,7 +177,7 @@ public class UdtServlet extends HttpServlet implements Runnable {
 					
 					logger.debug("Receiving node through UDT: "+job.getTarget());
 					
-					StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
+					StorageManager backend = StorageManagerFactory.getStorageManager(username);
 
 					try {
 

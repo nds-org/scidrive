@@ -44,6 +44,7 @@ import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.meta.NodesList;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
@@ -61,7 +62,7 @@ public abstract class Node implements Cloneable {
 	MetaStore _metastore = null;
 	StorageManager _storage = null;
 	
-	String owner;
+	SciDriveUser owner;
 	VospaceId id;
 	NodeInfo nodeInfo;
 	XMLObject nodeXML;
@@ -79,7 +80,7 @@ public abstract class Node implements Cloneable {
 	    return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + units[digitGroups];
 	}
 
-	public Node(byte[] bytes, String username, VospaceId id) {
+	public Node(byte[] bytes, SciDriveUser username, VospaceId id) {
 		this.owner = username;
 		this.nodeXML = new XMLObject(bytes);
 		setUri(id);
@@ -89,7 +90,7 @@ public abstract class Node implements Cloneable {
 	 * Construct a Node from the byte array
 	 * @param req The byte array containing the Node
 	 */
-	public Node(VospaceId id, String username) {
+	public Node(VospaceId id, SciDriveUser username) {
 		this.owner = username;
 		this.id = id;
 	}
@@ -283,7 +284,7 @@ public abstract class Node implements Cloneable {
 		}
 	}
 	
-	public String getOwner() {
+	public SciDriveUser getOwner() {
 		return owner;
 	}
 

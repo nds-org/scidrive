@@ -17,10 +17,12 @@
 package edu.jhu.pha.vospace.keystone;
 
 import java.security.Principal;
+import java.util.HashMap;
 
 import javax.ws.rs.core.SecurityContext;
 
-import com.sun.security.auth.UserPrincipal;
+import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
@@ -28,11 +30,25 @@ public class SciServerSecurityContext implements SecurityContext {
     private final KeystoneToken token;
     private final boolean isSecure;
     private final SciDriveUser user;
+	private static Logger logger = Logger.getLogger(SciServerSecurityContext.class); 
 
     public SciServerSecurityContext(KeystoneToken token, boolean isSecure) {
         this.token = token;
         this.isSecure = isSecure;
-        this.user = new SciDriveUser(token.getUserId(), "", true);
+        HashMap<String, String> storageCredentials = new HashMap<String, String>();
+        storageCredentials.put("storageurl", token.getSwiftAccountUrl());
+        this.user = new SciDriveUser(token.getUserId(), "", true, storageCredentials);
+        
+        ObjectMapper mapper = new ObjectMapper();
+        
+        if(UserHelper.getDataStoreCredentials(this.user.getName()).isEmpty())
+			try {
+				UserHelper.setDataStoreCredentials(this.user.getName(), mapper.writer().writeValueAsString(storageCredentials));
+			} catch (Exception e) {
+				logger.error("Error writing user storage credentials to DB");
+				e.printStackTrace();
+			}
+        
     }
 
     @Override

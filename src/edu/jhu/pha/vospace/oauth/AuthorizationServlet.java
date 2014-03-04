@@ -91,7 +91,7 @@ public class AuthorizationServlet extends BaseServlet {
                 handleOpenidResponse(request, response);
             } else { // initial login
             	logger.debug("Initiate");
-            	String userName = checkCertificate(request);
+            	SciDriveUser userName = SciDriveUser.fromName(checkCertificate(request));
             	if(null != userName){ // made X.509 authentication
             		logger.debug("Certificate checked. Username: "+userName);
 
@@ -187,7 +187,6 @@ public class AuthorizationServlet extends BaseServlet {
 
         // Is the user known to us?
         //String username = getUsername(id);
-        String username = id;
 	        
         // OpenID attribute exchange -- retrieve certificate
         // !!!!!!!!!! Uncomment to retrieve the user's certificate
@@ -211,7 +210,7 @@ public class AuthorizationServlet extends BaseServlet {
         }*/
 
         // TODO: handle case where access token is already present
-        authorizeRequestToken(request, response, username);
+        authorizeRequestToken(request, response, SciDriveUser.fromName(id));
     }
 
 	/**
@@ -221,7 +220,7 @@ public class AuthorizationServlet extends BaseServlet {
 	 * @throws IOException
 	 * @throws Oops
 	 */
-	private void authorizeRequestToken(HttpServletRequest request, HttpServletResponse response, String username)
+	private void authorizeRequestToken(HttpServletRequest request, HttpServletResponse response, SciDriveUser username)
 			throws Oops {
 
         String token = null, callbackUrl = null;

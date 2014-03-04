@@ -45,14 +45,15 @@ import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
 
-public class UserHelper {
+public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: add interface, extend both userhelpers from one, add to config
 	private static final Logger logger = Logger.getLogger(UserHelper.class);
 	
-    static public boolean addDefaultUser(final String username) {
+    static public boolean addDefaultUser(final SciDriveUser username) {
 		DbPoolServlet.goSql("Add new user",
          		"insert into users values ()",
                 new SqlWorker<Boolean>() {
@@ -71,7 +72,7 @@ public class UserHelper {
 	                                        @Override
 	                                        public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                                        	stmt.setInt(1, user_id);
-	                                        	stmt.setString(2, username);
+	                                        	stmt.setString(2, username.getName());
 	                                            return stmt.execute();
 	                                        }
 	                                    }
@@ -104,17 +105,17 @@ public class UserHelper {
 	}
 
     
-	public static AccountInfo getAccountInfo(final String username) {
+	public static AccountInfo getAccountInfo(final SciDriveUser username) {
 		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
                 "select hardlimit, softlimit from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?;",
                 new SqlWorker<AccountInfo>() {
                     @Override
                     public AccountInfo go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next()){
                             AccountInfo info = new AccountInfo();
-                            info.setUsername(username);
+                            info.setUsername(username.getName());
                             info.setHardLimit(rs.getInt("hardlimit"));
                             info.setSoftLimit(rs.getInt("softlimit"));
                         	return info;
@@ -132,13 +133,13 @@ public class UserHelper {
 	}
     
     /** Does the named user exist? */
-    public static boolean userExists(final String username) {
+    public static boolean userExists(final SciDriveUser username) {
         return DbPoolServlet.goSql("Checking whether user \"" + username + "\" exists in DB.",
                 "select count(identity) from user_identities where identity = ?;",
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next())
                             return rs.getInt(1) > 0;

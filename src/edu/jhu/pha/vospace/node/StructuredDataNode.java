@@ -26,13 +26,14 @@ import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.util.TokenBuffer;
 
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public class StructuredDataNode extends DataNode {
 
 	private static final Logger logger = Logger.getLogger(StructuredDataNode.class);
 	private static final MappingJsonFactory f = new MappingJsonFactory();
 
-	public StructuredDataNode(VospaceId id, String username) {
+	public StructuredDataNode(VospaceId id, SciDriveUser username) {
 		super(id, username);
 	}
 
@@ -40,7 +41,7 @@ public class StructuredDataNode extends DataNode {
      * Construct a Node from the byte array
      * @param req The byte array containing the Node
      */
-	public StructuredDataNode(byte[] bytes, String username, VospaceId id)  {
+	public StructuredDataNode(byte[] bytes, SciDriveUser username, VospaceId id)  {
         super(bytes, username, id);
     }
 

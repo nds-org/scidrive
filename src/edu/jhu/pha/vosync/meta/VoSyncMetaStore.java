@@ -8,12 +8,13 @@ import java.sql.SQLException;
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public class VoSyncMetaStore {
 	
-	private String owner;
+	private SciDriveUser owner;
 	
-	public VoSyncMetaStore(String owner) {
+	public VoSyncMetaStore(SciDriveUser owner) {
 		this.owner = owner;
 	}
 
@@ -25,7 +26,7 @@ public class VoSyncMetaStore {
                 new SqlWorker<Chunk>() {
                     @Override
                     public Chunk go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, owner);
+                        stmt.setString(1, owner.getName());
                         stmt.setString(2, chunkedId);
                         ResultSet resSet = stmt.executeQuery();
                         if(resSet.next()) {
@@ -55,7 +56,7 @@ public class VoSyncMetaStore {
                         stmt.setString(1, chunk.getChunkId());
                         stmt.setInt(2, chunk.getChunkNum());
                         stmt.setLong(3, chunk.getSize());
-                        stmt.setString(4, owner);
+                        stmt.setString(4, owner.getName());
                         return stmt.execute();
                     }
                 }
@@ -70,7 +71,7 @@ public class VoSyncMetaStore {
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, owner);
+                        stmt.setString(1, owner.getName());
                         stmt.setString(2, uploadId);
                         ResultSet resSet = stmt.executeQuery();
                         if(resSet.next()) {
@@ -96,7 +97,7 @@ public class VoSyncMetaStore {
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
                         stmt.setString(4, chunkedId);
                         return stmt.execute();
                     }
@@ -116,7 +117,7 @@ public class VoSyncMetaStore {
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
                         return stmt.execute();
                     }
                 }

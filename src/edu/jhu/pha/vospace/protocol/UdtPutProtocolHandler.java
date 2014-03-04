@@ -31,6 +31,7 @@ import edu.jhu.pha.vospace.jobs.JobException;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 import edu.jhu.pha.vospace.storage.StorageManager;
@@ -61,7 +62,8 @@ public class UdtPutProtocolHandler implements ProtocolHandler {
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException {
 		logger.debug("UDT Put job invoked "+job.getId());
-		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
+		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(user);
 
 		InputStream inp = null;
 		UDTOutputStream outp = null;
@@ -81,7 +83,7 @@ public class UdtPutProtocolHandler implements ProtocolHandler {
 			outp.flush();
 			logger.debug("Sent the job id");
 
-			Node node = NodeFactory.getNode(job.getTargetId(), job.getUsername());
+			Node node = NodeFactory.getNode(job.getTargetId(), user);
 			long size = node.getNodeInfo().getSize();
 			
 			outp.write(encode(size));

@@ -39,6 +39,7 @@ import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 /**
  * This class represents a metadata store for VOSpace based on the MySQL
@@ -47,9 +48,9 @@ import edu.jhu.pha.vospace.node.VospaceId;
 public class MySQLMetaStore2 implements MetaStore{
 	
 	private static final Logger logger = Logger.getLogger(MySQLMetaStore2.class);
-	private String owner;
+	private SciDriveUser owner;
 
-	public MySQLMetaStore2(String username) {
+	public MySQLMetaStore2(SciDriveUser username) {
 		this.owner = username;
 	}
 
@@ -67,7 +68,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next())
                             return rs.getBytes(1);
@@ -98,7 +99,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     		ArrayList<Node> result = new ArrayList<Node>();
                     		int countRows = 0;
 
-                    		stmt.setString(1, owner);
+                    		stmt.setString(1, owner.getName());
                             
                     		if(count > 0) {
                             	stmt.setInt(2, start);
@@ -153,7 +154,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     		
 	                		stmt.setString(1, identifier.getNodePath().getContainerName());
 	                		stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-	                		stmt.setString(3, owner);
+	                		stmt.setString(3, owner.getName());
 
                     		if(count > 0) {
                             	stmt.setInt(4, start);
@@ -212,7 +213,7 @@ public class MySQLMetaStore2 implements MetaStore{
 
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
 
                         ResultSet resSet = stmt.executeQuery();
                         
@@ -247,7 +248,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     public NodeType go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next()) {
                             return NodeType.valueOf(NodeType.class, rs.getString(1));
@@ -306,7 +307,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
                         ResultSet rs = stmt.executeQuery();
                         rs.next();
                         return rs.getInt(1)>0;
@@ -336,7 +337,7 @@ public class MySQLMetaStore2 implements MetaStore{
                         stmt.setBoolean(1, isRemoved);
                         stmt.setString(2, identifier.getNodePath().getContainerName());
                         stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(4, owner);
+                        stmt.setString(4, owner.getName());
                         return stmt.executeUpdate();
                     }
                 }
@@ -360,7 +361,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	                    @Override
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                        stmt.setString(1, identifier.getNodePath().getContainerName());
-	                        stmt.setString(2, owner);
+	                        stmt.setString(2, owner.getName());
 	                        return stmt.executeUpdate();
 	                    }
 	                }
@@ -379,7 +380,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                        stmt.setString(1, identifier.getNodePath().getContainerName());
 	                        stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-	                        stmt.setString(3, owner);
+	                        stmt.setString(3, owner.getName());
 	                        return stmt.executeUpdate();
 	                    }
 	                }
@@ -406,7 +407,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     public List<VospaceId> go(Connection conn, PreparedStatement stmt) throws SQLException {
                 		ArrayList<VospaceId> result = new ArrayList<VospaceId>();
 
-                		stmt.setString(1, owner);
+                		stmt.setString(1, owner.getName());
                         stmt.setString(2, identifier.getNodePath().getContainerName());
                         stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath()+"%");
                         stmt.setString(4, "^"+identifier.getNodePath().getNodeRelativeStoragePath()+".*"+searchPattern+".*");
@@ -438,7 +439,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, identifier.getNodePath().getContainerName());
-                        stmt.setString(2, owner);
+                        stmt.setString(2, owner.getName());
                         return stmt.executeUpdate();
                     }
                 }
@@ -462,7 +463,7 @@ public class MySQLMetaStore2 implements MetaStore{
                         stmt.setString(2, type.name());
                         stmt.setString(3, mimeType);
                         stmt.setString(4, identifier.getNodePath().getParentPath().getNodeRelativeStoragePath());
-                        stmt.setString(5, owner);
+                        stmt.setString(5, owner.getName());
                         stmt.setString(6, identifier.getNodePath().getContainerName());
                         return stmt.executeUpdate();
                     }
@@ -485,7 +486,7 @@ public class MySQLMetaStore2 implements MetaStore{
                         stmt.setInt(3, info.getRevision());
                         stmt.setString(4, identifier.getNodePath().getContainerName());
                         stmt.setString(5, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(6, owner);
+                        stmt.setString(6, owner.getName());
                         return stmt.executeUpdate();
                     }
                 }
@@ -510,7 +511,7 @@ public class MySQLMetaStore2 implements MetaStore{
                         stmt.setString(1, (isStructured)?NodeType.STRUCTURED_DATA_NODE.toString():NodeType.UNSTRUCTURED_DATA_NODE.toString());
                         stmt.setString(2, identifier.getNodePath().getContainerName());
                         stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(4, owner);
+                        stmt.setString(4, owner.getName());
                         return stmt.executeUpdate();
                     }
                 }
@@ -533,12 +534,12 @@ public class MySQLMetaStore2 implements MetaStore{
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, owner);
+                        stmt.setString(1, owner.getName());
                         stmt.setString(2, newIdentifier.getNodePath().getContainerName());
                         stmt.setString(3, newIdentifier.getNodePath().getNodeRelativeStoragePath());
                         stmt.setString(4, identifier.getNodePath().getContainerName());
                         stmt.setString(5, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(6, owner);
+                        stmt.setString(6, owner.getName());
                         return stmt.executeUpdate();
                     }
                 }
@@ -575,7 +576,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	                    		stmt.setString(1, properties.get(uri));
 		                        stmt.setString(2, identifier.getNodePath().getContainerName());
 		                        stmt.setString(3, identifier.getNodePath().getNodeRelativeStoragePath());
-		                        stmt.setString(4, owner);
+		                        stmt.setString(4, owner.getName());
 	                    		stmt.setString(5, uri);
 	                    		stmt.setString(6, properties.get(uri));
 	                    		stmt.executeUpdate();
@@ -598,7 +599,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     		if(null == properties.get(uri)) {
 		                        stmt.setString(1, identifier.getNodePath().getContainerName());
 		                        stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-		                        stmt.setString(3, owner);
+		                        stmt.setString(3, owner.getName());
 	                    		stmt.setString(4, uri);
 	                    		stmt.executeUpdate();
                     		}
@@ -621,7 +622,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                        stmt.setString(1, shareKey);
 	                        stmt.setBoolean(2, write_perm);
-	                        stmt.setString(3, owner);
+	                        stmt.setString(3, owner.getName());
 	                        stmt.setString(4, identifier.getNodePath().getContainerName());
 	                        stmt.setString(5, groupId);
 	                        return stmt.executeUpdate();
@@ -636,7 +637,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                        stmt.setString(1, shareKey);
 	                        stmt.setBoolean(2, write_perm);
-	                        stmt.setString(3, owner);
+	                        stmt.setString(3, owner.getName());
 	                        stmt.setString(4, identifier.getNodePath().getContainerName());
 	                        return stmt.executeUpdate();
 	                    }
@@ -662,7 +663,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     	Map<String, String> map = new HashMap<String, String>();
                         stmt.setString(1, identifier.getNodePath().getContainerName());
                         stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
+                        stmt.setString(3, owner.getName());
                         ResultSet resSet = stmt.executeQuery();
                         while(resSet.next()) {
                         	map.put(resSet.getString("property_uri"), resSet.getString("property_value"));

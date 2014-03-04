@@ -18,6 +18,7 @@ package edu.jhu.pha.vospace.meta;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 /** 
  * This class presents a factory for creating MetaStores
@@ -31,9 +32,9 @@ public class MetaStoreFactory {
 	private MetaStoreFactory()  {
 	}
 
-	public static MetaStore getMetaStore(String username) {
+	public static MetaStore getMetaStore(SciDriveUser username) {
 		try {
-			return metaStoreClass.getConstructor(String.class).newInstance(username);
+			return metaStoreClass.getConstructor(SciDriveUser.class).newInstance(username);
 		} catch (Exception e) {
 			logger.error("Error instantiating metadata store: "+e.getMessage());
 			throw new InternalServerErrorException("InternalServerError");

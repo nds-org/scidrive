@@ -14,6 +14,7 @@
  * limitations under the License.
  ******************************************************************************/
 package edu.jhu.pha.vospace.oauth;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +33,7 @@ import javax.ws.rs.core.MultivaluedMap;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.oauth.server.OAuthException;
@@ -38,6 +41,7 @@ import com.sun.jersey.oauth.server.spi.OAuthConsumer;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
+import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
@@ -100,7 +104,7 @@ public class MySQLOAuthProvider2 {
 	
     public static synchronized Token getAccessToken(final String tokenStr) {
     	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
-        		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission, share_id "+
+        		"select access_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission, share_id, storage_credentials "+
         				"from oauth_accessors "+
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
@@ -126,6 +130,17 @@ public class MySQLOAuthProvider2 {
             					else
                 					rolesSet.add(USER_ROLES.roshareuser);
             				}
+            				
+            				HashMap<String, String> userStorageCredentials;
+                        	ObjectMapper mapper = new ObjectMapper();
+                        	try {
+                        		userStorageCredentials = mapper.readValue(rs.getBytes("storage_credentials"), (new HashMap<String, String>()).getClass());
+    	                    } catch(IOException ex) {
+    	                    	logger.error("Unable to read user storage credentials for token "+tokenStr);
+    	                    	throw new InternalServerErrorException("Unable to read user storage credentials for token "+tokenStr);
+    	                    }
+
+            				
             	            token = new Token(
             	                    rs.getString("access_token"), 
             	                    rs.getString("token_secret"), 
@@ -134,7 +149,8 @@ public class MySQLOAuthProvider2 {
             	                    new SciDriveUser(
             	                    		rs.getString("identity"),
             	                    		rs.getString("container_name"),
-            	                    		rs.getBoolean("accessor_write_permission")
+            	                    		rs.getBoolean("accessor_write_permission"),
+            	                    		userStorageCredentials
             	                    	),
             	                    rolesSet,
             	                    new MultivaluedMapImpl());
@@ -303,7 +319,7 @@ public class MySQLOAuthProvider2 {
      * @param userId the owner userId
      * @throws OAuthException
      */
-    public static synchronized void markAsAuthorized(final Token requestToken, final String userId) {
+    public static synchronized void markAsAuthorized(final Token requestToken, final SciDriveUser userId) {
     	
 		try {
 			if(null == requestToken.getAttributes().getFirst("root_container")) { // No predefined one (can be predefined for sharing); in this case set the default one
@@ -326,7 +342,7 @@ public class MySQLOAuthProvider2 {
 		                new SqlWorker<Integer>() {
 		                    @Override
 		                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
-		            			stmt.setString(1, userId);
+		            			stmt.setString(1, userId.getName());
 		            			stmt.setString(2, default_root_container);
 		            			stmt.setString(3, requestToken.getToken());
 		                        return stmt.executeUpdate();

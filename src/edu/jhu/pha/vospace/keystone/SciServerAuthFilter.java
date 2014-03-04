@@ -20,6 +20,8 @@ import javax.ws.rs.WebApplicationException;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
+
 
 public class SciServerAuthFilter implements ContainerRequestFilter {
 
@@ -27,6 +29,9 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
     public ContainerRequest filter(ContainerRequest request) {
         SciServerSecurityContext sc = null;
 
+        if(request.getMethod().equals("OPTIONS"))
+        	return request;
+        
         try {
         	KeystoneToken token = new KeystoneToken(request.getHeaderValue("X-Auth-Token"));
         	sc = new SciServerSecurityContext(token, request.isSecure()); 
@@ -35,8 +40,8 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         }
         request.setSecurityContext(sc);
         
-        if(!UserHelper.userExists(sc.getUserPrincipal().getName())) {
-        	UserHelper.addDefaultUser(sc.getUserPrincipal().getName());
+        if(!UserHelper.userExists((SciDriveUser)sc.getUserPrincipal())) {
+        	UserHelper.addDefaultUser((SciDriveUser)sc.getUserPrincipal());
         }
         
         return request;

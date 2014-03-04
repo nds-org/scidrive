@@ -61,6 +61,7 @@ import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.oauth.UserHelper;
 
 public class NodeProcessor implements Runnable {
@@ -106,7 +107,10 @@ public class NodeProcessor implements Runnable {
 				    	Map<String,Object> nodeData = (new ObjectMapper()).readValue(delivery.getBody(), 0, delivery.getBody().length, new TypeReference<HashMap<String,Object>>() {});
 
 		            	channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-						node = NodeFactory.getNode(new VospaceId((String)nodeData.get("uri")), (String)nodeData.get("owner"));
+
+						SciDriveUser user = SciDriveUser.fromName((String)nodeData.get("owner"));
+
+		            	node = NodeFactory.getNode(new VospaceId((String)nodeData.get("uri")), user);
 
 		            	logger.debug("Node changed: "+nodeData.get("uri")+" "+nodeData.get("owner")+" "+node.getType());
 		            	
@@ -127,7 +131,7 @@ public class NodeProcessor implements Runnable {
 				            		node.getNodeInfo().setContentType(type.toString());
 				            		node.getMetastore().storeInfo(node.getUri(), node.getNodeInfo());
 
-			            			JsonNode credentials = UserHelper.getProcessorCredentials(node.getOwner());
+			            			JsonNode credentials = UserHelper.getProcessorCredentials(user);
 			            			
 			            			boolean makeStructured = false;
 			            			

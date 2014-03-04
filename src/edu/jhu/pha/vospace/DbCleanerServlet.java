@@ -36,6 +36,7 @@ import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 
@@ -89,7 +90,7 @@ public class DbCleanerServlet extends HttpServlet {
                             public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
                                 ResultSet resSet = stmt.executeQuery();
                                 if(resSet.next()) {
-                                	String username = resSet.getString("identity");
+                                	SciDriveUser username = SciDriveUser.fromName(resSet.getString("identity"));
                                 	
                                 	Node newNode = null;
                                 	try {
@@ -141,7 +142,7 @@ public class DbCleanerServlet extends HttpServlet {
                         public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
                             ResultSet resSet = stmt.executeQuery();
                             if(resSet.next()) {
-                            	final String username = resSet.getString("identity");
+                            	SciDriveUser username = SciDriveUser.fromName(resSet.getString("identity"));
                             	final String chunkedName = resSet.getString("chunked_name");
                             	logger.debug("Removing "+chunkedName+" chunks of user "+username);
                             	

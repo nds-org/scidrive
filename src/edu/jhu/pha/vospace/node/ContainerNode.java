@@ -46,6 +46,7 @@ import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.MetaStoreDistributed;
 import edu.jhu.pha.vospace.meta.NodesList;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 
 public class ContainerNode extends DataNode {
@@ -57,11 +58,11 @@ public class ContainerNode extends DataNode {
      * Construct a Node from the byte array
      * @param req The byte array containing the Node
      */
-    public ContainerNode(byte[] bytes, String username, VospaceId id)  {
+    public ContainerNode(byte[] bytes, SciDriveUser username, VospaceId id)  {
         super(bytes, username, id);
     }
 
-	public ContainerNode(VospaceId id, String username) {
+	public ContainerNode(VospaceId id, SciDriveUser username) {
 		super(id, username);
 	}
 	

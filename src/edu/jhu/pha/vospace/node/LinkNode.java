@@ -15,9 +15,11 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.node;
 
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
+
 public class LinkNode extends DataNode {
 
-	public LinkNode(VospaceId id, String username) {
+	public LinkNode(VospaceId id, SciDriveUser username) {
 		super(id, username);
 	}
 
@@ -25,7 +27,7 @@ public class LinkNode extends DataNode {
      * Construct a Node from the byte array
      * @param req The byte array containing the Node
      */
-	public LinkNode(byte[] bytes, String username, VospaceId id)  {
+	public LinkNode(byte[] bytes, SciDriveUser username, VospaceId id)  {
         super(bytes, username, id);
     }
 

@@ -94,7 +94,7 @@ public class NodesController {
 		else if(view.equals("xml"))
 			type = MediaType.TEXT_XML_TYPE;
 		
-		Node node = NodeFactory.getNode(identifier, user.getName());
+		Node node = NodeFactory.getNode(identifier, user);
 		
 		if(view != null && view.equals("data")) {// return the data contents
 			return Response.ok(node.exportData()).
@@ -142,7 +142,7 @@ public class NodesController {
 			throw new BadRequestException("InvalidURI");
 		}
 		
-		Node newNode = NodeFactory.createNode(identifier, user.getName(), getType(nodeBytes));
+		Node newNode = NodeFactory.createNode(identifier, user, getType(nodeBytes));
 		if (!newNode.hasValidParent()) throw new InternalServerErrorException("ContainerNotFound");
 		
 		// Does node already exist?
@@ -178,9 +178,8 @@ public class NodesController {
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		
 		try {
-			String username = user.getName();
 			VospaceId identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-			Node node = NodeFactory.getNode(identifier, username);
+			Node node = NodeFactory.getNode(identifier, user);
 			node.markRemoved(true);
 		} catch (URISyntaxException e) {
 			throw new BadRequestException("InvalidURI");
@@ -208,7 +207,7 @@ public class NodesController {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		Node currentNode = NodeFactory.getNode(identifier, user.getName());
+		Node currentNode = NodeFactory.getNode(identifier, user);
 
 		if(!currentNode.isStoredMetadata())
 			throw new NotFoundException("NodeNotFound");

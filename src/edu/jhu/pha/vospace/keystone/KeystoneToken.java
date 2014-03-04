@@ -22,23 +22,32 @@ import java.util.Set;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import com.rackspacecloud.client.cloudfiles.KeystoneFilesClient;
+
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 
 public class KeystoneToken {
 	private JsonNode tokenNode;
-	
+	private static Logger logger = Logger.getLogger(KeystoneToken.class); 
+	private final static Configuration conf = SettingsServlet.getConfig();
+
 	public KeystoneToken(String token) throws KeystoneException {
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		
-		HttpGet tokenGet = new HttpGet("http://zinc26.pha.jhu.edu:5000/v2.0/tokens/"+token);
-		tokenGet.setHeader("X-Auth-Token", "PQjnt72Q1z");
+		logger.debug("Keystone token "+conf.getString("keystone.url")+"/tokens/"+token+" "+KeystoneAuthenticator.getAdminToken());
+		
+		HttpGet tokenGet = new HttpGet(conf.getString("keystone.url")+"/tokens/"+token);
+		tokenGet.setHeader("X-Auth-Token", KeystoneAuthenticator.getAdminToken());
 		
 		try {
 			HttpResponse tokenResp = client.execute(tokenGet);
@@ -65,12 +74,30 @@ public class KeystoneToken {
 	
 	Set<String> getRoles() {
 		JsonNode rolesNode = tokenNode.path("access").path("user").path("roles");
-		if(rolesNode.isMissingNode() || !rolesNode.isArray())
+		if(rolesNode.isMissingNode() || !rolesNode.isArray()) {
+			logger.error("Not found roles node");
 			throw new KeystoneException(Response.Status.BAD_REQUEST, null);
+		}
 		HashSet<String> roles = new HashSet<String>(); 
 		for(JsonNode roleNode: rolesNode) {
 			roles.add(roleNode.path("name").getTextValue());
 		}
 		return roles;
+	}
+
+	public String getSwiftAccountUrl() {
+		JsonNode servicesNode = tokenNode.path("access").path("serviceCatalog");
+		if(servicesNode.isMissingNode() || !servicesNode.isArray()){
+			logger.error("Not found services node");
+			throw new KeystoneException(Response.Status.BAD_REQUEST, null);
+		}
+		 
+		for(JsonNode serviceNode: servicesNode) {
+			if(serviceNode.path("name").getTextValue().equals("swift")) {
+				return serviceNode.path("endpoints").path("publicURL").getTextValue();
+			}
+		}
+		logger.error("Not found swift publicUrl");
+		throw new KeystoneException(Response.Status.BAD_REQUEST, null);
 	}
 }

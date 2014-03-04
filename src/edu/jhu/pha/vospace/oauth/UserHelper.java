@@ -28,6 +28,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -54,7 +55,7 @@ public class UserHelper {
 	
     /** Download a certificate from <tt>certUrl</tt> and save it for the named user in the database.
      *  If the user doesn't already exist, throw an exception. */
-    public static void setCertificate(final String username, String certUrl) throws IOException {
+    public static void setCertificate(final SciDriveUser username, String certUrl) throws IOException {
         // 1. make sure user exists
         if (!userExists(username))
             throw new IllegalStateException("Unknown user \"" + username + "\".");
@@ -71,7 +72,7 @@ public class UserHelper {
                     public Void go(Connection conn, PreparedStatement stmt) throws SQLException {
                         // should we try stmt.setBinaryStream() instead?
                         stmt.setBytes(1, bytes);
-                        stmt.setString(2, username);
+                        stmt.setString(2, username.getName());
                         stmt.executeUpdate();
                         logger.debug("Streamed certificate to database.");
                         return null;
@@ -146,20 +147,24 @@ public class UserHelper {
                 });
     }
 
-	public static SwiftJsonCredentials getDataStoreCredentials(final String username) {
+	public static HashMap<String, String> getDataStoreCredentials(final String username) {
         return DbPoolServlet.goSql("Retrieving credentials for " + username,
                 "select storage_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
-                new SqlWorker<SwiftJsonCredentials>() {
+                new SqlWorker<HashMap<String, String>>() {
                     @Override
-                    public SwiftJsonCredentials go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    public HashMap<String, String> go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, username);
                         ResultSet rs = stmt.executeQuery();
                         if (!rs.next())
                             throw new PermissionDeniedException("The user "+username+" does not exist.");
+
+                        String credentials = rs.getString("storage_credentials");
+                        if(credentials == null || credentials.length() == 0)
+                        	return new HashMap<String, String>();
                         
                     	ObjectMapper mapper = new ObjectMapper();
                     	try {
-                    		SwiftJsonCredentials result = mapper.readValue(rs.getBytes("storage_credentials"), SwiftJsonCredentials.class);
+                    		HashMap<String, String> result = mapper.readValue(rs.getBytes("storage_credentials"), new HashMap<String, String>().getClass());
 	                        return result;
 	                    } catch(IOException ex) {
 	                    	throw new InternalServerErrorException("Unable to read user "+username+" storage credentials");
@@ -174,13 +179,13 @@ public class UserHelper {
 	 * @param processorId
 	 * @return
 	 */
-	public static JsonNode getProcessorCredentials(final String username) {
+	public static JsonNode getProcessorCredentials(final SciDriveUser username) {
         return DbPoolServlet.goSql("Retrieving processor credentials for " + username,
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<JsonNode>() {
                     @Override
                     public JsonNode go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (!rs.next())
                             throw new PermissionDeniedException("The user "+username+" does not exist.");
@@ -213,7 +218,7 @@ public class UserHelper {
                 });
 	}
 
-    static public boolean addDefaultUser(final String username) {
+    static public boolean addDefaultUser(final SciDriveUser username) {
 		DbPoolServlet.goSql("Add new user",
          		"insert into users values ()",
                 new SqlWorker<Boolean>() {
@@ -232,7 +237,7 @@ public class UserHelper {
 	                                        @Override
 	                                        public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                                        	stmt.setInt(1, user_id);
-	                                        	stmt.setString(2, username);
+	                                        	stmt.setString(2, username.getName());
 	                                            return stmt.execute();
 	                                        }
 	                                    }
@@ -254,7 +259,7 @@ public class UserHelper {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
             			stmt.setString(1, storageCredentials);
-            			stmt.setString(2, username);
+            			stmt.setString(2, username.getName());
                         return stmt.execute();
                     }
                 }
@@ -277,17 +282,17 @@ public class UserHelper {
 	}
 
     
-	public static AccountInfo getAccountInfo(final String username) {
+	public static AccountInfo getAccountInfo(final SciDriveUser username) {
 		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
                 "select hardlimit, softlimit from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?;",
                 new SqlWorker<AccountInfo>() {
                     @Override
                     public AccountInfo go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next()){
                             AccountInfo info = new AccountInfo();
-                            info.setUsername(username);
+                            info.setUsername(username.getName());
                             info.setHardLimit(rs.getInt("hardlimit"));
                             info.setSoftLimit(rs.getInt("softlimit"));
                         	return info;
@@ -305,13 +310,13 @@ public class UserHelper {
 	}
     
     /** Does the named user exist? */
-    public static boolean userExists(final String username) {
+    public static boolean userExists(final SciDriveUser username) {
         return DbPoolServlet.goSql("Checking whether user \"" + username + "\" exists in DB.",
                 "select count(identity) from user_identities where identity = ?;",
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next())
                             return rs.getInt(1) > 0;
@@ -329,13 +334,13 @@ public class UserHelper {
      * @param updateNode The processor credentials in JSON format. If null, the processor will be disabled
      * @return true if success
      */
-    public static boolean updateUserService(final String username, final String processorId, JsonNode updateNode) {
+    public static boolean updateUserService(final SciDriveUser username, final String processorId, JsonNode updateNode) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<byte[]>() {
                     @Override
                     public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next()) {
                         	byte[] b = rs.getBytes(1);
@@ -367,7 +372,7 @@ public class UserHelper {
                 @Override
                 public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
                     stmt.setString(1, mainNode.toString());
-                    stmt.setString(2, username);
+                    stmt.setString(2, username.getName());
                     return stmt.execute();
                 }
             }
@@ -375,13 +380,13 @@ public class UserHelper {
     
     }
 
-	public static JsonNode getUserServices(final String username) {
+	public static JsonNode getUserServices(final SciDriveUser username) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<byte[]>() {
                     @Override
                     public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, username);
+                        stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
                         if (rs.next()) {
                         	byte[] b = rs.getBytes(1);

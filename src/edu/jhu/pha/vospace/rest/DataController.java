@@ -43,6 +43,7 @@ import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 
 /**
@@ -65,10 +66,10 @@ public class DataController {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		if(null == job)
 			throw new NotFoundException("The job "+jobId+" is not found.");
-
+		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
 		
 		VospaceId targetId=job.getTargetId();
-		Node node = NodeFactory.getNode(targetId, job.getUsername());
+		Node node = NodeFactory.getNode(targetId, user);
 		
 		if(job.getDirection().equals(JobDescription.DIRECTION.PULLFROMVOSPACE)){
 			
@@ -130,8 +131,9 @@ public class DataController {
 		JobDescription job = JobsProcessor.getJob(UUID.fromString(jobId));
 		if(null == job)
 			throw new NotFoundException("The job "+jobId+" is not found.");
-
-		MetaStore store = MetaStoreFactory.getMetaStore(job.getUsername());
+		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
+		
+		MetaStore store = MetaStoreFactory.getMetaStore(user);
 
 		JobsProcessor.modifyJobState(job, STATE.RUN);
 		
@@ -140,14 +142,14 @@ public class DataController {
 			VospaceId id = job.getTargetId();
 
 			if(!store.isStored(id)){
-				Node node = NodeFactory.createNode(id, job.getUsername(), NodeType.DATA_NODE);
+				Node node = NodeFactory.createNode(id, user, NodeType.DATA_NODE);
 				node.setNode(null);
 			}
 			
 			logger.debug("Uploading node "+id);
 			
 			try {
-				DataNode targetNode = NodeFactory.<DataNode>getNode(id, job.getUsername());
+				DataNode targetNode = NodeFactory.<DataNode>getNode(id, user);
 				targetNode.setData(fileDataInp);
 				if(targetNode.getNodeInfo().isDeleted()) {
 					targetNode.markRemoved(false);

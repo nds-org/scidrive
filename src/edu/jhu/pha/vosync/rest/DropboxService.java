@@ -147,7 +147,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(fromId, user.getName());
+			node = NodeFactory.getNode(fromId, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(fromId.getNodePath().getNodeStoragePath());
 		}
@@ -158,7 +158,7 @@ public class DropboxService {
 			throw new BadRequestException(ex.getMessage());
 		}
 		
-		return Response.ok(NodeFactory.getNode(toId, user.getName()).export("json-dropbox",Detail.min)).build();
+		return Response.ok(NodeFactory.getNode(toId, user).export("json-dropbox",Detail.min)).build();
 	}
 
 	@Path("fileops/create_folder")
@@ -181,7 +181,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		Node node = NodeFactory.createNode(identifier, user.getName(), NodeType.CONTAINER_NODE);
+		Node node = NodeFactory.createNode(identifier, user, NodeType.CONTAINER_NODE);
 		
 		node.createParent();
 		node.setNode(null);
@@ -210,13 +210,13 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
 		node.markRemoved(true);
 		
-		return Response.ok(NodeFactory.getNode(identifier, user.getName()).export("json-dropbox",Detail.min)).build();
+		return Response.ok(NodeFactory.getNode(identifier, user).export("json-dropbox",Detail.min)).build();
 	}
 
 	@GET @Path("account/info")
@@ -227,7 +227,7 @@ public class DropboxService {
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
 	
-			AccountInfo info = UserHelper.getAccountInfo(user.getName());
+			AccountInfo info = UserHelper.getAccountInfo(user);
 			
 			g2.writeStartObject();
 			
@@ -246,7 +246,7 @@ public class DropboxService {
 			g2.writeEndObject();
 
 			g2.writeArrayFieldStart("services");
-			JsonNode servicesCredentials = UserHelper.getUserServices(user.getName());
+			JsonNode servicesCredentials = UserHelper.getUserServices(user);
 			for(ProcessorConfig proc: ProcessingFactory.getInstance().getProcessorConfigs().values()) {
 				g2.writeStartObject();
 				g2.writeStringField("id", proc.getId());
@@ -273,7 +273,7 @@ public class DropboxService {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode credNode = mapper.readTree(serviceCredInpStream);
-			UserHelper.updateUserService(user.getName(), processor, credNode);
+			UserHelper.updateUserService(user, processor, credNode);
 			return Response.ok().build();
 		} catch(IOException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
@@ -284,7 +284,7 @@ public class DropboxService {
 	@RolesAllowed({"user"})
 	public Response disableAccountService(@PathParam("processor") String processor) {
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
-		UserHelper.updateUserService(user.getName(), processor, null);
+		UserHelper.updateUserService(user, processor, null);
 		return Response.ok().build();
 	}
 	
@@ -292,7 +292,7 @@ public class DropboxService {
 	@RolesAllowed({"user"})
 	public Response getAccountService(@PathParam("processor") String processor) {
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
-		JsonNode node = UserHelper.getUserServices(user.getName());
+		JsonNode node = UserHelper.getUserServices(user);
 		String cred = (node.get(processor) == null)?"{}":node.get(processor).toString();
 		return Response.ok(cred).build();
 	}
@@ -330,7 +330,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -366,7 +366,7 @@ public class DropboxService {
 		}
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -412,7 +412,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -527,7 +527,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getMetaStore(user.getName());
+		MetaStore metastore = MetaStoreFactory.getMetaStore(user);
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
@@ -549,22 +549,22 @@ public class DropboxService {
 							newId = new VospaceId(currentFile.replaceAll(fileName, fileName+"_"+current_num++));
 						}
 						logger.debug("Node "+newId.toString()+" not exists.");
-						node = (DataNode)NodeFactory.createNode(newId, user.getName(), NodeType.DATA_NODE);
+						node = (DataNode)NodeFactory.createNode(newId, user, NodeType.DATA_NODE);
 						node.createParent();
 						node.setNode(null);
 					} catch(URISyntaxException e) {
 						throw new InternalServerErrorException("InvalidURI");
 					}
 				} else {
-					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
 			} else {
 				try {
-					node = NodeFactory.getNode(identifier, user.getName());
+					node = NodeFactory.getNode(identifier, user);
 				} catch(NotFoundException ex) {
-					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
@@ -592,7 +592,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getMetaStore(user.getName());
+		MetaStore metastore = MetaStoreFactory.getMetaStore(user);
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
@@ -602,7 +602,7 @@ public class DropboxService {
 				if(metastore.isStored(identifier)){
 					//throw new BadRequestException(identifier.toString()+" exists.");
 					//logger.debug("Found conflict in node "+identifier);
-					node = NodeFactory.getNode(identifier, user.getName());
+					node = NodeFactory.getNode(identifier, user);
 					
 					if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
 						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
@@ -629,18 +629,18 @@ public class DropboxService {
 						}*/
 					}
 				} else {
-					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
 			} else {
 				if(metastore.isStored(identifier)){
-					Node tmpNode = NodeFactory.getNode(identifier, user.getName());
+					Node tmpNode = NodeFactory.getNode(identifier, user);
 					tmpNode.getStorage().remove(tmpNode.getUri().getNodePath(), true);
 					tmpNode.getMetastore().remove(tmpNode.getUri());
 				}
 				
-				node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+				node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 				node.createParent();
 				node.setNode(null);
 			}
@@ -675,7 +675,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -692,7 +692,7 @@ public class DropboxService {
 			g.writeStartArray();
 
 			for(VospaceId childNodeId: nodesList) {
-				Node childNode = NodeFactory.getNode(childNodeId, user.getName());
+				Node childNode = NodeFactory.getNode(childNodeId, user);
 				JsonNode jnode = (JsonNode)childNode.export("json-dropbox-object", Detail.min); 
 				g.writeTree(jnode);
 
@@ -739,7 +739,7 @@ public class DropboxService {
 		    
 		    Analyzer analyzer = new EnglishAnalyzer(Version.LUCENE_41);
 		    QueryParser parser = new QueryParser(Version.LUCENE_41, "content", analyzer);
-		    String queryFullStr = "owner:\""+user.getName()+"\" AND "+queryStr;
+		    String queryFullStr = "owner:\""+user+"\" AND "+queryStr;
 		    Query query = parser.parse(queryFullStr);
 		    ScoreDoc[] hits = isearcher.search(query, null, 100).scoreDocs;
 		    
@@ -780,7 +780,7 @@ public class DropboxService {
 		}
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -845,7 +845,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -1036,7 +1036,7 @@ public class DropboxService {
 
 		Node node;
 		try {
-			node = NodeFactory.getNode(identifier, user.getName());
+			node = NodeFactory.getNode(identifier, user);
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			throw new NotFoundException(identifier.getNodePath().getNodeStoragePath());
 		}
@@ -1070,7 +1070,7 @@ public class DropboxService {
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response chunkedUpload(@QueryParam("upload_id") String uploadId, @QueryParam("offset") long offset, InputStream fileDataInp) {
 		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
-		VoSyncMetaStore voMeta = new VoSyncMetaStore(user.getName());
+		VoSyncMetaStore voMeta = new VoSyncMetaStore(user);
 
 		logger.debug("New chunk: "+uploadId+" "+offset);
 		
@@ -1093,7 +1093,7 @@ public class DropboxService {
 			String chunkNumberString = String.format("%07d", newChunk.getChunkNum());
 			
 			identifier = new VospaceId(new NodePath("/"+conf.getString("chunked_container")+"/"+uploadId+"/"+chunkNumberString));
-			DataNode node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+			DataNode node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 
 			node.getStorage().createContainer(new NodePath("/"+conf.getString("chunked_container")));
 			node.getStorage().putBytes(identifier.getNodePath(), fileDataInp);
@@ -1122,7 +1122,7 @@ public class DropboxService {
 	@RolesAllowed({"user", "rwshareuser"})
 	public Response commitChunkedUpload(@PathParam("root") String root, @PathParam("path") String fullPath, @FormParam("upload_id") String uploadId, @QueryParam("overwrite") @DefaultValue("true") Boolean overwrite, @QueryParam("parent_rev") String parentRev) {
 		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
-		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(user.getName());
+		VoSyncMetaStore vosyncMeta = new VoSyncMetaStore(user);
 		
 		if(null == uploadId || !(vosyncMeta.chunkedExists(uploadId))) {
 			throw new BadRequestException("Parameter upload_id is missing or invalid");
@@ -1135,7 +1135,7 @@ public class DropboxService {
 			throw new BadRequestException("InvalidURI");
 		}
 
-		MetaStore metastore = MetaStoreFactory.getMetaStore(user.getName());
+		MetaStore metastore = MetaStoreFactory.getMetaStore(user);
 		
 		Node node;
 		if(identifier.getNodePath().getParentPath().isRoot(false)){
@@ -1143,25 +1143,25 @@ public class DropboxService {
 		} else {
 			if(parentRev != null) {
 				if(metastore.isStored(identifier)){
-					node = NodeFactory.getNode(identifier, user.getName());
+					node = NodeFactory.getNode(identifier, user);
 					
 					if(!parentRev.equals(Integer.toString(node.getNodeInfo().getRevision()))) {
 						throw new BadRequestException("Revision mismatch: current is "+node.getNodeInfo().getRevision());
 						//TODO fix the revisions
 					}
 				} else {
-					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}
 			} else {
 				try {
-					node = NodeFactory.getNode(identifier, user.getName());
+					node = NodeFactory.getNode(identifier, user);
 					if(!overwrite) {
 						throw new BadRequestException("Node exists");
 					}
 				} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-					node = (DataNode)NodeFactory.createNode(identifier, user.getName(), NodeType.DATA_NODE);
+					node = (DataNode)NodeFactory.createNode(identifier, user, NodeType.DATA_NODE);
 					node.createParent();
 					node.setNode(null);
 				}

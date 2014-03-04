@@ -42,6 +42,7 @@ import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
 import edu.jhu.pha.vosync.meta.VoSyncMetaStore;
@@ -54,12 +55,12 @@ public class DataNode extends Node implements Cloneable {
 	 * Construct a Node from the byte array
 	 * @param req The byte array containing the Node
 	 */
-	public DataNode(byte[] bytes, String username, VospaceId id) {
+	public DataNode(byte[] bytes, SciDriveUser username, VospaceId id) {
 		super(bytes, username, id);
 	}
 
 
-	public DataNode(VospaceId id, String username){
+	public DataNode(VospaceId id, SciDriveUser username){
 		super(id, username);
 	}
 	
@@ -180,10 +181,10 @@ public class DataNode extends Node implements Cloneable {
 			job.setStartTime(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
 			job.setState(JobDescription.STATE.PENDING);
 			job.addProtocol("ivo://ivoa.net/vospace/core#httpget", null);
-			job.setUsername(getOwner());
+			job.setUsername(getOwner().getName());
 			
 			String endpointUrl = null;
-			JobsProcessor.getDefaultImpl().submitJob(owner, job);
+			JobsProcessor.getDefaultImpl().submitJob(owner.getName(), job);
 			endpointUrl = conf.getString("application.url")+"/data/"+job.getId();
 			return new URI(endpointUrl);
 		} catch(URISyntaxException ex) {

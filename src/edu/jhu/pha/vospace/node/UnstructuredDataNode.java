@@ -15,13 +15,15 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.node;
 
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
+
 
 
 public class UnstructuredDataNode extends DataNode {
 
 	
 
-	public UnstructuredDataNode(VospaceId id, String username) {
+	public UnstructuredDataNode(VospaceId id, SciDriveUser username) {
 		super(id, username);
 	}
 	
@@ -29,7 +31,7 @@ public class UnstructuredDataNode extends DataNode {
      * Construct a Node from the byte array
      * @param req The byte array containing the Node
      */
-    public UnstructuredDataNode(byte[] bytes, String username, VospaceId id) {
+    public UnstructuredDataNode(byte[] bytes, SciDriveUser username, VospaceId id) {
         super(bytes, username, id);
     }
 

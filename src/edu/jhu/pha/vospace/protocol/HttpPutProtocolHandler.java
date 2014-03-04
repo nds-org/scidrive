@@ -27,6 +27,7 @@ import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
@@ -53,14 +54,15 @@ public class HttpPutProtocolHandler implements ProtocolHandler {
     public void invoke(JobDescription job) throws IOException {
 		String putFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpput"));
 		
-		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
+		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(user);
 
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		InputStream fileInp = backend.getBytes(job.getTargetId().getNodePath());
 
 		HttpPut put = new HttpPut(putFileUrl);
 		
-		Node node = NodeFactory.getNode(job.getTargetId(), job.getUsername());
+		Node node = NodeFactory.getNode(job.getTargetId(), user);
 		
         put.setEntity(new InputStreamEntity(fileInp, node.getNodeInfo().getSize()));
 

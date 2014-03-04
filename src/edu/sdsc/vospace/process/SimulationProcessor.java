@@ -32,6 +32,7 @@ import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.process.ProcessingException;
 import edu.jhu.pha.vospace.process.Processor;
 import edu.jhu.pha.vospace.process.ProcessorConfig;
@@ -52,7 +53,7 @@ public class SimulationProcessor extends Processor {
 
 	@Override
 	public void processNodeMeta(Metadata metadata, JsonNode credentials) throws ProcessingException {
-        String owner = metadata.get("owner");
+		SciDriveUser owner = SciDriveUser.fromName(metadata.get("owner"));
         String source = metadata.get(TikaCoreProperties.SOURCE);
 
         try {

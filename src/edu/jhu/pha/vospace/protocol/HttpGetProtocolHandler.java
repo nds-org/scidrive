@@ -37,6 +37,7 @@ import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 
 /**
@@ -63,7 +64,8 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException, URISyntaxException{
 		String getFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpget"));
-		MetaStore store = MetaStoreFactory.getMetaStore(job.getUsername());
+		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
+		MetaStore store = MetaStoreFactory.getMetaStore(user);
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		
 		HttpGet get = new HttpGet(getFileUrl);
@@ -92,16 +94,16 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
 				if(job.getTargetId().toString().endsWith("/.auto") && null != fileName){
 					logger.debug("Auto node success "+fileName);
 					VospaceId newId = new VospaceId(job.getTargetId().toString().replaceFirst(".auto", fileName));
-					DataNode targetNode = (DataNode)NodeFactory.createNode(newId, job.getUsername(), NodeType.DATA_NODE);
+					DataNode targetNode = (DataNode)NodeFactory.createNode(newId, user, NodeType.DATA_NODE);
 					targetNode.setNode(null);
 					targetNode.setData(fileInp);
 				} else {
 					DataNode targetNode;
 					if(!store.isStored(job.getTargetId())) {
-						targetNode = NodeFactory.createNode(job.getTargetId(), job.getUsername(), NodeType.DATA_NODE);
+						targetNode = NodeFactory.createNode(job.getTargetId(), user, NodeType.DATA_NODE);
 						targetNode.setNode(null);						
 					} else {
-						targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), job.getUsername());
+						targetNode = (DataNode)NodeFactory.getNode(job.getTargetId(), user);
 					}
 					targetNode.setData(fileInp);
 				}

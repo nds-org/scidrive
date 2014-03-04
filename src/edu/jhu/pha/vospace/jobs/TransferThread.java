@@ -28,6 +28,7 @@ import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.protocol.ProtocolHandler;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.rest.JobDescription.DIRECTION;
@@ -108,7 +109,8 @@ public class TransferThread implements Callable<STATE> {
 		VospaceId target = transfer.getTargetId();
 		VospaceId direction = transfer.getDirectionTargetId();
 		// Get node
-		Node node = NodeFactory.getNode(target, transfer.getUsername());
+    	SciDriveUser username = SciDriveUser.fromName(transfer.getUsername());
+		Node node = NodeFactory.getNode(target, username);
 		
 		if (direction.toString().endsWith(".null")) {
 			if(!keepBytes)
@@ -121,8 +123,9 @@ public class TransferThread implements Callable<STATE> {
 	
 	private static void validateTransfer(JobDescription transfer) {
 		/*TODO Check the whole method */
+    	SciDriveUser username = SciDriveUser.fromName(transfer.getUsername());
 
-		MetaStore store = MetaStoreFactory.getMetaStore(transfer.getUsername());
+		MetaStore store = MetaStoreFactory.getMetaStore(username);
 
 		// Check transfer details
 		VospaceId target = transfer.getTargetId();
@@ -133,7 +136,7 @@ public class TransferThread implements Callable<STATE> {
 		try {
 			// Parent node
 			if (!external) {
-				Node directionParentNode = NodeFactory.getNode(direction.getParent(), transfer.getUsername());
+				Node directionParentNode = NodeFactory.getNode(direction.getParent(), username);
 				if(!directionParentNode.isStoredMetadata() || !(directionParentNode.getType() == NodeType.CONTAINER_NODE)) 
 					throw new BadRequestException("The parent node is not valid.");
 			}
@@ -145,7 +148,7 @@ public class TransferThread implements Callable<STATE> {
 		if (store.isStored(target)) {
 			if (transfer.getDirection().equals(DIRECTION.PUSHTOVOSPACE) || transfer.getDirection().equals(DIRECTION.PULLTOVOSPACE)) {
 				// Container
-				Node targetNode = NodeFactory.getNode(target, transfer.getUsername());
+				Node targetNode = NodeFactory.getNode(target, username);
 
 				if (targetNode.getType().equals(NodeType.CONTAINER_NODE)) 
 					throw new BadRequestException("Data cannot be uploaded to a container."); 
@@ -159,7 +162,7 @@ public class TransferThread implements Callable<STATE> {
 			if (!external) throw new ConflictException("A Node does not exist with the requested URI");
 		}
 		if (!external && store.isStored(direction)) {
-			Node directionNode = NodeFactory.getNode(direction, transfer.getUsername());
+			Node directionNode = NodeFactory.getNode(direction, username);
 			 if(!directionNode.getType().equals(NodeType.CONTAINER_NODE))
 					 throw new ConflictException("A Node already exists with the requested URI");		
 		}

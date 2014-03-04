@@ -27,6 +27,7 @@ import udt.UDTClient;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.SizeLimitInputStream;
 import edu.jhu.pha.vospace.jobs.JobException;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.rest.JobDescription;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
@@ -54,8 +55,8 @@ public class UdtGetProtocolHandler implements ProtocolHandler {
 	@Override
     public void invoke(JobDescription job) throws IOException, JobException{
 		logger.debug("UDT Get job invoked "+job.getId());
-		
-		StorageManager backend = StorageManagerFactory.getStorageManager(job.getUsername());
+		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
+		StorageManager backend = StorageManagerFactory.getStorageManager(user);
 
 		InputStream inp = null;
 		

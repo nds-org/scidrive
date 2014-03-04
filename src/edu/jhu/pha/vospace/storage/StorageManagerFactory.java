@@ -18,6 +18,7 @@ package edu.jhu.pha.vospace.storage;
 import java.lang.reflect.Method;
 
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 /** 
  * This class presents a factory for creating StorageManagers
@@ -32,18 +33,18 @@ public class StorageManagerFactory {
 	/*
 	 * Get a StorageManager
 	 */
-	public static StorageManager getStorageManager(String username) {
+	public static StorageManager getStorageManager(SciDriveUser username) {
 		try {
-			return storageClass.getConstructor(String.class).newInstance(username);
+			return storageClass.getConstructor(SciDriveUser.class).newInstance(username);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new InternalServerErrorException("Error initialising class "+e.getMessage());
 		}
 	}
 
-	public static String generateRandomCredentials(String username) {
+	public static String generateRandomCredentials(SciDriveUser username) {
 		try {
-			Method genMethod =storageClass.getMethod("generateRandomCredentials", String.class); 
+			Method genMethod =storageClass.getMethod("generateRandomCredentials", SciDriveUser.class); 
 			if(null != genMethod){
 				return (String)genMethod.invoke(null, username);
 			}

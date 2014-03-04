@@ -19,6 +19,7 @@ import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
+import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 /** 
  * A factory for creating nodes
@@ -26,17 +27,17 @@ import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 public class NodeFactory {
 	private NodeFactory() {}
 
-	public static <T extends Node> T createNode(VospaceId uri, String username, NodeType nodeType) {
+	public static <T extends Node> T createNode(VospaceId uri, SciDriveUser username, NodeType nodeType) {
 		T node;
 		try {
-			node = (T)nodeType.getNodeClass().getConstructor(VospaceId.class, String.class).newInstance(uri, username);
+			node = (T)nodeType.getNodeClass().getConstructor(VospaceId.class, SciDriveUser.class).newInstance(uri, username);
 		} catch (Exception e) {
 			throw new InternalServerErrorException("InternalFault");
 		}
 		return node;
 	}
 	
-	public static <T extends Node> T getNode(VospaceId uri, String username) {
+	public static <T extends Node> T getNode(VospaceId uri, SciDriveUser username) {
 		MetaStore metastore = MetaStoreFactory.getMetaStore(username);
 		if(null == uri)
 			throw new NotFoundException("NodeNotFound");
