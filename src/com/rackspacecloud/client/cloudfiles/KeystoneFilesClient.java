@@ -5,19 +5,11 @@
 package com.rackspacecloud.client.cloudfiles;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-
 import org.apache.commons.configuration.Configuration;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.keystone.KeystoneAuthenticator;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
@@ -47,7 +39,6 @@ public class KeystoneFilesClient extends FilesClient{
 		this.storageURL = username.getAccountUrl();
     	this.authToken = KeystoneAuthenticator.getAdminToken();
     	this.isLoggedin = true;
-		logger.debug("Keystone init "+this.authToken);
     }
     
     /**

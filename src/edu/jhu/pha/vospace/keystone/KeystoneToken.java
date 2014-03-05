@@ -94,7 +94,7 @@ public class KeystoneToken {
 		 
 		for(JsonNode serviceNode: servicesNode) {
 			if(serviceNode.path("name").getTextValue().equals("swift")) {
-				return serviceNode.path("endpoints").path("publicURL").getTextValue();
+				return serviceNode.path("endpoints").get(0).path("publicURL").getTextValue();
 			}
 		}
 		logger.error("Not found swift publicUrl");

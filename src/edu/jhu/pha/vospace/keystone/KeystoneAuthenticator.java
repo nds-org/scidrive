@@ -17,6 +17,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.http.HttpEntity;
@@ -40,7 +43,7 @@ public class KeystoneAuthenticator {
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	
-	private static AtomicBoolean isLoggingIn = new AtomicBoolean(false);
+	private static final Lock loginLock = new ReentrantLock();
 	
 	private static ScheduledFuture<JsonNode> loginFuture;
 	private static final DateFormat dateForm = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -58,31 +61,37 @@ public class KeystoneAuthenticator {
 	}
 
 	/**
-	 * Login for other classes when the token has expired. If login is already in call, just waits for termination, otherwise assignes the token to static var.
+	 * Login for other classes when the token has expired.
+	 * If login is already in call, just waits for success, otherwise assigns the token to static var.
 	 */
 	public static void login(long delay) {
 		logger.debug("Login "+delay);
 		try {
-			if(isLoggingIn.compareAndSet(false, true)) {
-				if(loginFuture != null) { // cancel task if already scheduled, f.e. token was revoked but scheduled login exists
-					loginFuture.cancel(true);
-				}
+			if(loginLock.tryLock()) {
+				try {
+					if(loginFuture != null) { // cancel task if already scheduled, f.e. token was revoked but scheduled login exists
+						loginFuture.cancel(true);
+					}
+						
+					loginFuture = scheduler.schedule(new TokenUpdater(), (delay<0)?0:delay, SECONDS);
+					JsonNode tokenNode = loginFuture.get();
 					
-				loginFuture = scheduler.schedule(new TokenUpdater(), (delay<0)?0:delay, SECONDS);
-				JsonNode tokenNode = loginFuture.get();
-				
-	            String expiresStr = tokenNode.path("access").path("token").path("expires").getTextValue();
-	            Date tokenExpDate = dateForm.parse(expiresStr);
-	            long expireDelay = TimeUnit.MILLISECONDS.toSeconds(tokenExpDate.getTime() - Calendar.getInstance().getTimeInMillis());
-
-				loginFuture = scheduler.schedule(new TokenUpdater(), (expireDelay < 0)?0:expireDelay-16, SECONDS); // 16 sec just in case..
-	            
-	            authToken = tokenNode.path("access").path("token").path("id").getTextValue();
-	            logger.debug("Got new token: "+authToken);
-				
-				isLoggingIn.set(false);
-			} else {
-				loginFuture.get();
+		            String expiresStr = tokenNode.path("access").path("token").path("expires").getTextValue();
+		            Date tokenExpDate = dateForm.parse(expiresStr);
+		            long expireDelay = TimeUnit.MILLISECONDS.toSeconds(tokenExpDate.getTime() - Calendar.getInstance().getTimeInMillis());
+	
+					loginFuture = scheduler.schedule(new TokenUpdater(), (expireDelay < 0)?0:expireDelay-16, SECONDS); // 16 sec just in case..
+		            
+		            authToken = tokenNode.path("access").path("token").path("id").getTextValue();
+				} finally {
+		            loginLock.unlock();
+				}
+			} else { // already logging in
+				try {
+					loginLock.lock();
+				} finally {
+					loginLock.unlock();
+				}
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();

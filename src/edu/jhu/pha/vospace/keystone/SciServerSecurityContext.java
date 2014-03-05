@@ -36,7 +36,8 @@ public class SciServerSecurityContext implements SecurityContext {
         this.token = token;
         this.isSecure = isSecure;
         HashMap<String, String> storageCredentials = new HashMap<String, String>();
-        storageCredentials.put("storageurl", token.getSwiftAccountUrl());
+        if(null != token.getSwiftAccountUrl())
+        	storageCredentials.put("storageurl", token.getSwiftAccountUrl());
         this.user = new SciDriveUser(token.getUserId(), "", true, storageCredentials);
         
         ObjectMapper mapper = new ObjectMapper();
