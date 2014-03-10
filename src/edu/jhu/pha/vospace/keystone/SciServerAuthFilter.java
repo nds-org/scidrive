@@ -17,6 +17,8 @@
 package edu.jhu.pha.vospace.keystone;
 
 import javax.ws.rs.WebApplicationException;
+
+import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 
@@ -27,7 +29,12 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
 
     @Override
     public ContainerRequest filter(ContainerRequest request) {
-        SciServerSecurityContext sc = null;
+        String authHeader = request.getHeaderValue("X-Auth-Token");
+        if (authHeader == null) {
+            return request;
+        }
+
+    	SciServerSecurityContext sc = null;
 
         if(request.getMethod().equals("OPTIONS"))
         	return request;

@@ -186,10 +186,10 @@ public class TransfersController {
 			JobsProcessor.getDefaultImpl().submitJob(username, job);
 		} catch (JDOMException e) {
 			e.printStackTrace();
-			throw new InternalServerErrorException(e);
+			throw new BadRequestException(e);
 		} catch (IOException e) {
 			logger.error(e);
-			throw new InternalServerErrorException(e);
+			throw new BadRequestException(e);
 		} catch (IllegalArgumentException e) {
 			logger.error("Error calling the job task: "+e.getMessage());
 			throw new InternalServerErrorException("InternalFault");
