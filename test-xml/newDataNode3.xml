@@ -1,0 +1,8 @@
+<vos:node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xsi:type="vos:UnstructuredDataNode" uri="vos://edu.jhu!vospace/test_cont1/data4.bin">
+  <vos:properties>
+    <vos:property uri="ivo://ivoa.net/vospace/core#description">My important results</vos:property>
+  </vos:properties>
+  <vos:accepts/>
+  <vos:provides/>
+  <vos:capabilities/>
+</vos:node>

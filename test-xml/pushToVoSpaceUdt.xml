@@ -1,0 +1,6 @@
+<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0">
+	<vos:target>vos://edu.jhu!vospace/test_cont1/data2.bin</vos:target>
+	<vos:direction>pushToVoSpace</vos:direction>
+	<vos:view>ivo://net.ivoa/vospace/core#anyview</vos:view>
+	<vos:protocol uri="ivo://ivoa.net/vospace/core#udtput"></vos:protocol>
+</vos:transfer>

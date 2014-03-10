@@ -1,0 +1,17 @@
+<uws:job xsi:schemaLocation="http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd " xmlns:xml="http://www.w3.org/XML/1998/namespace" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <uws:jobId/>
+  <uws:ownerId xsi:nil="true"/>
+  <uws:phase></uws:phase>
+  <uws:startTime xsi:nil="true"/>
+  <uws:endTime xsi:nil="true"/>
+  <uws:executionDuration>0</uws:executionDuration>
+  <uws:destruction xsi:nil="true"/>
+  <uws:jobInfo>
+    <vos:transfer>
+	<vos:target>vos://nvo.caltech!vospace/mydata1</vos:target>
+	<vos:direction>pushToVoSpace</vos:direction>
+	<vos:view>ivo://net.ivoa/vospace/core#fits</vos:view>
+	<vos:protocol>ivo://net.ivoa/vospace/core#httpput</vos:protocol>
+    </vos:transfer>
+ </uws:jobInfo>
+</uws:job>

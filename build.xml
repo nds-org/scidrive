@@ -173,7 +173,51 @@
       <ivy:retrieve conf="compile"/>
   </target>
 
+<!-- ================================= Testing  ================================= -->
+  <target name="resolve-test" depends="init-ivy" description="--> retrieve test dependencies with ivy">
+      <ivy:retrieve conf="test" pattern="test-lib/[artifact](-[classifier]).[ext]"/>
+	    <path id="test.classpath">
+	      <fileset dir="test-lib">
+	        <include name="*.jar"/>
+	      </fileset>
+	    </path>
+  </target>
 
+  <target name="test-compile" depends="resolve-test" description="testing">
+  	<mkdir dir="test-bin" />
+    <javac srcdir="test"
+      destdir="test-bin">
+        <classpath refid="test.classpath"/>
+    </javac>
+  </target>
+	
+  <target name="test-run" depends="test-compile" description="Run tests">
+  	<mkdir dir="test-report" />
+	<junit printsummary="yes">
+		<classpath>
+			<path refid="test.classpath"/>
+	        <pathelement location="test-bin"/>
+        </classpath>
+	    <formatter type="xml"/>
+	    <batchtest fork="yes" todir="test-report">
+	        <fileset dir="test">
+	            <include name="**/*Test*.java"/>
+	        </fileset>
+	    </batchtest>
+	</junit>
+  </target>
+
+  <target name="test-report" description="Run tests">
+  	<junitreport todir="./test-report">
+  	  <fileset dir="./test-report">
+  	    <include name="TEST-*.xml"/>
+  	  </fileset>
+  	  <report format="frames" todir="./test-report/html"/>
+  	</junitreport>
+  </target>
+
+  <target name="test" depends="test-run, test-report" description="tests report"/>
+	
 <!-- ================================= Dist Target  ================================= -->
 
   <target name="dist" depends="resolve_catalina,resolve,compile"

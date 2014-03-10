@@ -1,0 +1,8 @@
+<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="vos:DataNode" uri="vos://edu.jhu!vospace/test_cont1/data1.bin">
+  <properties>
+    <property uri="ivo://ivoa.net/vospace/core#date">2010-03-12</property>
+  </properties>
+  <accepts/>
+  <provides/>
+  <capabilities/>
+</node>

@@ -1,0 +1,6 @@
+<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0">
+	<vos:target>vos://edu.jhu!vospace/node5/node52/node52data</vos:target>
+	<vos:direction>pullFromVoSpace</vos:direction>
+	<vos:view>ivo://net.ivoa/vospace/core#anyview</vos:view>
+	<vos:protocol uri="ivo://ivoa.net/vospace/core#udtget"></vos:protocol>
+</vos:transfer>

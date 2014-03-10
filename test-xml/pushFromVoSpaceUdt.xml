@@ -1,0 +1,8 @@
+<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0">
+	<vos:target>vos://edu.jhu!vospace/test_cont1/pulleddata1.txt</vos:target>
+	<vos:direction>pushFromVoSpace</vos:direction>
+	<vos:view>ivo://net.ivoa/vospace/core#anyview</vos:view>
+	<vos:protocol uri="ivo://ivoa.net/vospace/core#udtput">
+		<vos:protocolEndpoint>dimm.pha.jhu.edu:9000/fef87316-c2eb-477a-9204-5245c9367699</vos:protocolEndpoint>
+	</vos:protocol>
+</vos:transfer>

@@ -1,0 +1,9 @@
+<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0">
+	<vos:target>vos://edu.jhu!vospace/test_cont1/data1.bin</vos:target>
+	<vos:direction>pullToVoSpace</vos:direction>
+	<vos:view>ivo://net.ivoa/vospace/core#anyview</vos:view>
+	<vos:protocol uri="ivo://ivoa.net/vospace/core#udtget">
+		<vos:protocolEndpoint>tempsdss.pha.jhu.edu:9000/038a64e1-5186-4f11-b9c6-b6f64061f6ff</vos:protocolEndpoint>
+		<!--vos:protocolEndpoint>dimm.pha.jhu.edu:9000/0bda5062-4d19-4bfd-a9c0-2de3066645f9</vos:protocolEndpoint-->
+	</vos:protocol>
+</vos:transfer>

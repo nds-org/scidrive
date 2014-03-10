@@ -1,0 +1,5 @@
+<vos:transfer xsi:schemaLocation="http://www.ivoa.net/xml/UWS/v1.0 UWS.xsd" xmlns:xml="http://www.w3.org/XML/1998/namespace" xmlns:uws="http://www.ivoa.net/xml/UWS/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<vos:target>vos://edu.jhu!vospace/test_cont1/data1.bin</vos:target>
+	<vos:direction>vos://edu.jhu!vospace/test_cont1/.auto</vos:direction>
+	<vos:keepBytes>true</vos:keepBytes>
+</vos:transfer>

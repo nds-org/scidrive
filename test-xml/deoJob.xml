@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vos:transfer xmlns:vos="http://www.ivoa.net/xml/VOSpace/v2.0">
+  <vos:target>vos://edu.jhu!vospace/node1/data1</vos:target>
+  <vos:direction>pullToVoSpace</vos:direction>
+  <vos:view>ivo://ivoa.net/vospace/core#fits</vos:view>
+  <vos:protocol uri="ivo://ivoa.net/vospace/core#httpget">
+    <vos:protocolEndpoint>http://azure.pha.jhu.edu:8080/sdss/tap/async/4672bd14-03be-458a-b087-907eac4c3858/results/result</vos:protocolEndpoint>
+  </vos:protocol>
+</vos:transfer>

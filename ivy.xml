@@ -3,6 +3,7 @@
     <configurations>
         <conf name="catalina"/>
         <conf name="compile"/>
+        <conf name="test" description="Required for test only"/>
     </configurations>
     <dependencies>
         <dependency org="org.apache.tomcat" name="servlet-api" rev="6.0.36" conf="catalina->default"/>
@@ -65,5 +66,14 @@
 
         <dependency org="org.kamranzafar" name="jtar" rev="2.2" conf="compile->default"/>
 		<dependency org="org.python" name="jython-standalone" rev="2.7-b1" conf="compile->default"/>
+		
+		<dependency org="com.jayway.restassured" name="rest-assured" rev="2.3.0" conf="test->default">
+            <exclude org="org.codehaus.groovy" name="groovy" /> <!-- Dependency issues -->
+		</dependency>
+		<dependency org="org.codehaus.groovy" name="groovy-all" rev="2.2.1" conf="test->default"/>
+		<dependency org="com.jayway.restassured" name="json-path" rev="2.3.0" conf="test->default"/>
+		<dependency org="com.jayway.restassured" name="xml-path" rev="2.3.0" conf="test->default"/>
+		<dependency org="com.jayway.restassured" name="json-schema-validator" rev="2.3.0" conf="test->default"/>
+		
     </dependencies>
 </ivy-module>
