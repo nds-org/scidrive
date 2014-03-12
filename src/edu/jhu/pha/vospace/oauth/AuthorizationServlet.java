@@ -42,6 +42,7 @@ import org.openid4java.message.ax.FetchRequest;
 import edu.jhu.pha.vospace.BaseServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 
 /** A simple implementation of an OpenID relying party, specialized for VOSpace & VAO OpenID.
  *  For more sample code, see OpenID4Java's sample code or the USVAO SSO example
@@ -95,8 +96,8 @@ public class AuthorizationServlet extends BaseServlet {
             	if(null != userName){ // made X.509 authentication
             		logger.debug("Certificate checked. Username: "+userName);
 
-                    if (!UserHelper.userExists(userName)) {
-                        UserHelper.addDefaultUser(userName);
+                    if (!MetaStoreFactory.getUserHelper().userExists(userName)) {
+                    	MetaStoreFactory.getUserHelper().addDefaultUser(userName);
                     }
 
             		authorizeRequestToken(request, response, userName);

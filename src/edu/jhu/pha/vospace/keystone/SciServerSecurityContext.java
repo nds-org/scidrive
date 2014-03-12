@@ -24,6 +24,7 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public class SciServerSecurityContext implements SecurityContext {
@@ -42,9 +43,9 @@ public class SciServerSecurityContext implements SecurityContext {
         
         ObjectMapper mapper = new ObjectMapper();
         
-        if(UserHelper.getDataStoreCredentials(this.user.getName()).isEmpty())
+        if(MetaStoreFactory.getUserHelper().getDataStoreCredentials(this.user.getName()).isEmpty())
 			try {
-				UserHelper.setDataStoreCredentials(this.user.getName(), mapper.writer().writeValueAsString(storageCredentials));
+				MetaStoreFactory.getUserHelper().setDataStoreCredentials(this.user.getName(), mapper.writer().writeValueAsString(storageCredentials));
 			} catch (Exception e) {
 				logger.error("Error writing user storage credentials to DB");
 				e.printStackTrace();

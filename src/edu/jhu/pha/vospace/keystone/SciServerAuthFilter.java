@@ -22,6 +22,7 @@ import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 
@@ -47,8 +48,8 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         }
         request.setSecurityContext(sc);
         
-        if(!UserHelper.userExists((SciDriveUser)sc.getUserPrincipal())) {
-        	UserHelper.addDefaultUser((SciDriveUser)sc.getUserPrincipal());
+        if(!MetaStoreFactory.getUserHelper().userExists((SciDriveUser)sc.getUserPrincipal())) {
+        	MetaStoreFactory.getUserHelper().addDefaultUser((SciDriveUser)sc.getUserPrincipal());
         }
         
         return request;

@@ -41,6 +41,7 @@ import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
 import edu.jhu.pha.vospace.meta.UserGroup;
+import edu.jhu.pha.vospace.meta.UserHelper;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
@@ -51,12 +52,14 @@ import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
 
-public class UserHelper {
-	private static final Logger logger = Logger.getLogger(UserHelper.class);
+public class UserHelperImpl implements UserHelper {
+	private static final Logger logger = Logger.getLogger(UserHelperImpl.class);
 	
-    /** Download a certificate from <tt>certUrl</tt> and save it for the named user in the database.
-     *  If the user doesn't already exist, throw an exception. */
-    public static void setCertificate(final SciDriveUser username, String certUrl) throws IOException {
+    /* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#setCertificate(edu.jhu.pha.vospace.oauth.SciDriveUser, java.lang.String)
+	 */
+    @Override
+	public void setCertificate(final SciDriveUser username, String certUrl) throws IOException {
         // 1. make sure user exists
         if (!userExists(username))
             throw new IllegalStateException("Unknown user \"" + username + "\".");
@@ -131,9 +134,11 @@ public class UserHelper {
         return result;
     }
 
-    /** Retrieve a user's certificate as a blob from the database. Null if it doesn't exist.
-     *  If the user doesn't exist, throws an IllegalStateException (so you should call userExists first). */
-    public static Blob getCertificate(final String username) {
+    /* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getCertificate(java.lang.String)
+	 */
+    @Override
+	public Blob getCertificate(final String username) {
         return DbPoolServlet.goSql("retrieving certificate for " + username,
                 "select certificate from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?",
                 new SqlWorker<Blob>() {
@@ -148,7 +153,11 @@ public class UserHelper {
                 });
     }
 
-	public static HashMap<String, String> getDataStoreCredentials(final String username) {
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getDataStoreCredentials(java.lang.String)
+	 */
+	@Override
+	public HashMap<String, String> getDataStoreCredentials(final String username) {
         return DbPoolServlet.goSql("Retrieving credentials for " + username,
                 "select storage_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<HashMap<String, String>>() {
@@ -174,13 +183,11 @@ public class UserHelper {
                 });
 	}
 
-	/**
-	 * Returns all processors credentials from the DB
-	 * @param username
-	 * @param processorId
-	 * @return
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getProcessorCredentials(edu.jhu.pha.vospace.oauth.SciDriveUser)
 	 */
-	public static JsonNode getProcessorCredentials(final SciDriveUser username) {
+	@Override
+	public JsonNode getProcessorCredentials(final SciDriveUser username) {
         return DbPoolServlet.goSql("Retrieving processor credentials for " + username,
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<JsonNode>() {
@@ -205,7 +212,11 @@ public class UserHelper {
                 });
 	}
 
-	public static int setDataStoreCredentials(final String username, final String credentials) {
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#setDataStoreCredentials(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public int setDataStoreCredentials(final String username, final String credentials) {
         return DbPoolServlet.goSql("Retrieving credentials for " + username,
                 "update users set storage_credentials = ? where user_id = (select user_id from user_identities where identity = ?);",
                 new SqlWorker<Integer>() {
@@ -219,7 +230,11 @@ public class UserHelper {
                 });
 	}
 
-    static public boolean addDefaultUser(final SciDriveUser username) {
+    /* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#addDefaultUser(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+    @Override
+	public boolean addDefaultUser(final SciDriveUser username) {
 		DbPoolServlet.goSql("Add new user",
          		"insert into users values ()",
                 new SqlWorker<Boolean>() {
@@ -283,7 +298,11 @@ public class UserHelper {
 	}
 
     
-	public static AccountInfo getAccountInfo(final SciDriveUser username) {
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getAccountInfo(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+	@Override
+	public AccountInfo getAccountInfo(final SciDriveUser username) {
 		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
                 "select hardlimit, softlimit from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?;",
                 new SqlWorker<AccountInfo>() {
@@ -310,8 +329,11 @@ public class UserHelper {
 		return info;
 	}
     
-    /** Does the named user exist? */
-    public static boolean userExists(final SciDriveUser username) {
+    /* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#userExists(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+    @Override
+	public boolean userExists(final SciDriveUser username) {
         return DbPoolServlet.goSql("Checking whether user \"" + username + "\" exists in DB.",
                 "select count(identity) from user_identities where identity = ?;",
                 new SqlWorker<Boolean>() {
@@ -328,14 +350,11 @@ public class UserHelper {
         );
     }
     
-    /**
-     * Modifies the user credentials for metadata extractors.
-     * @param username The user ID
-     * @param processorId processor ID (from processors.xml/processor/id)
-     * @param updateNode The processor credentials in JSON format. If null, the processor will be disabled
-     * @return true if success
-     */
-    public static boolean updateUserService(final SciDriveUser username, final String processorId, JsonNode updateNode) {
+    /* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#updateUserService(edu.jhu.pha.vospace.oauth.SciDriveUser, java.lang.String, org.codehaus.jackson.JsonNode)
+	 */
+    @Override
+	public boolean updateUserService(final SciDriveUser username, final String processorId, JsonNode updateNode) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<byte[]>() {
@@ -381,7 +400,11 @@ public class UserHelper {
     
     }
 
-	public static JsonNode getUserServices(final SciDriveUser username) {
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getUserServices(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+	@Override
+	public JsonNode getUserServices(final SciDriveUser username) {
         byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
                 "select service_credentials from users JOIN user_identities ON users.user_id = user_identities.user_id where identity = ?;",
                 new SqlWorker<byte[]>() {
@@ -408,7 +431,11 @@ public class UserHelper {
 		}
 	}
 	
-	public static List<UserGroup> getGroups(final SciDriveUser user) {
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getGroups(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+	@Override
+	public List<UserGroup> getGroups(final SciDriveUser user) {
     	final ArrayList<UserGroup> groups = new ArrayList<UserGroup>();
 
 		DbPoolServlet.goSql("Get share groups",
@@ -421,7 +448,7 @@ public class UserHelper {
         	            	UserGroup group = new UserGroup();
         	            	group.setId(rs.getString(1));
         	            	group.setName(rs.getString(2));
-        	            	group.setId(rs.getString(2));
+        	            	group.setDescription(rs.getString(2));
         	            	groups.add(group);
             			}
             			return true;
@@ -431,4 +458,23 @@ public class UserHelper {
 		return groups;
 	}
 
+	@Override
+	public List<String> getGroupUsers(final SciDriveUser user, final String groupId) {
+		final ArrayList<String> users = new ArrayList<String>();
+		DbPoolServlet.goSql("Get share group members",
+	    		"select identity from user_identities JOIN user_groups ON user_identities.user_id = user_groups.user_id WHERE group_id = ? order by identity;",
+	            new SqlWorker<Boolean>() {
+	                @Override
+	                public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+	                	stmt.setString(1, groupId);
+	        			ResultSet rs = stmt.executeQuery();
+	        			while(rs.next()){
+        					users.add(rs.getString(1));
+	        			}
+	        			return true;
+	                }
+	            }
+	    );
+		return users;
+	}	
 }

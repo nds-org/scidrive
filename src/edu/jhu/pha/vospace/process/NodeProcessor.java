@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -54,6 +55,7 @@ import com.rabbitmq.client.QueueingConsumer;
 
 import edu.jhu.pha.vospace.QueueConnector;
 import edu.jhu.pha.vospace.SettingsServlet;
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
@@ -62,7 +64,6 @@ import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
-import edu.jhu.pha.vospace.oauth.UserHelper;
 
 public class NodeProcessor implements Runnable {
 
@@ -131,7 +132,7 @@ public class NodeProcessor implements Runnable {
 				            		node.getNodeInfo().setContentType(type.toString());
 				            		node.getMetastore().storeInfo(node.getUri(), node.getNodeInfo());
 
-			            			JsonNode credentials = UserHelper.getProcessorCredentials(user);
+			            			JsonNode credentials = MetaStoreFactory.getUserHelper().getProcessorCredentials(user);
 			            			
 			            			boolean makeStructured = false;
 			            			

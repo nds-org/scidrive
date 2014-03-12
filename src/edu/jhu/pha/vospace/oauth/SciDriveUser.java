@@ -5,6 +5,8 @@ import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
+
 public class SciDriveUser implements Principal {
 
 	private String name;
@@ -22,7 +24,7 @@ public class SciDriveUser implements Principal {
 	}
 
 	public static SciDriveUser fromName(String name) {
-		return new SciDriveUser(name, "", true, UserHelper.getDataStoreCredentials(name));
+		return new SciDriveUser(name, "", true, MetaStoreFactory.getUserHelper().getDataStoreCredentials(name));
 	}
 	
 	@Override

@@ -18,6 +18,7 @@ package edu.jhu.pha.vospace.meta;
 import org.apache.log4j.Logger;
 
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.keystone.UserHelperImpl;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 /** 
@@ -28,7 +29,7 @@ public class MetaStoreFactory {
 	private static final Logger logger = Logger.getLogger(MetaStoreFactory.class);
 	
 	private final static Class<? extends MetaStore> metaStoreClass = MySQLMetaStore2.class; 
-	private final static Class<? extends UserHelper> userHelperClass = UserHelper.class; 
+	private final static Class<? extends UserHelper> userHelperClass = UserHelperImpl.class; 
 
 	public static MetaStore getMetaStore(SciDriveUser username) {
 		try {
@@ -40,7 +41,12 @@ public class MetaStoreFactory {
 	}
 
 	public static UserHelper getUserHelper() {
-		
+		try {
+			return userHelperClass.getConstructor().newInstance();
+		} catch (Exception e) {
+			logger.error("Error instantiating userhelper store: "+e.getMessage());
+			throw new InternalServerErrorException("InternalServerError");
+		}
 	}
 
 }

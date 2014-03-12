@@ -56,7 +56,6 @@ public class KeystoneAuthenticator {
 	public static String getAdminToken() {
 		if(null == authToken)
 			login(0);
-		logger.debug("Returning authToken "+authToken);
 		return authToken;
 	}
 
@@ -117,7 +116,6 @@ public class KeystoneAuthenticator {
     	        
     	        FilesResponse response = new FilesResponse(MyHttpConnectionPoolProvider.getHttpClient().execute(method));
     	        
-    	        method.abort();
     	        if (response.loginSuccess()) {
     	            JsonNode tokenNode = new ObjectMapper().readValue(response.getResponseBodyAsStream(), JsonNode.class);
     	        	return tokenNode;

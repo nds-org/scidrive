@@ -93,7 +93,6 @@ import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
-import edu.jhu.pha.vospace.oauth.UserHelper;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.process.NodeProcessor;
 import edu.jhu.pha.vospace.process.ProcessorConfig;
@@ -228,7 +227,7 @@ public class DropboxService {
 	    	ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 			JsonGenerator g2 = f.createJsonGenerator(byteOut).useDefaultPrettyPrinter();
 	
-			AccountInfo info = UserHelper.getAccountInfo(user);
+			AccountInfo info = MetaStoreFactory.getUserHelper().getAccountInfo(user);
 			
 			g2.writeStartObject();
 			
@@ -247,7 +246,7 @@ public class DropboxService {
 			g2.writeEndObject();
 
 			g2.writeArrayFieldStart("services");
-			JsonNode servicesCredentials = UserHelper.getUserServices(user);
+			JsonNode servicesCredentials = MetaStoreFactory.getUserHelper().getUserServices(user);
 			for(ProcessorConfig proc: ProcessingFactory.getInstance().getProcessorConfigs().values()) {
 				g2.writeStartObject();
 				g2.writeStringField("id", proc.getId());
@@ -274,7 +273,7 @@ public class DropboxService {
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode credNode = mapper.readTree(serviceCredInpStream);
-			UserHelper.updateUserService(user, processor, credNode);
+			MetaStoreFactory.getUserHelper().updateUserService(user, processor, credNode);
 			return Response.ok().build();
 		} catch(IOException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
@@ -285,7 +284,7 @@ public class DropboxService {
 	@RolesAllowed({"user"})
 	public Response disableAccountService(@PathParam("processor") String processor) {
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
-		UserHelper.updateUserService(user, processor, null);
+		MetaStoreFactory.getUserHelper().updateUserService(user, processor, null);
 		return Response.ok().build();
 	}
 	
@@ -293,7 +292,7 @@ public class DropboxService {
 	@RolesAllowed({"user"})
 	public Response getAccountService(@PathParam("processor") String processor) {
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
-		JsonNode node = UserHelper.getUserServices(user);
+		JsonNode node = MetaStoreFactory.getUserHelper().getUserServices(user);
 		String cred = (node.get(processor) == null)?"{}":node.get(processor).toString();
 		return Response.ok(cred).build();
 	}
@@ -921,7 +920,7 @@ public class DropboxService {
 	}
 
 	@DELETE @Path("shares/{share_id:.+}")
-	@RolesAllowed({"user", "rwshareuser"})
+	@RolesAllowed({"user"})
 	public Response deleteShare(@PathParam("share_id") final String share_id) {
 		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
@@ -943,8 +942,9 @@ public class DropboxService {
 
 	@Path("share_groups")
 	@GET
-	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
+	@RolesAllowed({"user"})
 	public byte[] shareGroups() {
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
@@ -953,7 +953,7 @@ public class DropboxService {
 
 			g2.writeStartArray();
 
-			for(UserGroup group: UserHelper.getGroups()) {
+			for(UserGroup group: MetaStoreFactory.getUserHelper().getGroups(user)) {
 				g2.writeStartObject();
 				g2.writeStringField("id", group.getId());
 				g2.writeStringField("name", group.getName());
@@ -974,8 +974,9 @@ public class DropboxService {
 	
 	@Path("share_groups/{group_id}")
 	@GET
-	@RolesAllowed({"user", "rwshareuser", "roshareuser"})
-	public byte[] shareGroupMembers(@PathParam("group_id") final int group_id) {
+	@RolesAllowed({"user"})
+	public byte[] shareGroupMembers(@PathParam("group_id") final String group_id) {
+		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		ByteArrayOutputStream byteOut = null;
     	try {
         	JsonFactory f = new JsonFactory();
@@ -983,23 +984,9 @@ public class DropboxService {
 			final JsonGenerator g2 = f.createJsonGenerator(byteOut);
 
 			g2.writeStartArray();
-
-			DbPoolServlet.goSql("Get share group members",
-	        		"select identity from user_identities JOIN user_groups ON user_identities.user_id = user_groups.user_id WHERE group_id = ? order by identity;",
-	                new SqlWorker<Boolean>() {
-	                    @Override
-	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-	                    	stmt.setInt(1, group_id);
-	            			ResultSet rs = stmt.executeQuery();
-	            			while(rs.next()){
-	            				try {
-	            					g2.writeString(rs.getString(1));
-	            				} catch(IOException ex) {logger.error(ex.getMessage());}
-	            			}
-	            			return true;
-	                    }
-	                }
-	        );
+			for(String userName: MetaStoreFactory.getUserHelper().getGroupUsers(user, group_id)) {
+				g2.writeString(userName);
+			}
 			g2.writeEndArray();
 
 			g2.close();

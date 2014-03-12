@@ -40,6 +40,7 @@ import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 import edu.jhu.pha.vospace.meta.UserGroup;
+import edu.jhu.pha.vospace.meta.UserHelper;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
@@ -50,11 +51,12 @@ import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 
-public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: add interface, extend both userhelpers from one, add to config
-	private static final Logger logger = Logger.getLogger(UserHelper.class);
+public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl implements UserHelper {
+	private static final Logger logger = Logger.getLogger(UserHelperImpl.class);
 	private final static Configuration conf = SettingsServlet.getConfig();
 	
-    static public boolean addDefaultUser(final SciDriveUser username) {
+    @Override
+	public boolean addDefaultUser(final SciDriveUser username) {
 		DbPoolServlet.goSql("Add new user",
          		"insert into users values ()",
                 new SqlWorker<Boolean>() {
@@ -106,7 +108,8 @@ public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: 
 	}
 
     
-	public static AccountInfo getAccountInfo(final SciDriveUser username) {
+	@Override
+	public AccountInfo getAccountInfo(final SciDriveUser username) {
 		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
                 "select hardlimit, softlimit from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?;",
                 new SqlWorker<AccountInfo>() {
@@ -134,7 +137,8 @@ public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: 
 	}
     
     /** Does the named user exist? */
-    public static boolean userExists(final SciDriveUser username) {
+    @Override
+	public boolean userExists(final SciDriveUser username) {
         return DbPoolServlet.goSql("Checking whether user \"" + username + "\" exists in DB.",
                 "select count(identity) from user_identities where identity = ?;",
                 new SqlWorker<Boolean>() {
@@ -151,7 +155,8 @@ public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: 
         );
     }
     
-    public static List<UserGroup> getGroups(final SciDriveUser user) {
+    @Override
+	public List<UserGroup> getGroups(final SciDriveUser user) {
     	
     	ArrayList<UserGroup> groups = new ArrayList<UserGroup>();
     	
@@ -173,7 +178,7 @@ public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: 
 	            	UserGroup group = new UserGroup();
 	            	group.setId(groupNode.get("id").getTextValue());
 	            	group.setName(groupNode.get("name").getTextValue());
-	            	group.setId(groupNode.get("description").getTextValue());
+	            	group.setDescription(groupNode.get("description").getTextValue());
 	            	groups.add(group);
 	            }
 	            return groups;
@@ -182,7 +187,39 @@ public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: 
             	throw new InternalServerErrorException("Error reading groups");
 	        }
 		} catch (IOException e) {
-			logger.error("Error querying new SciDrive token: "+e.getMessage());
+			logger.error("Error reading groups: "+e.getMessage());
+			e.printStackTrace();
+			throw new InternalServerErrorException(e);
+		}
+    }
+    
+    public List<String> getGroupUsers(final SciDriveUser user, final String groupId) {
+    	ArrayList<String> users = new ArrayList<String>();
+    	
+        HttpGet method = new HttpGet(conf.getString("keystone.url")+"/v3/groups/"+groupId+"/users");
+        method.setHeader("Content-Type", "application/json");
+        method.setHeader("X-Auth-Token",KeystoneAuthenticator.getAdminToken());
+
+		try {
+	        HttpResponse resp = MyHttpConnectionPoolProvider.getHttpClient().execute(method);
+	        if (resp.getStatusLine().getStatusCode() == 200) {
+	            JsonNode usersNode = new ObjectMapper().readValue(resp.getEntity().getContent(), JsonNode.class);
+	            JsonNode usersList = usersNode.path("users");
+	            if(null == usersList || !usersList.isArray()) {
+	            	logger.error("Error reading group users");
+	            	throw new InternalServerErrorException("Error reading group users");
+	            }
+	            for(Iterator<JsonNode> it = usersList.getElements(); it.hasNext();) {
+	            	JsonNode userNode = it.next();
+	            	users.add(userNode.path("name").getTextValue());
+	            }
+	            return users;
+	        } else {
+            	logger.error("Error reading group users");
+            	throw new InternalServerErrorException("Error reading group users");
+	        }
+		} catch (IOException e) {
+			logger.error("Error reading group users: "+e.getMessage());
 			e.printStackTrace();
 			throw new InternalServerErrorException(e);
 		}

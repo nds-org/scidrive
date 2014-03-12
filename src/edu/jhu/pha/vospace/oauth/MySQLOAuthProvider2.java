@@ -42,6 +42,7 @@ import com.sun.jersey.oauth.server.spi.OAuthConsumer;
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodePath;
@@ -324,8 +325,8 @@ public class MySQLOAuthProvider2 {
 		try {
 			if(null == requestToken.getAttributes().getFirst("root_container")) { // No predefined one (can be predefined for sharing); in this case set the default one
 				final String default_root_container = ((Consumer)requestToken.getConsumer()).getAttributes().getFirst("container");
-		        if (!UserHelper.userExists(userId)) {
-		            UserHelper.addDefaultUser(userId);
+		        if (!MetaStoreFactory.getUserHelper().userExists(userId)) {
+		        	MetaStoreFactory.getUserHelper().addDefaultUser(userId);
 		        }
 
 				//First check if the root node exists
