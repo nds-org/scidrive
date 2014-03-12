@@ -83,6 +83,7 @@ import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.MetaStoreDistributed;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.meta.RegionsInfo;
+import edu.jhu.pha.vospace.meta.UserGroup;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.DataNode;
 import edu.jhu.pha.vospace.node.Node;
@@ -952,24 +953,14 @@ public class DropboxService {
 
 			g2.writeStartArray();
 
-			DbPoolServlet.goSql("Get share groups",
-	        		"select group_id, group_name from groups order by group_name;",
-	                new SqlWorker<Boolean>() {
-	                    @Override
-	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-	            			ResultSet rs = stmt.executeQuery();
-	            			while(rs.next()){
-	            				try {
-	            					g2.writeStartObject();
-	            					g2.writeNumberField("id", rs.getInt(1));
-	            					g2.writeStringField("name", rs.getString(2));
-	            					g2.writeEndObject();
-	            				} catch(IOException ex) {logger.error(ex.getMessage());}
-	            			}
-	            			return true;
-	                    }
-	                }
-	        );
+			for(UserGroup group: UserHelper.getGroups()) {
+				g2.writeStartObject();
+				g2.writeStringField("id", group.getId());
+				g2.writeStringField("name", group.getName());
+				g2.writeStringField("description", group.getDescription());
+				g2.writeEndObject();
+			}
+			
 			g2.writeEndArray();
 
 			g2.close();

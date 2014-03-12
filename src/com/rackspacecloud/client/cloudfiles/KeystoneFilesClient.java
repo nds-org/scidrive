@@ -34,7 +34,7 @@ public class KeystoneFilesClient extends FilesClient{
      */
     public KeystoneFilesClient(HttpClient client, SciDriveUser username, String password, String authUrl, String account, int connectionTimeOut) {
 		super(client, username.getName(), password, authUrl, account, connectionTimeOut);
-		this.authenticationURL = conf.getString("keystone.url");
+		this.authenticationURL = conf.getString("keystone.url")+"/v2.0/";
 		this.isLoggedin   = true;
 		this.storageURL = username.getAccountUrl();
     	this.authToken = KeystoneAuthenticator.getAdminToken();

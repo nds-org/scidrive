@@ -40,6 +40,7 @@ import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+import edu.jhu.pha.vospace.meta.UserGroup;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
@@ -405,6 +406,29 @@ public class UserHelper {
 		} catch (Exception e) {
             throw new IllegalStateException("Error parsing user's credentials");
 		}
+	}
+	
+	public static List<UserGroup> getGroups(final SciDriveUser user) {
+    	final ArrayList<UserGroup> groups = new ArrayList<UserGroup>();
+
+		DbPoolServlet.goSql("Get share groups",
+        		"select group_id, group_name from groups order by group_name;",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+            			ResultSet rs = stmt.executeQuery();
+            			while(rs.next()){
+        	            	UserGroup group = new UserGroup();
+        	            	group.setId(rs.getString(1));
+        	            	group.setName(rs.getString(2));
+        	            	group.setId(rs.getString(2));
+        	            	groups.add(group);
+            			}
+            			return true;
+                    }
+                }
+        );
+		return groups;
 	}
 
 }

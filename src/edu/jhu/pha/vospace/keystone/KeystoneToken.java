@@ -44,9 +44,7 @@ public class KeystoneToken {
 	public KeystoneToken(String token) throws KeystoneException {
 		HttpClient client = MyHttpConnectionPoolProvider.getHttpClient();
 		
-		logger.debug("Keystone token "+conf.getString("keystone.url")+"/tokens/"+token+" "+KeystoneAuthenticator.getAdminToken());
-		
-		HttpGet tokenGet = new HttpGet(conf.getString("keystone.url")+"/tokens/"+token);
+		HttpGet tokenGet = new HttpGet(conf.getString("keystone.url")+"/v2.0/tokens/"+token);
 		tokenGet.setHeader("X-Auth-Token", KeystoneAuthenticator.getAdminToken());
 		
 		try {

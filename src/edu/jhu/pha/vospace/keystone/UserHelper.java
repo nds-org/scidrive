@@ -16,29 +16,30 @@
 package edu.jhu.pha.vospace.keystone;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.configuration.Configuration;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
-import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
+import edu.jhu.pha.vospace.meta.UserGroup;
 import edu.jhu.pha.vospace.node.ContainerNode;
 import edu.jhu.pha.vospace.node.Node;
 import edu.jhu.pha.vospace.node.NodeFactory;
@@ -48,10 +49,10 @@ import edu.jhu.pha.vospace.node.VospaceId;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
-import edu.jhu.pha.vospace.storage.SwiftJsonCredentials;
 
 public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: add interface, extend both userhelpers from one, add to config
 	private static final Logger logger = Logger.getLogger(UserHelper.class);
+	private final static Configuration conf = SettingsServlet.getConfig();
 	
     static public boolean addDefaultUser(final SciDriveUser username) {
 		DbPoolServlet.goSql("Add new user",
@@ -148,5 +149,42 @@ public class UserHelper extends edu.jhu.pha.vospace.oauth.UserHelper { // TODO: 
                     }
                 }
         );
+    }
+    
+    public static List<UserGroup> getGroups(final SciDriveUser user) {
+    	
+    	ArrayList<UserGroup> groups = new ArrayList<UserGroup>();
+    	
+        HttpGet method = new HttpGet(conf.getString("keystone.url")+"/v3/users/"+user.getName()+"/groups");
+        method.setHeader("Content-Type", "application/json");
+        method.setHeader("X-Auth-Token",KeystoneAuthenticator.getAdminToken());
+
+		try {
+	        HttpResponse resp = MyHttpConnectionPoolProvider.getHttpClient().execute(method);
+	        if (resp.getStatusLine().getStatusCode() == 200) {
+	            JsonNode groupsNode = new ObjectMapper().readValue(resp.getEntity().getContent(), JsonNode.class);
+	            JsonNode groupsList = groupsNode.path("groups");
+	            if(null == groupsList || !groupsList.isArray()) {
+	            	logger.error("Error reading groups");
+	            	throw new InternalServerErrorException("Error reading groups");
+	            }
+	            for(Iterator<JsonNode> it = groupsList.getElements(); it.hasNext();) {
+	            	JsonNode groupNode = it.next();
+	            	UserGroup group = new UserGroup();
+	            	group.setId(groupNode.get("id").getTextValue());
+	            	group.setName(groupNode.get("name").getTextValue());
+	            	group.setId(groupNode.get("description").getTextValue());
+	            	groups.add(group);
+	            }
+	            return groups;
+	        } else {
+            	logger.error("Error reading groups");
+            	throw new InternalServerErrorException("Error reading groups");
+	        }
+		} catch (IOException e) {
+			logger.error("Error querying new SciDrive token: "+e.getMessage());
+			e.printStackTrace();
+			throw new InternalServerErrorException(e);
+		}
     }
 }

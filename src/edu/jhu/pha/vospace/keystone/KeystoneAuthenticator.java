@@ -101,13 +101,13 @@ public class KeystoneAuthenticator {
 			e.printStackTrace();
 		}
 	}
-	
+    
     private static class TokenUpdater implements Callable<JsonNode> {
     	
         @Override
 		public JsonNode call() {
     		logger.debug("TokenUpdater called");
-            HttpPost method = new HttpPost(conf.getString("keystone.url")+"/tokens");
+            HttpPost method = new HttpPost(conf.getString("keystone.url")+"/v2.0/tokens");
             method.setHeader("Content-Type", "application/json");
 
     		try {

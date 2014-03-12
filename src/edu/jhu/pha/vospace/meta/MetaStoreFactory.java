@@ -28,9 +28,7 @@ public class MetaStoreFactory {
 	private static final Logger logger = Logger.getLogger(MetaStoreFactory.class);
 	
 	private final static Class<? extends MetaStore> metaStoreClass = MySQLMetaStore2.class; 
-
-	private MetaStoreFactory()  {
-	}
+	private final static Class<? extends UserHelper> userHelperClass = UserHelper.class; 
 
 	public static MetaStore getMetaStore(SciDriveUser username) {
 		try {
@@ -40,4 +38,9 @@ public class MetaStoreFactory {
 			throw new InternalServerErrorException("InternalServerError");
 		}
 	}
+
+	public static UserHelper getUserHelper() {
+		
+	}
+
 }
