@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.commons.configuration.Configuration;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -39,6 +40,7 @@ import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
+import edu.jhu.pha.vospace.meta.Share;
 import edu.jhu.pha.vospace.meta.UserGroup;
 import edu.jhu.pha.vospace.meta.UserHelper;
 import edu.jhu.pha.vospace.node.ContainerNode;
@@ -224,4 +226,51 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
 			throw new InternalServerErrorException(e);
 		}
     }
+    
+
+	@Override
+	public Share getSharePermission(final String userId, final String shareId) {
+        return DbPoolServlet.goSql("Checking whether user \"" + userId + "\" can access share.",
+                "select container_name, group_id, share_write_permission, identity from container_shares " +
+                "JOIN containers ON container_shares.container_id = containers.container_id " +
+                "JOIN user_identities ON containers.user_id = user_identities.user_id where share_id = ?;",
+                new SqlWorker<Share>() {
+                    @Override
+                    public Share go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, shareId);
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next()) {
+                        	
+                        	String containerName = rs.getString(1);
+                        	String groupId = rs.getString(2);
+                        	boolean share_write_permission = rs.getBoolean(3);
+                        	String userId = rs.getString(4);
+
+                        	rs.close();
+                        	
+                            HttpHead method = new HttpHead(conf.getString("keystone.url")+"/v3//groups/"+groupId+"/users/"+userId);
+                            method.setHeader("X-Auth-Token",KeystoneAuthenticator.getAdminToken());
+                    		try {
+                    	        HttpResponse resp = MyHttpConnectionPoolProvider.getHttpClient().execute(method);
+                    	        if (resp.getStatusLine().getStatusCode() == 204) { // user is member of group
+                    	        	Share.SharePermission permission = (share_write_permission)?Share.SharePermission.RW_USER:Share.SharePermission.RO_USER;
+                    	        	
+                    	        	// returning the share with userId of container owner
+                                	return new Share(userId, containerName, permission);
+                    	        } else {
+                                	return new Share(userId, "", Share.SharePermission.DENIED);
+                    	        }
+                    		} catch (IOException e) {
+                    			logger.error("Error checking group users: "+e.getMessage());
+                    			e.printStackTrace();
+                    			throw new InternalServerErrorException(e);
+                    		}
+                        } else
+                        	rs.close();
+                        	return new Share(userId, "", Share.SharePermission.DENIED);
+                    }
+                }
+        );
+		
+	}	
 }

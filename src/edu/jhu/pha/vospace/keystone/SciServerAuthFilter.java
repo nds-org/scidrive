@@ -40,9 +40,12 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         if(request.getMethod().equals("OPTIONS"))
         	return request;
         
+        String share = request.getHeaderValue("X-Share");
+        
         try {
         	KeystoneToken token = new KeystoneToken(request.getHeaderValue("X-Auth-Token"));
-        	sc = new SciServerSecurityContext(token, request.isSecure()); 
+        	
+        	sc = new SciServerSecurityContext(token, share, request.isSecure()); 
         } catch (KeystoneException e) {
             throw new WebApplicationException(e.toResponse());
         }

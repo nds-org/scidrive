@@ -59,4 +59,5 @@ public interface UserHelper {
 
 	public abstract List<String> getGroupUsers(SciDriveUser user, String groupId);
 	
+	public abstract Share getSharePermission(String userId, String shareId);
 }

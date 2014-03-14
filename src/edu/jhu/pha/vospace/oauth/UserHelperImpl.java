@@ -40,6 +40,7 @@ import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+import edu.jhu.pha.vospace.meta.Share;
 import edu.jhu.pha.vospace.meta.UserGroup;
 import edu.jhu.pha.vospace.meta.UserHelper;
 import edu.jhu.pha.vospace.node.ContainerNode;
@@ -476,5 +477,11 @@ public class UserHelperImpl implements UserHelper {
 	            }
 	    );
 		return users;
+	}
+
+	@Override
+	public Share getSharePermission(String userId, String shareId) {
+		// Unused
+		return new Share(userId, "", Share.SharePermission.DENIED);
 	}	
 }

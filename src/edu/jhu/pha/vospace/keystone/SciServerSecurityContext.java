@@ -19,12 +19,14 @@ package edu.jhu.pha.vospace.keystone;
 import java.security.Principal;
 import java.util.HashMap;
 
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
+import edu.jhu.pha.vospace.meta.Share;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public class SciServerSecurityContext implements SecurityContext {
@@ -33,14 +35,22 @@ public class SciServerSecurityContext implements SecurityContext {
     private final SciDriveUser user;
 	private static Logger logger = Logger.getLogger(SciServerSecurityContext.class); 
 
-    public SciServerSecurityContext(KeystoneToken token, boolean isSecure) {
+    public SciServerSecurityContext(KeystoneToken token, String shareId, boolean isSecure) {
         this.token = token;
         this.isSecure = isSecure;
         HashMap<String, String> storageCredentials = new HashMap<String, String>();
         if(null != token.getSwiftAccountUrl())
         	storageCredentials.put("storageurl", token.getSwiftAccountUrl());
-        this.user = new SciDriveUser(token.getUserId(), "", true, storageCredentials);
         
+    	if(null != shareId) {
+    		Share share = MetaStoreFactory.getUserHelper().getSharePermission(token.getUserId(), shareId);
+    		if(share.getPermission().equals(Share.SharePermission.DENIED))
+    			throw new KeystoneException(Response.Status.UNAUTHORIZED, "Denied");
+    		this.user = new SciDriveUser(share.getUserId(), share.getContainer(), share.getPermission().canWrite(), storageCredentials);
+    	} else {
+            this.user = new SciDriveUser(token.getUserId(), "", true, storageCredentials);
+    	}
+    	
         ObjectMapper mapper = new ObjectMapper();
         
         if(MetaStoreFactory.getUserHelper().getDataStoreCredentials(this.user.getName()).isEmpty())
