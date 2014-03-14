@@ -616,15 +616,15 @@ public class MySQLMetaStore2 implements MetaStore{
 		
 		if(groupId != null && !groupId.isEmpty()) {
 			DbPoolServlet.goSql("Adding new share for container",
-	        		"insert into container_shares (share_id, container_id, group_id, share_write_permission) select ?, container_id, ?, ? from containers JOIN user_identities ON containers.user_id = user_identities.user_id WHERE identity = ? AND container_name = ?",
+	        		"insert into container_shares (share_id, container_id, group_id, share_write_permission) select ?, container_id, group_id, ? from containers JOIN user_identities ON containers.user_id = user_identities.user_id JOIN groups WHERE identity = ? AND container_name = ? and group_id = ?",
 	                new SqlWorker<Integer>() {
 	                    @Override
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
 	                        stmt.setString(1, shareKey);
-	                        stmt.setString(2, groupId);
-	                        stmt.setBoolean(3, write_perm);
-	                        stmt.setString(4, owner.getName());
-	                        stmt.setString(5, identifier.getNodePath().getContainerName());
+	                        stmt.setBoolean(2, write_perm);
+	                        stmt.setString(3, owner.getName());
+	                        stmt.setString(4, identifier.getNodePath().getContainerName());
+	                        stmt.setString(5, groupId);
 	                        return stmt.executeUpdate();
 	                    }
 	                }

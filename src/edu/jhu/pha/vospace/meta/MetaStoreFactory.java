@@ -28,7 +28,7 @@ public class MetaStoreFactory {
 
 	private static final Logger logger = Logger.getLogger(MetaStoreFactory.class);
 	
-	private final static Class<? extends MetaStore> metaStoreClass = MySQLMetaStore2.class; 
+	private final static Class<? extends MetaStore> metaStoreClass = MySQLMetaStoreKeystone.class; 
 	private final static Class<? extends UserHelper> userHelperClass = UserHelperImpl.class; 
 
 	public static MetaStore getMetaStore(SciDriveUser username) {
