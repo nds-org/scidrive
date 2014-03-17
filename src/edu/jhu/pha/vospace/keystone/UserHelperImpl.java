@@ -230,8 +230,8 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
     
 
 	@Override
-	public Share getSharePermission(final String userId, final String shareId) {
-        return DbPoolServlet.goSql("Checking whether user \"" + userId + "\" can access share.",
+	public Share getSharePermission(final String requestUserId, final String shareId) {
+        return DbPoolServlet.goSql("Checking whether user \"" + requestUserId + "\" can access share.",
                 "select container_name, group_id, share_write_permission, identity, storage_credentials from container_shares " +
                 "JOIN containers ON container_shares.container_id = containers.container_id " +
                 "JOIN user_identities ON containers.user_id = user_identities.user_id "+
@@ -247,7 +247,7 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
                         	String containerName = rs.getString(1);
                         	String groupId = rs.getString(2);
                         	boolean share_write_permission = rs.getBoolean(3);
-                        	String userId = rs.getString(4);
+                        	String ownerUserId = rs.getString(4);
                         	String storageCredentialsString = rs.getString(5);
 
                         	rs.close();
@@ -262,22 +262,23 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
                         	try {
                         		credentials = mapper.readValue(storageCredentialsString, new HashMap<String, String>().getClass());
     	                    } catch(IOException ex) {
-    	                    	throw new InternalServerErrorException("Unable to read user "+userId+" storage credentials");
+    	                    	throw new InternalServerErrorException("Unable to read user "+ownerUserId+" storage credentials");
     	                    }
 
                         	if(groupId.isEmpty()) {//anonymous share
-                            	return new Share(userId, containerName, permission, credentials);
+                        		logger.debug("group is empty - anon share");
+                            	return new Share(ownerUserId, containerName, permission, credentials);
                         	}
-                        	
-                            HttpHead method = new HttpHead(conf.getString("keystone.url")+"/v3//groups/"+groupId+"/users/"+userId);
+
+                            HttpHead method = new HttpHead(conf.getString("keystone.url")+"/v3/groups/"+groupId+"/users/"+requestUserId);
                             method.setHeader("X-Auth-Token",KeystoneAuthenticator.getAdminToken());
                     		try {
                     	        HttpResponse resp = MyHttpConnectionPoolProvider.getHttpClient().execute(method);
                     	        if (resp.getStatusLine().getStatusCode() == 204) { // user is member of group
                     	        	// returning the share with userId of container owner
-                                	return new Share(userId, containerName, permission, credentials);
+                                	return new Share(requestUserId, containerName, permission, credentials);
                     	        } else {
-                                	return new Share(userId, "", Share.SharePermission.DENIED, null);
+                                	return new Share(requestUserId, "", Share.SharePermission.DENIED, null);
                     	        }
                     		} catch (IOException e) {
                     			logger.error("Error checking group users: "+e.getMessage());
@@ -286,7 +287,7 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
                     		}
                         } else
                         	rs.close();
-                        	return new Share(userId, "", Share.SharePermission.DENIED, null);
+                        	return new Share(requestUserId, "", Share.SharePermission.DENIED, null);
                     }
                 }
         );

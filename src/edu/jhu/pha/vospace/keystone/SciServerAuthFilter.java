@@ -37,14 +37,8 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         String authHeader = request.getHeaderValue("X-Auth-Token");
         String share = request.getHeaderValue("X-Share");
 
-        for(String key: request.getRequestHeaders().keySet()) {
-        	logger.debug("Key: "+key);
-        }
-        
-    	logger.debug("Continue "+request.getHeaderValue("X-Share"));
-
         if (authHeader == null && share == null) {
-        	logger.debug("Not found authHeader and shareHeader");
+        	logger.error("Not found authHeader and shareHeader");
             return request;
         }
 

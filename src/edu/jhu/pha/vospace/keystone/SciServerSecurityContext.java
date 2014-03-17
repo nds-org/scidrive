@@ -42,8 +42,10 @@ public class SciServerSecurityContext implements SecurityContext {
         
     	if(null != shareId) {
     		share = MetaStoreFactory.getUserHelper().getSharePermission((token != null)?token.getUserId():null, shareId);
-    		if(share.getPermission().equals(Share.SharePermission.DENIED))
+    		if(share.getPermission().equals(Share.SharePermission.DENIED)) {
+    			logger.error("Access denied");
     			throw new KeystoneException(Response.Status.UNAUTHORIZED, "Denied");
+    		}
     		this.user = new SciDriveUser(share.getUserId(), share.getContainer(), share.getPermission().canWrite(), share.getStorageCredentials());
     	} else {
             HashMap<String, String> storageCredentials = new HashMap<String, String>();
@@ -72,7 +74,7 @@ public class SciServerSecurityContext implements SecurityContext {
     @Override
     public boolean isUserInRole(String role) {
 		if(role.equals("user"))
-			return this.share == null;
+			return this.share == null && this.token.getRoles().contains("user");
 	
 		return(
 				(role.equals("rwshareuser") && this.share.getPermission().equals(Share.SharePermission.RW_USER)) ||
