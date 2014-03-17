@@ -34,32 +34,33 @@ public class SciServerSecurityContext implements SecurityContext {
     private final boolean isSecure;
     private final SciDriveUser user;
 	private static Logger logger = Logger.getLogger(SciServerSecurityContext.class); 
-
+	private Share share;
+	
     public SciServerSecurityContext(KeystoneToken token, String shareId, boolean isSecure) {
         this.token = token;
         this.isSecure = isSecure;
-        HashMap<String, String> storageCredentials = new HashMap<String, String>();
-        if(null != token.getSwiftAccountUrl())
-        	storageCredentials.put("storageurl", token.getSwiftAccountUrl());
         
     	if(null != shareId) {
-    		Share share = MetaStoreFactory.getUserHelper().getSharePermission(token.getUserId(), shareId);
+    		share = MetaStoreFactory.getUserHelper().getSharePermission((token != null)?token.getUserId():null, shareId);
     		if(share.getPermission().equals(Share.SharePermission.DENIED))
     			throw new KeystoneException(Response.Status.UNAUTHORIZED, "Denied");
-    		this.user = new SciDriveUser(share.getUserId(), share.getContainer(), share.getPermission().canWrite(), storageCredentials);
+    		this.user = new SciDriveUser(share.getUserId(), share.getContainer(), share.getPermission().canWrite(), share.getStorageCredentials());
     	} else {
+            HashMap<String, String> storageCredentials = new HashMap<String, String>();
+            if(null != token && null != token.getSwiftAccountUrl())
+            	storageCredentials.put("storageurl", token.getSwiftAccountUrl());
+            
             this.user = new SciDriveUser(token.getUserId(), "", true, storageCredentials);
+
+            ObjectMapper mapper = new ObjectMapper();
+            if(MetaStoreFactory.getUserHelper().getDataStoreCredentials(this.user.getName()).isEmpty()) // update in DB
+    			try {
+    				MetaStoreFactory.getUserHelper().setDataStoreCredentials(this.user.getName(), mapper.writer().writeValueAsString(storageCredentials));
+    			} catch (Exception e) {
+    				logger.error("Error writing user storage credentials to DB");
+    				e.printStackTrace();
+    			}
     	}
-    	
-        ObjectMapper mapper = new ObjectMapper();
-        
-        if(MetaStoreFactory.getUserHelper().getDataStoreCredentials(this.user.getName()).isEmpty())
-			try {
-				MetaStoreFactory.getUserHelper().setDataStoreCredentials(this.user.getName(), mapper.writer().writeValueAsString(storageCredentials));
-			} catch (Exception e) {
-				logger.error("Error writing user storage credentials to DB");
-				e.printStackTrace();
-			}
         
     }
 
@@ -70,7 +71,13 @@ public class SciServerSecurityContext implements SecurityContext {
 
     @Override
     public boolean isUserInRole(String role) {
-        return token.getRoles().contains(role);
+		if(role.equals("user"))
+			return this.share == null;
+	
+		return(
+				(role.equals("rwshareuser") && this.share.getPermission().equals(Share.SharePermission.RW_USER)) ||
+				(role.equals("roshareuser") && this.share.getPermission().equals(Share.SharePermission.RO_USER))
+			);
     }
 
     @Override

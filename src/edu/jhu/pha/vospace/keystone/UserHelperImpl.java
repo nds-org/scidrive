@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -231,9 +232,11 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
 	@Override
 	public Share getSharePermission(final String userId, final String shareId) {
         return DbPoolServlet.goSql("Checking whether user \"" + userId + "\" can access share.",
-                "select container_name, group_id, share_write_permission, identity from container_shares " +
+                "select container_name, group_id, share_write_permission, identity, storage_credentials from container_shares " +
                 "JOIN containers ON container_shares.container_id = containers.container_id " +
-                "JOIN user_identities ON containers.user_id = user_identities.user_id where share_id = ?;",
+                "JOIN user_identities ON containers.user_id = user_identities.user_id "+
+                "JOIN users ON containers.user_id = users.user_id "+
+                "where share_id = ?;",
                 new SqlWorker<Share>() {
                     @Override
                     public Share go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -245,20 +248,36 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
                         	String groupId = rs.getString(2);
                         	boolean share_write_permission = rs.getBoolean(3);
                         	String userId = rs.getString(4);
+                        	String storageCredentialsString = rs.getString(5);
 
                         	rs.close();
+                        	
+                        	Share.SharePermission permission = (share_write_permission)?Share.SharePermission.RW_USER:Share.SharePermission.RO_USER;
+
+                        	HashMap<String, String> credentials;
+                            if(storageCredentialsString == null || storageCredentialsString.length() == 0)
+                            	credentials = new HashMap<String, String>();
+                            
+                        	ObjectMapper mapper = new ObjectMapper();
+                        	try {
+                        		credentials = mapper.readValue(storageCredentialsString, new HashMap<String, String>().getClass());
+    	                    } catch(IOException ex) {
+    	                    	throw new InternalServerErrorException("Unable to read user "+userId+" storage credentials");
+    	                    }
+
+                        	if(groupId.isEmpty()) {//anonymous share
+                            	return new Share(userId, containerName, permission, credentials);
+                        	}
                         	
                             HttpHead method = new HttpHead(conf.getString("keystone.url")+"/v3//groups/"+groupId+"/users/"+userId);
                             method.setHeader("X-Auth-Token",KeystoneAuthenticator.getAdminToken());
                     		try {
                     	        HttpResponse resp = MyHttpConnectionPoolProvider.getHttpClient().execute(method);
                     	        if (resp.getStatusLine().getStatusCode() == 204) { // user is member of group
-                    	        	Share.SharePermission permission = (share_write_permission)?Share.SharePermission.RW_USER:Share.SharePermission.RO_USER;
-                    	        	
                     	        	// returning the share with userId of container owner
-                                	return new Share(userId, containerName, permission);
+                                	return new Share(userId, containerName, permission, credentials);
                     	        } else {
-                                	return new Share(userId, "", Share.SharePermission.DENIED);
+                                	return new Share(userId, "", Share.SharePermission.DENIED, null);
                     	        }
                     		} catch (IOException e) {
                     			logger.error("Error checking group users: "+e.getMessage());
@@ -267,7 +286,7 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
                     		}
                         } else
                         	rs.close();
-                        	return new Share(userId, "", Share.SharePermission.DENIED);
+                        	return new Share(userId, "", Share.SharePermission.DENIED, null);
                     }
                 }
         );

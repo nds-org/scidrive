@@ -18,6 +18,8 @@ package edu.jhu.pha.vospace.keystone;
 
 import javax.ws.rs.WebApplicationException;
 
+import org.apache.log4j.Logger;
+
 import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
@@ -28,10 +30,21 @@ import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public class SciServerAuthFilter implements ContainerRequestFilter {
 
+	private static Logger logger = Logger.getLogger(SciServerAuthFilter.class); 
+
     @Override
     public ContainerRequest filter(ContainerRequest request) {
         String authHeader = request.getHeaderValue("X-Auth-Token");
-        if (authHeader == null) {
+        String share = request.getHeaderValue("X-Share");
+
+        for(String key: request.getRequestHeaders().keySet()) {
+        	logger.debug("Key: "+key);
+        }
+        
+    	logger.debug("Continue "+request.getHeaderValue("X-Share"));
+
+        if (authHeader == null && share == null) {
+        	logger.debug("Not found authHeader and shareHeader");
             return request;
         }
 
@@ -40,10 +53,12 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         if(request.getMethod().equals("OPTIONS"))
         	return request;
         
-        String share = request.getHeaderValue("X-Share");
+    	logger.debug("Continue;");
         
         try {
-        	KeystoneToken token = new KeystoneToken(request.getHeaderValue("X-Auth-Token"));
+        	KeystoneToken token = null;
+        	if(null != authHeader)
+        		token = new KeystoneToken(authHeader);
         	
         	sc = new SciServerSecurityContext(token, share, request.isSecure()); 
         } catch (KeystoneException e) {
