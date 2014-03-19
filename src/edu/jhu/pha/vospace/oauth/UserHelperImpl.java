@@ -482,6 +482,6 @@ public class UserHelperImpl implements UserHelper {
 	@Override
 	public Share getSharePermission(String userId, String shareId) {
 		// Unused
-		return new Share(userId, "", Share.SharePermission.DENIED);
+		return new Share(userId, "", Share.SharePermission.DENIED, null);
 	}	
 }
