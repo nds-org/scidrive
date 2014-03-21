@@ -33,7 +33,6 @@ import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.exceptions.NotFoundException;
 import edu.jhu.pha.vospace.node.Node;
-import edu.jhu.pha.vospace.node.Node.PropertyType;
 import edu.jhu.pha.vospace.node.NodeFactory;
 import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
@@ -61,7 +60,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public byte[] getNodeBytes(final VospaceId identifier) {
         return DbPoolServlet.goSql("Retrieving node "+identifier+" for user "+owner+" from meta DB",
-                "SELECT node FROM nodes JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
+                "SELECT node FROM nodes JOIN containers ON nodes.container_id = containers.container_id JOIN users ON containers.user_id = users.user_id "+
                 		"WHERE `current_rev` = 1 AND `container_name` = ? AND `path` = ? AND `identity` = ?",
                 new SqlWorker<byte[]>() {
                     @Override
@@ -91,7 +90,7 @@ public class MySQLMetaStore2 implements MetaStore{
         	String deletedCondition = includeDeleted?"":"nodes.`deleted` = 0 AND ";
     		return DbPoolServlet.goSql("GetNodeChildren root request",
     				"SELECT SQL_CALC_FOUND_ROWS containers.container_name as container, nodes.rev, nodes.deleted, nodes.mtime, nodes.size, nodes.mimetype, nodes.type "+
-            		"FROM nodes JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
+            		"FROM nodes JOIN containers ON nodes.container_id = containers.container_id JOIN users ON containers.user_id = users.user_id "+
             		"WHERE "+deletedCondition+"`parent_node_id` is NULL AND `identity` = ? AND `container_name` <> '' order by container "+((count > 0)?" limit ?, ?":""),
                     new SqlWorker<NodesList>() {
                         @Override
@@ -140,7 +139,7 @@ public class MySQLMetaStore2 implements MetaStore{
         	String deletedCondition = includeDeleted?"":"nodes.`deleted` = 0 AND ";
 			String request = "SELECT SQL_CALC_FOUND_ROWS containers.container_name as container, nodes.path, nodes.rev, nodes.deleted, nodes.mtime, nodes.size, nodes.mimetype, nodes.type "+
 	        		"FROM nodes JOIN containers ON nodes.container_id = containers.container_id "+
-					"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+					"JOIN users ON containers.user_id = users.user_id "+
 	        		"JOIN nodes b ON nodes.parent_node_id = b.node_id "+
 	        		"WHERE "+deletedCondition+"containers.container_name = ? AND b.`path` = ? AND `identity` = ? order by path "+((count > 0)?" limit ?, ?":"");
 	        
@@ -203,7 +202,7 @@ public class MySQLMetaStore2 implements MetaStore{
         return DbPoolServlet.goSql("Retrieving node info",
         		"select rev, deleted, nodes.mtime, nodes.size, mimetype, chunked_name from nodes " +
         		"JOIN containers ON nodes.container_id = containers.container_id " +
-        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"JOIN users ON containers.user_id = users.user_id "+
         		"LEFT JOIN chunked_uploads ON nodes.node_id = chunked_uploads.node_id "+
                 "WHERE current_rev = 1 and container_name = ? and path = ? and identity = ?",
                 new SqlWorker<NodeInfo>() {
@@ -241,7 +240,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public NodeType getType(final VospaceId identifier)  {
         return DbPoolServlet.goSql("Get node type",
-        		"select nodes.type from nodes JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"select nodes.type from nodes JOIN containers ON nodes.container_id = containers.container_id JOIN users ON containers.user_id = users.user_id "+
         				"WHERE `current_rev` = 1 and `container_name` = ? and `path` = ? and `identity` = ?",
                 new SqlWorker<NodeType>() {
                     @Override
@@ -259,38 +258,6 @@ public class MySQLMetaStore2 implements MetaStore{
                 }
         );
 	}
-	
-	/*
-	 * (non-Javadoc)
-	 * @see edu.jhu.pha.vospace.meta.MetaStore#incrementRevision(edu.jhu.pha.vospace.node.VospaceId)
-	 */
-	/*@Override
-	public void incrementRevision(final VospaceId identifier) {
-		
-        DbPoolServlet.goSql("Updating node "+identifier+" current revision",
-                "UPDATE nodes SET rev = rev+1 "+
-                		"WHERE current_rev = 1 AND node_id = "+
-                		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
-                		"ON nodes.container_id = containers.container_id JOIN user_identities "+
-                		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
-                new SqlWorker<Boolean>() {
-                    @Override
-                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.setString(1, identifier.getNodePath().getContainerName());
-                        stmt.setString(2, identifier.getNodePath().getNodeRelativeStoragePath());
-                        stmt.setString(3, owner);
-                        int upd = stmt.executeUpdate();
-                        if (upd > 0)
-                            return true;
-                        else {
-                        	logger.error("Node "+identifier.toString()+" not found in incrementRevision.");
-                            throw new NotFoundException("NodeNotFound");
-                        }
-                    }
-                }
-        );
-	}*/
-
 
 	/*
 	 * (non-Javadoc)
@@ -300,7 +267,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	public boolean isStored(final VospaceId identifier) {
         return DbPoolServlet.goSql("Is node stored?",
         		"select count(*) from nodes "+
-        				"JOIN containers ON nodes.container_id = containers.container_id JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        				"JOIN containers ON nodes.container_id = containers.container_id JOIN users ON containers.user_id = users.user_id "+
                 		"WHERE `current_rev` = 1 AND `container_name` = ? AND `path` = ? AND `identity` = ?",
                 new SqlWorker<Boolean>() {
                     @Override
@@ -329,8 +296,8 @@ public class MySQLMetaStore2 implements MetaStore{
         		"update nodes set deleted = ? "+
         		"WHERE node_id = "+
         		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
-        		"ON nodes.container_id = containers.container_id JOIN user_identities "+
-        		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
+        		"ON nodes.container_id = containers.container_id JOIN users "+
+        		"ON containers.user_id = users.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -354,8 +321,8 @@ public class MySQLMetaStore2 implements MetaStore{
 	        DbPoolServlet.goSql("Removing root"+identifier,
 	        		"delete from containers "+
 	        		"WHERE container_id in "+
-	        		"(SELECT * FROM (SELECT containers.container_id FROM containers JOIN user_identities "+
-	        		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `identity` = ?) a)",
+	        		"(SELECT * FROM (SELECT containers.container_id FROM containers JOIN users "+
+	        		"ON containers.user_id = users.user_id WHERE `container_name` = ? AND `identity` = ?) a)",
 	        
 	                new SqlWorker<Integer>() {
 	                    @Override
@@ -372,7 +339,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	        		"WHERE node_id in "+
 	        		"(SELECT * FROM (SELECT nodes.node_id FROM nodes "+
 	        		"JOIN containers ON nodes.container_id = containers.container_id "+
-	        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+	        		"JOIN users ON containers.user_id = users.user_id "+
 	        		"WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
 	        
 	                new SqlWorker<Integer>() {
@@ -434,7 +401,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public void storeData(final VospaceId identifier, final NodeType type)  {
 		DbPoolServlet.goSql("Adding container",
-        		"insert ignore into containers (container_name, user_id) select ?, user_id from user_identities where identity = ?",
+        		"insert ignore into containers (container_name, user_id) select ?, user_id from users where identity = ?",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -448,7 +415,7 @@ public class MySQLMetaStore2 implements MetaStore{
 		DbPoolServlet.goSql("Adding metadata",
         		"insert into nodes (container_id, path, parent_node_id, type, mimetype) "+
         				"SELECT containers.`container_id`, ?, nodes.node_id, ?, ? FROM containers "+
-        				"JOIN user_identities ON containers.`user_id` = user_identities.user_id "+
+        				"JOIN users ON containers.`user_id` = users.user_id "+
         				"LEFT JOIN nodes ON containers.`container_id` = nodes.`container_id` and nodes.path = ? "+
         				"WHERE `identity` = ? and `container_name` = ?",
         				new SqlWorker<Integer>() {
@@ -476,8 +443,8 @@ public class MySQLMetaStore2 implements MetaStore{
         DbPoolServlet.goSql("Adding nodeinfo",
         		"update nodes set size = ?, mimetype = ?, rev = ? where current_rev = 1 and node_id = "+
                 		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
-                		"ON nodes.container_id = containers.container_id JOIN user_identities "+
-                		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
+                		"ON nodes.container_id = containers.container_id JOIN users "+
+                		"ON containers.user_id = users.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -503,8 +470,8 @@ public class MySQLMetaStore2 implements MetaStore{
         DbPoolServlet.goSql("Adding nodeinfo",
         		"update nodes set type = ? where current_rev = 1 and node_id = "+
                 		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
-                		"ON nodes.container_id = containers.container_id JOIN user_identities "+
-                		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
+                		"ON nodes.container_id = containers.container_id JOIN users "+
+                		"ON containers.user_id = users.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -526,11 +493,11 @@ public class MySQLMetaStore2 implements MetaStore{
 	@Override
 	public void updateData(final VospaceId identifier, final VospaceId newIdentifier)  {
         DbPoolServlet.goSql("Updating metadata",
-        		"update nodes set container_id = SELECT container_id from containers JOIN user_identities ON containers.user_id = user_identities.user_id WHERE identity = ? AND container_name = ?, "+
+        		"update nodes set container_id = SELECT container_id from containers JOIN users ON containers.user_id = users.user_id WHERE identity = ? AND container_name = ?, "+
         				"path = ? where current_rev = 1 and node_id = "+
                 		"(SELECT * FROM (SELECT nodes.node_id FROM nodes JOIN containers "+
-                		"ON nodes.container_id = containers.container_id JOIN user_identities "+
-                		"ON containers.user_id = user_identities.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
+                		"ON nodes.container_id = containers.container_id JOIN users "+
+                		"ON containers.user_id = users.user_id WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) a)",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -564,7 +531,7 @@ public class MySQLMetaStore2 implements MetaStore{
         DbPoolServlet.goSql("Updating properties",
         		"INSERT INTO node_properties (node_id, property_id, property_value) SELECT `node_id`, `property_id`, ? FROM nodes "+
         					"JOIN containers ON nodes.container_id = containers.container_id "+
-        					"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        					"JOIN users ON containers.user_id = users.user_id "+
         					"JOIN properties " +
 	                		"WHERE `container_name` = ? AND `path` = ? AND `identity` = ? AND `property_uri` = ? AND `property_readonly` = 0 "+
         					"ON DUPLICATE KEY UPDATE property_value = ?",
@@ -589,7 +556,7 @@ public class MySQLMetaStore2 implements MetaStore{
         DbPoolServlet.goSql("Deleting properties",
         		"DELETE from node_properties WHERE node_id = (SELECT nodes.`node_id` FROM nodes "+
         		"JOIN containers ON nodes.container_id = containers.container_id "+ 
-        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+ 
+        		"JOIN users ON containers.user_id = users.user_id "+ 
         		"WHERE `container_name` = ? AND `path` = ? AND `identity` = ?) "+
         		"AND `property_id` = (SELECT property_id FROM properties WHERE property_uri = ? and `property_readonly` = 0)",
                 new SqlWorker<Boolean>() {
@@ -616,7 +583,7 @@ public class MySQLMetaStore2 implements MetaStore{
 		
 		if(groupId != null && !groupId.isEmpty()) {
 			DbPoolServlet.goSql("Adding new share for container",
-	        		"insert into container_shares (share_id, container_id, group_id, share_write_permission) select ?, container_id, group_id, ? from containers JOIN user_identities ON containers.user_id = user_identities.user_id JOIN groups WHERE identity = ? AND container_name = ? and group_id = ?",
+	        		"insert into container_shares (share_id, container_id, group_id, share_write_permission) select ?, container_id, group_id, ? from containers JOIN users ON containers.user_id = users.user_id JOIN groups WHERE identity = ? AND container_name = ? and group_id = ?",
 	                new SqlWorker<Integer>() {
 	                    @Override
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -631,7 +598,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	        );
 		} else {
 			DbPoolServlet.goSql("Adding new share for container",
-	        		"insert into container_shares (share_id, container_id, share_write_permission) select ?, container_id, ? from containers JOIN user_identities ON containers.user_id = user_identities.user_id WHERE identity = ? AND container_name = ?",
+	        		"insert into container_shares (share_id, container_id, share_write_permission) select ?, container_id, ? from containers JOIN users ON containers.user_id = users.user_id WHERE identity = ? AND container_name = ?",
 	                new SqlWorker<Integer>() {
 	                    @Override
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -654,7 +621,7 @@ public class MySQLMetaStore2 implements MetaStore{
         		"JOIN properties ON node_properties.property_id = properties.property_id "+
         		"JOIN nodes ON node_properties.node_id = nodes.node_id " +
 				"JOIN containers ON nodes.container_id = containers.container_id "+
-        		"JOIN user_identities ON containers.user_id = user_identities.user_id "+
+        		"JOIN users ON containers.user_id = users.user_id "+
         		"WHERE `current_rev` = 1 AND `container_name` = ? AND `path` = ? AND `identity` = ?",
                 new SqlWorker<Map<String, String>>() {
                     @Override

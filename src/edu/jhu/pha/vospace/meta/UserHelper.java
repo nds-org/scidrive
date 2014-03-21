@@ -13,15 +13,6 @@ import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 public interface UserHelper {
 
-	/** Download a certificate from <tt>certUrl</tt> and save it for the named user in the database.
-	 *  If the user doesn't already exist, throw an exception. */
-	public abstract void setCertificate(SciDriveUser username, String certUrl)
-			throws IOException;
-
-	/** Retrieve a user's certificate as a blob from the database. Null if it doesn't exist.
-	 *  If the user doesn't exist, throws an IllegalStateException (so you should call userExists first). */
-	public abstract Blob getCertificate(String username);
-
 	public abstract HashMap<String, String> getDataStoreCredentials(
 			String username);
 

@@ -83,7 +83,7 @@ public class DbCleanerServlet extends HttpServlet {
             	res = DbPoolServlet.goSql("Cleaning DB nodes",
                 		"select container_name, path, identity from nodes " +
                 		"JOIN containers ON nodes.container_id = containers.container_id " +
-                		"JOIN user_identities ON containers.user_id = user_identities.user_id " +
+                		"JOIN users ON containers.user_id = users.user_id " +
                 		"where deleted = 1 and mtime < (NOW() - INTERVAL "+NODE_EXPIRY_INTERVAL+" MINUTE) order by path limit 1",
                         new SqlWorker<Boolean>() {
                             @Override
@@ -135,7 +135,7 @@ public class DbCleanerServlet extends HttpServlet {
         	while(res) {
             	res = DbPoolServlet.goSql("Cleaning chunks",
         			"select `identity`, `chunked_name` from (select `chunked_name`, max(`mtime`) `maxtime`, `identity` from chunked_uploads "+ 
-        			"JOIN user_identities ON chunked_uploads.`user_id` = user_identities.`user_id` "+
+        			"JOIN users ON chunked_uploads.`user_id` = users.`user_id` "+
         			"where `node_id` is NULL group by `chunked_name`) a WHERE `maxtime` < (NOW() - INTERVAL "+CHUNK_EXPIRY_INTERVAL+" MINUTE) limit 1", 
                     new SqlWorker<Boolean>() {
                         @Override

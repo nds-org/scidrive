@@ -5,15 +5,6 @@
 
 	<display-name>VOSpace</display-name>
 
-	<!--servlet>
-		<servlet-name>Cert_test</servlet-name>
-		<servlet-class>edu.jhu.pha.vospace.openid.UserName</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Cert_test</servlet-name>
-		<url-pattern>/username</url-pattern>
-	</servlet-mapping-->
-
 	<servlet>
 		<servlet-name>Jersey REST Service</servlet-name>
 		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
@@ -23,8 +14,7 @@
 		</init-param>
 		<init-param>
 		     <param-name>com.sun.jersey.spi.container.ContainerRequestFilters</param-name>
-		     <!-- <param-value>edu.jhu.pha.vospace.oauth.MyOAuthServerFilter</param-value> -->
-		     <param-value>edu.jhu.pha.vospace.keystone.SciServerAuthFilter</param-value>
+		     <param-value>edu.jhu.pha.vospace.keystone.SciServerAuthFilter,edu.jhu.pha.vospace.oauth.MyOAuthServerFilter</param-value>
 		 </init-param>
 	    <init-param>
 	        <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>

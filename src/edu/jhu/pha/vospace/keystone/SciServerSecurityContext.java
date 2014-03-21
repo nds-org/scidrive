@@ -54,6 +54,10 @@ public class SciServerSecurityContext implements SecurityContext {
             
             this.user = new SciDriveUser(token.getUserId(), "", true, storageCredentials);
 
+            if(!MetaStoreFactory.getUserHelper().userExists(user)) {
+            	MetaStoreFactory.getUserHelper().addDefaultUser(user);
+            }
+            
             ObjectMapper mapper = new ObjectMapper();
             if(MetaStoreFactory.getUserHelper().getDataStoreCredentials(this.user.getName()).isEmpty()) // update in DB
     			try {

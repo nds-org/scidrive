@@ -20,12 +20,8 @@ import javax.ws.rs.WebApplicationException;
 
 import org.apache.log4j.Logger;
 
-import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
-
-import edu.jhu.pha.vospace.meta.MetaStoreFactory;
-import edu.jhu.pha.vospace.oauth.SciDriveUser;
 
 
 public class SciServerAuthFilter implements ContainerRequestFilter {
@@ -59,10 +55,8 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
             throw new WebApplicationException(e.toResponse());
         }
         request.setSecurityContext(sc);
-        
-        if(!MetaStoreFactory.getUserHelper().userExists((SciDriveUser)sc.getUserPrincipal())) {
-        	MetaStoreFactory.getUserHelper().addDefaultUser((SciDriveUser)sc.getUserPrincipal());
-        }
+
+        logger.debug("Continue;");
         
         return request;
     }

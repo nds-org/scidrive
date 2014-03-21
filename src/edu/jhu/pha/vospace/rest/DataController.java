@@ -54,7 +54,6 @@ import edu.jhu.pha.vospace.rest.JobDescription.STATE;
 public class DataController {
 	
 	private static final Logger logger = Logger.getLogger(DataController.class);
-	private @Context SecurityContext security; 
 	
 	/**
 	 * Returns the data of a transfer

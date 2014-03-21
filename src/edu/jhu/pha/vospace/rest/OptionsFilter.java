@@ -32,6 +32,7 @@ public class OptionsFilter implements ContainerResponseFilter {
 			response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");
 			response.getHttpHeaders().add("Access-Control-Allow-Headers", request.getHeaderValue("Access-Control-Request-Headers"));
 			response.getHttpHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT");
+			response.getHttpHeaders().add("Access-Control-Max-Age", "10");
 		} else {
 			response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");
 		}

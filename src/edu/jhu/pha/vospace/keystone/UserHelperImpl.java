@@ -21,7 +21,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -40,6 +39,7 @@ import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.api.exceptions.InternalServerErrorException;
+import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
 import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
 import edu.jhu.pha.vospace.meta.Share;
 import edu.jhu.pha.vospace.meta.UserGroup;
@@ -54,67 +54,136 @@ import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.storage.StorageManager;
 import edu.jhu.pha.vospace.storage.StorageManagerFactory;
 
-public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl implements UserHelper {
+public class UserHelperImpl implements UserHelper {
 	private static final Logger logger = Logger.getLogger(UserHelperImpl.class);
 	private final static Configuration conf = SettingsServlet.getConfig();
 	
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#getDataStoreCredentials(java.lang.String)
+	 */
+	@Override
+	public HashMap<String, String> getDataStoreCredentials(final String username) {
+        return DbPoolServlet.goSql("Retrieving credentials for " + username,
+                "select storage_credentials from users where identity = ?;",
+                new SqlWorker<HashMap<String, String>>() {
+                    @Override
+                    public HashMap<String, String> go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, username);
+                        ResultSet rs = stmt.executeQuery();
+                        if (!rs.next())
+                            throw new PermissionDeniedException("The user "+username+" does not exist.");
+
+                        String credentials = rs.getString("storage_credentials");
+                        if(credentials == null || credentials.length() == 0)
+                        	return new HashMap<String, String>();
+                        
+                    	ObjectMapper mapper = new ObjectMapper();
+                    	try {
+                    		HashMap<String, String> result = mapper.readValue(rs.getBytes("storage_credentials"), new HashMap<String, String>().getClass());
+	                        return result;
+	                    } catch(IOException ex) {
+	                    	throw new InternalServerErrorException("Unable to read user "+username+" storage credentials");
+	                    }
+                    }
+                });
+	}
+
+	/* (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.oauth.UserHelper#getProcessorCredentials(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+	@Override
+	public JsonNode getProcessorCredentials(final SciDriveUser username) {
+        return DbPoolServlet.goSql("Retrieving processor credentials for " + username,
+                "select service_credentials from users where identity = ?;",
+                new SqlWorker<JsonNode>() {
+                    @Override
+                    public JsonNode go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, username.getName());
+                        ResultSet rs = stmt.executeQuery();
+                        if (!rs.next())
+                            throw new PermissionDeniedException("The user "+username+" does not exist.");
+                        
+                    	ObjectMapper mapper = new ObjectMapper();
+                    	try {
+                    		byte[] credBytes = rs.getBytes("service_credentials");
+                    		if(null == credBytes || credBytes.length == 0)
+                    			credBytes = "{}".getBytes();
+                    		JsonNode allCredentials = mapper.readValue(credBytes, JsonNode.class);
+	                        return allCredentials;
+	                    } catch(IOException ex) {
+	                    	throw new InternalServerErrorException("Unable to read user "+username+" service credentials");
+	                    }
+                    }
+                });
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#setDataStoreCredentials(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public int setDataStoreCredentials(final String username, final String credentials) {
+        return DbPoolServlet.goSql("Retrieving credentials for " + username,
+                "update users set storage_credentials = ? where identity = ?;",
+                new SqlWorker<Integer>() {
+                    @Override
+                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, credentials);
+                        stmt.setString(2, username);
+                        int result = stmt.executeUpdate();
+                        return result;
+                    }
+                });
+	}
+
+	
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#addDefaultUser(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
     @Override
-	public boolean addDefaultUser(final SciDriveUser username) {
-		DbPoolServlet.goSql("Add new user",
-         		"insert into users values ()",
+	public synchronized boolean addDefaultUser(final SciDriveUser username) {
+		if(DbPoolServlet.goSql("Add new user",
+         		"INSERT IGNORE INTO users (identity) "+
+				"values(?);",
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        stmt.executeUpdate();
-                        
-                        ResultSet rs = stmt.getGeneratedKeys();
-
-                        if(rs.next()) {
-                               final int user_id = rs.getInt(1);
-                               
-	                       		return DbPoolServlet.goSql("Add user identity",
-	                             		"insert into user_identities (user_id, identity) values (?, ?)",
-	                                    new SqlWorker<Boolean>() {
-	                                        @Override
-	                                        public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
-	                                        	stmt.setInt(1, user_id);
-	                                        	stmt.setString(2, username.getName());
-	                                            return stmt.execute();
-	                                        }
-	                                    }
-	                            );
-                               
-                               
-                        }
-                        return false;
+                    	stmt.setString(1, username.getName());
+                        return stmt.executeUpdate() > 0;
                     }
-                },
-                Statement.RETURN_GENERATED_KEYS
-        );
+                }
+        )) {
 
-		try {
-			logger.debug("Creating new toor node");
-			VospaceId identifier = new VospaceId(new NodePath("/"));
-			Node node = NodeFactory.createNode(identifier, username, NodeType.CONTAINER_NODE);
-			if(!node.isStoredMetadata()){
-				node.setNode(null);
-				ContainerNode firstNode = (ContainerNode)NodeFactory.createNode(identifier.appendPath(new NodePath("/first_container")), username, NodeType.CONTAINER_NODE);
-				firstNode.setNode(null);
+			try {
+				logger.debug("Creating new root node");
+				VospaceId identifier = new VospaceId(new NodePath("/"));
+				Node node = NodeFactory.createNode(identifier, username, NodeType.CONTAINER_NODE);
+				if(!node.isStoredMetadata()){
+					node.setNode(null);
+					ContainerNode firstNode = (ContainerNode)NodeFactory.createNode(identifier.appendPath(new NodePath("/first_container")), username, NodeType.CONTAINER_NODE);
+					firstNode.setNode(null);
+				}
+				logger.debug("new toor node was created");
+			} catch(URISyntaxException ex) {
+				logger.error("Error creating root node for user: "+ex.getMessage());
+				return false;
 			}
-			logger.debug("new toor node was created");
-		} catch(URISyntaxException ex) {
-			logger.error("Error creating root node for user: "+ex.getMessage());
-			return false;
+			return true;
 		}
-		
-		return true;
+		return false;
 	}
 
     
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#getAccountInfo(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
 	@Override
 	public AccountInfo getAccountInfo(final SciDriveUser username) {
 		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
-                "select hardlimit, softlimit from users JOIN user_identities ON users.user_id = user_identities.user_id WHERE identity = ?;",
+                "select hardlimit, softlimit from users WHERE identity = ?;",
                 new SqlWorker<AccountInfo>() {
                     @Override
                     public AccountInfo go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -139,11 +208,14 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
 		return info;
 	}
     
-    /** Does the named user exist? */
+    /*
+     * (non-Javadoc)
+     * @see edu.jhu.pha.vospace.meta.UserHelper#userExists(edu.jhu.pha.vospace.oauth.SciDriveUser)
+     */
     @Override
 	public boolean userExists(final SciDriveUser username) {
         return DbPoolServlet.goSql("Checking whether user \"" + username + "\" exists in DB.",
-                "select count(identity) from user_identities where identity = ?;",
+                "select count(identity) from users where identity = ?;",
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -158,6 +230,94 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
         );
     }
     
+    /*
+     * (non-Javadoc)
+     * @see edu.jhu.pha.vospace.meta.UserHelper#updateUserService(edu.jhu.pha.vospace.oauth.SciDriveUser, java.lang.String, org.codehaus.jackson.JsonNode)
+     */
+    @Override
+	public boolean updateUserService(final SciDriveUser username, final String processorId, JsonNode updateNode) {
+        byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
+                "select service_credentials from users where identity = ?;",
+                new SqlWorker<byte[]>() {
+                    @Override
+                    public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, username.getName());
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next()) {
+                        	byte[] b = rs.getBytes(1);
+                        	if(null == b || b.length == 0)
+                        		return "{}".getBytes();
+                            return b;
+                        } else
+                            throw new IllegalStateException("No result from query.");
+                    }
+                }
+        );
+		ObjectMapper mapper = new ObjectMapper();
+    	final JsonNode mainNode;
+		try {
+			mainNode = mapper.readTree(curNode);
+		} catch (Exception e) {
+            throw new IllegalStateException("Error parsing user's credentials");
+		}
+
+		if(null != updateNode) {
+			((org.codehaus.jackson.node.ObjectNode)mainNode).put(processorId, updateNode);
+		} else {
+			((org.codehaus.jackson.node.ObjectNode)mainNode).remove(processorId);
+		}
+		
+        return DbPoolServlet.goSql("Updating user's service credentials from db",
+            "update users set service_credentials = ? where identity = ?",
+            new SqlWorker<Boolean>() {
+                @Override
+                public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    stmt.setString(1, mainNode.toString());
+                    stmt.setString(2, username.getName());
+                    return stmt.execute();
+                }
+            }
+        );
+    
+    }
+
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#getUserServices(edu.jhu.pha.vospace.oauth.SciDriveUser)
+	 */
+	@Override
+	public JsonNode getUserServices(final SciDriveUser username) {
+        byte[] curNode = DbPoolServlet.goSql("Retrieving user's service credentials from db",
+                "select service_credentials from users where identity = ?;",
+                new SqlWorker<byte[]>() {
+                    @Override
+                    public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, username.getName());
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next()) {
+                        	byte[] b = rs.getBytes(1);
+                        	if(null == b || b.length == 0)
+                                return "{}".getBytes();
+                            return b;
+                        } else
+                            throw new IllegalStateException("No result from query.");
+                    }
+                }
+        );
+
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			return mapper.readTree(curNode);
+		} catch (Exception e) {
+            throw new IllegalStateException("Error parsing user's credentials");
+		}
+	}
+    
+    
+    /*
+     * (non-Javadoc)
+     * @see edu.jhu.pha.vospace.meta.UserHelper#getGroups(edu.jhu.pha.vospace.oauth.SciDriveUser)
+     */
     @Override
 	public List<UserGroup> getGroups(final SciDriveUser user) {
     	
@@ -196,7 +356,12 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
 		}
     }
     
-    public List<String> getGroupUsers(final SciDriveUser user, final String groupId) {
+    /*
+     * (non-Javadoc)
+     * @see edu.jhu.pha.vospace.meta.UserHelper#getGroupUsers(edu.jhu.pha.vospace.oauth.SciDriveUser, java.lang.String)
+     */
+    @Override
+	public List<String> getGroupUsers(final SciDriveUser user, final String groupId) {
     	ArrayList<String> users = new ArrayList<String>();
     	
         HttpGet method = new HttpGet(conf.getString("keystone.url")+"/v3/groups/"+groupId+"/users");
@@ -228,7 +393,10 @@ public class UserHelperImpl extends edu.jhu.pha.vospace.oauth.UserHelperImpl imp
 		}
     }
     
-
+    /*
+     * (non-Javadoc)
+     * @see edu.jhu.pha.vospace.meta.UserHelper#getSharePermission(java.lang.String, java.lang.String)
+     */
 	@Override
 	public Share getSharePermission(final String requestUserId, final String shareId) {
         return DbPoolServlet.goSql("Checking whether user \"" + requestUserId + "\" can access share.",
