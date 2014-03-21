@@ -450,7 +450,7 @@ public class DropboxService {
 		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 
 		return DbPoolServlet.goSql("Get transfers queue",
-	    		"select state, direction, starttime, endtime, target from jobs JOIN user_identities ON jobs.user_id = user_identities.user_id WHERE identity = ? order by starttime DESC",
+	    		"select state, direction, starttime, endtime, target from jobs JOIN users ON jobs.user_id = users.user_id WHERE identity = ? order by starttime DESC",
 	            new SqlWorker<byte[]>() {
 	                @Override
 	                public byte[] go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -889,7 +889,7 @@ public class DropboxService {
 	        		"select share_id, container_name, group_name, share_write_permission FROM container_shares "+
 	        		"LEFT JOIN groups ON container_shares.group_id = groups.group_id "+
 	        		"JOIN containers ON container_shares.container_id = containers.container_id "+
-	        		"JOIN user_identities ON containers.user_id = user_identities.user_id WHERE identity = ?",
+	        		"JOIN users ON containers.user_id = users.user_id WHERE identity = ?",
 	                new SqlWorker<Boolean>() {
 	                    @Override
 	                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -927,7 +927,7 @@ public class DropboxService {
 		DbPoolServlet.goSql("Remove share",
         		"delete container_shares from container_shares "+
         		"JOIN containers ON container_shares.container_id = containers.container_id "+
-        		"JOIN user_identities ON containers.user_id = user_identities.user_id WHERE share_id = ? AND identity = ?;",
+        		"JOIN users ON containers.user_id = users.user_id WHERE share_id = ? AND identity = ?;",
                 new SqlWorker<Boolean>() {
                     @Override
                     public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {

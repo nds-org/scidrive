@@ -14,7 +14,7 @@
 		</init-param>
 		<init-param>
 		     <param-name>com.sun.jersey.spi.container.ContainerRequestFilters</param-name>
-		     <param-value>edu.jhu.pha.vospace.keystone.SciServerAuthFilter,edu.jhu.pha.vospace.oauth.MyOAuthServerFilter</param-value>
+		     <param-value>edu.jhu.pha.vospace.oauth.MyOAuthServerFilter;edu.jhu.pha.vospace.keystone.SciServerAuthFilter</param-value>
 		 </init-param>
 	    <init-param>
 	        <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>
@@ -28,6 +28,10 @@
          <param-name>com.sun.jersey.config.feature.DisableWADL</param-name>
          <param-value>true</param-value>
      	</init-param>
+     	<init-param>
+			<param-name>com.sun.jersey.config.property.oauth.ignorePathPattern</param-name>
+			<param-value>request_token|access_token|authorize</param-value>
+		</init-param>
    		<load-on-startup>5</load-on-startup>
 	</servlet>
 	<servlet-mapping>

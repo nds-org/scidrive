@@ -92,7 +92,7 @@ public class AuthorizationServlet extends BaseServlet {
                 handleOpenidResponse(request, response);
             } else { // initial login
             	logger.debug("Initiate");
-            	SciDriveUser userName = SciDriveUser.fromName(checkCertificate(request));
+            	SciDriveUser userName = SciDriveUser.fromBoundName(checkCertificate(request));
             	if(null != userName){ // made X.509 authentication
             		logger.debug("Certificate checked. Username: "+userName);
 
@@ -185,6 +185,7 @@ public class AuthorizationServlet extends BaseServlet {
 
         // the user's OpenID
         String id = verification.getVerifiedId().getIdentifier();
+        logger.debug("Got OpenID "+id);
 
         // Is the user known to us?
         //String username = getUsername(id);
@@ -211,7 +212,7 @@ public class AuthorizationServlet extends BaseServlet {
         }*/
 
         // TODO: handle case where access token is already present
-        authorizeRequestToken(request, response, SciDriveUser.fromName(id));
+        authorizeRequestToken(request, response, SciDriveUser.fromBoundName(id));
     }
 
 	/**

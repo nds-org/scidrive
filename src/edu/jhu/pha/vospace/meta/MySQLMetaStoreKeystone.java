@@ -46,7 +46,7 @@ public class MySQLMetaStoreKeystone extends MySQLMetaStore2 {
 		
 		if(groupId != null && !groupId.isEmpty()) {
 			DbPoolServlet.goSql("Adding new share for container",
-	        		"insert into container_shares (share_id, container_id, group_id, share_write_permission) select ?, container_id, ?, ? from containers JOIN user_identities ON containers.user_id = user_identities.user_id WHERE identity = ? AND container_name = ?",
+	        		"insert into container_shares (share_id, container_id, group_id, share_write_permission) select ?, container_id, ?, ? from containers JOIN users ON containers.user_id = users.user_id WHERE identity = ? AND container_name = ?",
 	                new SqlWorker<Integer>() {
 	                    @Override
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -61,7 +61,7 @@ public class MySQLMetaStoreKeystone extends MySQLMetaStore2 {
 	        );
 		} else {
 			DbPoolServlet.goSql("Adding new share for container",
-	        		"insert into container_shares (share_id, container_id, share_write_permission) select ?, container_id, ? from containers JOIN user_identities ON containers.user_id = user_identities.user_id WHERE identity = ? AND container_name = ?",
+	        		"insert into container_shares (share_id, container_id, share_write_permission) select ?, container_id, ? from containers JOIN users ON containers.user_id = users.user_id WHERE identity = ? AND container_name = ?",
 	                new SqlWorker<Integer>() {
 	                    @Override
 	                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {

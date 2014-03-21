@@ -46,6 +46,8 @@ public interface UserHelper {
 
 	public abstract JsonNode getUserServices(SciDriveUser username);
 
+	public abstract String getUserIdFromBoundId(String boundName);
+
 	public abstract List<UserGroup> getGroups(SciDriveUser user);
 
 	public abstract List<String> getGroupUsers(SciDriveUser user, String groupId);

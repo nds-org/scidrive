@@ -23,7 +23,26 @@ public class SciDriveUser implements Principal {
 		this.storageCredentials = storageCredentials;
 	}
 
+	/**
+	 * Returns SciDrive user from keystone ID
+	 * @param boundName
+	 * @return
+	 */
 	public static SciDriveUser fromName(String name) {
+		if(null == name)
+			return null;
+		return new SciDriveUser(name, "", true, MetaStoreFactory.getUserHelper().getDataStoreCredentials(name));
+	}
+	
+	/**
+	 * Returns SciDrive user from bound name, f.e. OpenID
+	 * @param boundName
+	 * @return
+	 */
+	public static SciDriveUser fromBoundName(String boundName) {
+		if(null == boundName)
+			return null;
+		String name = MetaStoreFactory.getUserHelper().getUserIdFromBoundId(boundName);
 		return new SciDriveUser(name, "", true, MetaStoreFactory.getUserHelper().getDataStoreCredentials(name));
 	}
 	

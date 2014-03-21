@@ -73,7 +73,6 @@ public class MySQLOAuthProvider2 {
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
         				"left outer join users on users.user_id = containers.user_id "+
-        				"left outer join user_identities on users.user_id = user_identities.user_id "+
         				"where request_token = ? limit 1",
                 new SqlWorker<Token>() {
                     @Override
@@ -111,7 +110,6 @@ public class MySQLOAuthProvider2 {
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
         				"left outer join container_shares on oauth_accessors.share_key = container_shares.share_key "+
         				"left outer join users on users.user_id = containers.user_id "+
-        				"left outer join user_identities on users.user_id = user_identities.user_id "+
         				"where access_token = ? limit 1",
                 new SqlWorker<Token>() {
                     @Override
@@ -194,6 +192,7 @@ public class MySQLOAuthProvider2 {
         );
     }
     
+    //TODO !!!!!!!!!!!!!!!
     /**
      * Returns the user the share is made for
      * @param shareId
@@ -201,7 +200,7 @@ public class MySQLOAuthProvider2 {
      */
     public static synchronized List<String> getShareUsers(final String shareId) {
         return DbPoolServlet.goSql("Get share user logins",
-        		"select identity from user_identities JOIN user_groups ON user_groups.user_id = user_identities.user_id JOIN container_shares ON user_groups.group_id = container_shares.group_id AND container_shares.share_id = ?",
+        		"select identity from users JOIN user_groups ON user_groups.user_id = user_identities.user_id JOIN container_shares ON user_groups.group_id = container_shares.group_id AND container_shares.share_id = ?",
                 new SqlWorker<List<String>>() {
                     @Override
                     public List<String> go(Connection conn, PreparedStatement stmt) throws SQLException {
@@ -339,7 +338,7 @@ public class MySQLOAuthProvider2 {
 				}
 
 		        DbPoolServlet.goSql("Mark oauth token as authorized",
-		        		"update oauth_accessors set container_id = (select container_id from containers join user_identities on containers.user_id = user_identities.user_id where identity = ? and container_name = ?), authorized = 1 where request_token = ?;",
+		        		"update oauth_accessors set container_id = (select container_id from containers join users on containers.user_id = users.user_id where identity = ? and container_name = ?), authorized = 1 where request_token = ?;",
 		                new SqlWorker<Integer>() {
 		                    @Override
 		                    public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {

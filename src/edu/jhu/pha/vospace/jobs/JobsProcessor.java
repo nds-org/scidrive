@@ -150,7 +150,7 @@ public abstract class JobsProcessor implements Runnable  {
 		}
 		
         DbPoolServlet.goSql("Submit job",
-        		"insert into jobs (id,user_id,starttime,state,direction,target,json_notation) select ?, user_id, ?,?,?,?,? from user_identities WHERE identity = ?",
+        		"insert into jobs (id,user_id,starttime,state,direction,target,json_notation) select ?, user_id, ?,?,?,?,? from users WHERE identity = ?",
                 new SqlWorker<Integer>() {
                     @Override
                     public Integer go(Connection conn, PreparedStatement stmt) throws SQLException {

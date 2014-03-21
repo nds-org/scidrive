@@ -402,7 +402,6 @@ public class UserHelperImpl implements UserHelper {
         return DbPoolServlet.goSql("Checking whether user \"" + requestUserId + "\" can access share.",
                 "select container_name, group_id, share_write_permission, identity, storage_credentials from container_shares " +
                 "JOIN containers ON container_shares.container_id = containers.container_id " +
-                "JOIN user_identities ON containers.user_id = user_identities.user_id "+
                 "JOIN users ON containers.user_id = users.user_id "+
                 "where share_id = ?;",
                 new SqlWorker<Share>() {
@@ -460,5 +459,29 @@ public class UserHelperImpl implements UserHelper {
                 }
         );
 		
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#getUserIdFromBoundId(java.lang.String)
+	 */
+	@Override
+	public String getUserIdFromBoundId(final String boundName) {
+        return DbPoolServlet.goSql("Checking bound users table and returning userId",
+                "select identity from users JOIN user_bindings ON users.user_id = user_bindings.user_id where bound_identity = ?;",
+                new SqlWorker<String>() {
+                    @Override
+                    public String go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, boundName);
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next())
+                            return rs.getString(1);
+                        else {
+                        	logger.error("Can't find user bind "+boundName);
+                            throw new PermissionDeniedException("The user "+boundName+" is not bound.");
+                        }
+                    }
+                }
+        );
 	}	
 }
