@@ -16,10 +16,10 @@
         <dependency org="org.glassfish.jersey.core" name="jersey-server" rev="2.7" conf="compile->default"/>
         <dependency org="org.glassfish.jersey.core" name="jersey-common" rev="2.7" conf="compile->default"/>
 
-        <dependency org="org.glassfish.jersey.containers" name="jersey-container-servlet-core" rev="2.7" conf="compile->default"/>
         <dependency org="org.glassfish.jersey.containers" name="jersey-container-servlet" rev="2.7" conf="compile->default"/>
 
 		<dependency org="org.glassfish.jersey.media" name="jersey-media-multipart" rev="2.7" conf="compile->default"/>
+		<dependency org="org.glassfish.jersey.media" name="jersey-media-sse" rev="2.7" conf="compile->default"/>
 
         <dependency org="org.glassfish.jersey.security" name="oauth1-server" rev="2.7" conf="compile->default"/>
             

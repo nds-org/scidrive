@@ -23,6 +23,8 @@ import org.apache.log4j.Logger;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.ShutdownListener;
+import com.rabbitmq.client.ShutdownSignalException;
 
 public class QueueConnector {
     static Configuration conf = SettingsServlet.getConfig();
@@ -51,7 +53,11 @@ public class QueueConnector {
             conn = factory.newConnection();
             channel = conn.createChannel();
             T result = goer.go(conn, channel);
-            return result;
+            conn.addShutdownListener(new ShutdownListener() {
+                public void shutdownCompleted(ShutdownSignalException cause) {
+                	logger.info("RabbitMQ connection shutdown");
+                }
+            });            return result;
         } catch (IOException e) {
             goer.error(context, e);
             return null;
