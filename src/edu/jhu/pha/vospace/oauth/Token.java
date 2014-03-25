@@ -6,12 +6,13 @@ import java.util.Set;
 
 import javax.ws.rs.core.MultivaluedMap;
 
-import com.sun.jersey.core.util.MultivaluedMapImpl;
-import com.sun.jersey.oauth.server.spi.OAuthConsumer;
-import com.sun.jersey.oauth.server.spi.OAuthToken;
+import org.glassfish.jersey.internal.util.collection.MultivaluedStringMap;
+import org.glassfish.jersey.server.oauth1.OAuth1Consumer;
+import org.glassfish.jersey.server.oauth1.OAuth1Token;
 
 
-public class Token implements OAuthToken {
+
+public class Token implements OAuth1Token {
    private final String token;
    private final String secret;
    private final String consumerKey;
@@ -34,7 +35,7 @@ public class Token implements OAuthToken {
 
    public Token(String token, String secret, Token requestToken) {
        this(token, secret, requestToken.getConsumer().getKey(), null,
-               requestToken.principal, requestToken.roles, new MultivaluedMapImpl());
+               requestToken.principal, requestToken.roles, new MultivaluedStringMap());
    }
 
    public Token(String token, String secret, String consumerKey, String callbackUrl, MultivaluedMap<String, String> attributes) {
@@ -52,7 +53,7 @@ public class Token implements OAuthToken {
    }
 
    @Override
-   public OAuthConsumer getConsumer() {
+   public OAuth1Consumer getConsumer() {
        return MySQLOAuthProvider2.getConsumer(consumerKey);
    }
 

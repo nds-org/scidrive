@@ -1,7 +1,7 @@
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
- * Copyright (c) 2010-2011 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010-2014 Oracle and/or its affiliates. All rights reserved.
  *
  * The contents of this file are subject to the terms of either the GNU
  * General Public License Version 2 only ("GPL") or the Common Development
@@ -40,82 +40,56 @@
 
 package edu.jhu.pha.vospace.oauth;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
+import javax.ws.rs.Priorities;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.Provider;
+import javax.annotation.Priority;
+import javax.inject.Inject;
+import javax.inject.Provider;
 
-import com.sun.jersey.api.core.ResourceConfig;
-import com.sun.jersey.oauth.server.NonceManager;
-import com.sun.jersey.oauth.server.OAuthException;
-import com.sun.jersey.oauth.server.OAuthSecurityContext;
-import com.sun.jersey.oauth.server.OAuthServerRequest;
-import com.sun.jersey.oauth.server.spi.OAuthConsumer;
-import com.sun.jersey.oauth.server.spi.OAuthProvider;
-import com.sun.jersey.oauth.server.spi.OAuthToken;
-import com.sun.jersey.oauth.signature.OAuthParameters;
-import com.sun.jersey.oauth.signature.OAuthSecrets;
-import com.sun.jersey.oauth.signature.OAuthSignature;
-import com.sun.jersey.oauth.signature.OAuthSignatureException;
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
+import org.glassfish.jersey.internal.util.PropertiesHelper;
+import org.glassfish.jersey.oauth1.signature.OAuth1Parameters;
+import org.glassfish.jersey.oauth1.signature.OAuth1Secrets;
+import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
+import org.glassfish.jersey.oauth1.signature.OAuth1SignatureException;
+import org.glassfish.jersey.server.ExtendedUriInfo;
+import org.glassfish.jersey.server.oauth1.OAuth1Consumer;
+import org.glassfish.jersey.server.oauth1.OAuth1Exception;
+import org.glassfish.jersey.server.oauth1.OAuth1ServerProperties;
+import org.glassfish.jersey.server.oauth1.OAuth1Token;
+import org.glassfish.jersey.server.oauth1.TokenResource;
+import org.glassfish.jersey.server.oauth1.internal.OAuthServerRequest;
 
-/** OAuth request filter that filters all requests indicating in the Authorization
+import edu.jhu.pha.vospace.rest.SciDriveOAuthProvider;
+
+
+/**
+ * OAuth request filter that filters all requests indicating in the Authorization
  * header they use OAuth. Checks if the incoming requests are properly authenticated
  * and populates the security context with the corresponding user principal and roles.
  * <p>
- * When an application is deployed as a Servlet or Filter this Jersey filter can be registered using the following initialization parameters:
- * <pre>
- * &lt;init-param&gt;
- *     &lt;param-name&gt;com.sun.jersey.spi.container.ContainerRequestFilters&lt;/param-name&gt;
- *     &lt;param-value&gt;com.sun.jersey.oauth.server.api.OAuthServerFilter&lt;/param-value&gt;
- * &lt;/init-param&gt;
- * </pre>
- *
- * <p>
- * This filter requires an implementation of {@link OAuthProvider} interface to be
- * included in the list of providers of the application (e.g. by annotating it
- * using the {@link Provider} annotation and having it on the scanning classpath).
- * <p>
- * The constants in this class indicate how you can parameterize this filter. E.g. when an application
- * is deployed as a Servlet or Filter you can set the path patern to be ignored by this filter
- * using the following initialization parameter:
- * <pre>
- * &lt;init-param&gt;
- *     &lt;param-name&gt;com.sun.jersey.config.property.oauth.ignorePathPattern&lt;/param-name&gt;
- *     &lt;param-value&gt;/login&lt;/param-value&gt;
- * &lt;/init-param&gt;
- * </pre>
  *
  * @author Paul C. Bryan <pbryan@sun.com>
  * @author Martin Matula
  */
+@Priority(Priorities.AUTHENTICATION)
 public class MyOAuthServerFilter implements ContainerRequestFilter {
-    /** OAuth realm. Default is set to "default". */
-    public static final String PROPERTY_REALM = "com.sun.jersey.config.property.oauth.realm";
-    /** Property that can be set to a regular expression used to match the path (relative to the base URI) this
-     * filter should not be applied to. */
-    public static final String PROPERTY_IGNORE_PATH_PATTERN = "com.sun.jersey.config.property.oauth.ignorePathPattern";
-    /** Can be set to max. age (in milliseconds) of nonces that should be tracked (default = 300000 ms = 5 min). */
-    public static final String PROPERTY_MAX_AGE = "com.sun.jersey.config.property.oauth.maxAge";
-    /** If set to true makes the correct OAuth authentication optional - i.e. instead of returning the appropriate status code
-     * ({@link Response.Status#BAD_REQUEST} or {@link Response.Status#UNAUTHORIZED}) the filter
-     * will ignore this request (as if it was not authenticated) and let the web application deal with it. */
-    public static final String FEATURE_NO_FAIL = "com.sun.jersey.config.feature.oauth.noFail";
 
     /** OAuth Server */
-    private final OAuthProvider provider;
+    @Inject
+    private SciDriveOAuthProvider provider;
 
     /** Manages and validates incoming nonces. */
     private final DbNonceManager nonces;
-
-    /** Maximum age (in milliseconds) of timestamp to accept in incoming messages. */
-    private final int maxAge;
 
     /** Value to return in www-authenticate header when 401 response returned. */
     private final String wwwAuthenticateHeader;
@@ -126,11 +100,21 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
     /** Regular expression pattern for path to ignore. */
     private final Pattern ignorePathPattern;
 
+    @Inject
+    private OAuth1Signature oAuth1Signature;
+
+    @Inject
+    private Provider<ExtendedUriInfo> uriInfo;
+
+
     private final boolean optional;
 
-    public MyOAuthServerFilter(@Context ResourceConfig rc, @Context OAuthProvider provider) {
-        this.provider = provider;
-
+    /**
+     * Create a new filter.
+     * @param rc Resource config.
+     */
+    @Inject
+    public MyOAuthServerFilter(Configuration rc) {
         // establish supported OAuth protocol versions
         HashSet<String> v = new HashSet<String>();
         v.add(null);
@@ -138,10 +122,17 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
         versions = Collections.unmodifiableSet(v);
 
         // optional initialization parameters (defaulted)
-        String realm = defaultInitParam(rc, PROPERTY_REALM, "default");
-        maxAge = intValue(defaultInitParam(rc, PROPERTY_MAX_AGE, "300000")); // 5 minutes
-        ignorePathPattern = pattern(defaultInitParam(rc, PROPERTY_IGNORE_PATH_PATTERN, null)); // no pattern
-        optional = rc.getFeature(FEATURE_NO_FAIL);
+        String realm = PropertiesHelper.getValue(rc.getProperties(), OAuth1ServerProperties.REALM, "default", String.class);
+        /* Maximum age (in milliseconds) of timestamp to accept in incoming messages. */
+        int maxAge = PropertiesHelper.getValue(rc.getProperties(), OAuth1ServerProperties.MAX_AGE, 300000);
+        /* Average requests to process between nonce garbage collection passes. */
+        int gcPeriod = PropertiesHelper.getValue(rc.getProperties(), OAuth1ServerProperties.GC_PERIOD, 100);
+        ignorePathPattern = pattern(PropertiesHelper.getValue(rc.getProperties(), OAuth1ServerProperties.IGNORE_PATH_PATTERN,
+                null, String.class)); // no pattern
+        optional = PropertiesHelper.isProperty(rc.getProperties(), OAuth1ServerProperties.NO_FAIL);
+
+        final String timeUnitStr = PropertiesHelper.getValue(rc.getProperties(), OAuth1ServerProperties.TIMESTAMP_UNIT,
+                String.class);
 
         nonces = new DbNonceManager(maxAge);
 
@@ -149,38 +140,45 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
         wwwAuthenticateHeader = "OAuth realm=\"" + realm + "\"";
     }
 
-    @Override
-    public ContainerRequest filter(ContainerRequest request) {
-        // do not filter requests that do not use OAuth authentication
 
-        String authHeader = request.getHeaderValue(OAuthParameters.AUTHORIZATION_HEADER);
-        if (!request.getQueryParameters().containsKey(OAuthParameters.VERSION) && !request.getFormParameters().containsKey(OAuthParameters.VERSION) && (authHeader == null || !authHeader.toUpperCase().startsWith(OAuthParameters.SCHEME.toUpperCase()))) {
-            return request;
+    @Override
+    public void filter(ContainerRequestContext request) throws IOException {
+        // do not filter requests that do not use OAuth authentication
+        String authHeader = request.getHeaderString(OAuth1Parameters.AUTHORIZATION_HEADER);
+        if (authHeader == null || !authHeader.toUpperCase().startsWith(OAuth1Parameters.SCHEME.toUpperCase())) {
+            return;
+        }
+
+        // do not filter requests that matches to access or token resources
+        final Method handlingMethod = uriInfo.get().getMatchedResourceMethod().getInvocable().getHandlingMethod();
+        if (handlingMethod.isAnnotationPresent(TokenResource.class)
+                || handlingMethod.getDeclaringClass().isAnnotationPresent(TokenResource.class)) {
+            return;
         }
 
         // do not filter if the request path matches pattern to ignore
-        if (match(ignorePathPattern, request.getPath())) {
-            return request;
+        if (match(ignorePathPattern, request.getUriInfo().getPath())) {
+            return;
         }
 
-        OAuthSecurityContext sc = null;
-
+        OAuth1SecurityContext sc;
         try {
             sc = getSecurityContext(request);
-        } catch (OAuthException e) {
+        } catch (OAuth1Exception e) {
             if (optional) {
-                return request;
+                return;
             } else {
-                throw new WebApplicationException(e.toResponse());
+                throw e;
             }
         }
+
         request.setSecurityContext(sc);
-        return request;
     }
 
-    private OAuthSecurityContext getSecurityContext(ContainerRequest request) throws OAuthException {
+
+    private OAuth1SecurityContext getSecurityContext(ContainerRequestContext request) throws OAuth1Exception {
         OAuthServerRequest osr = new OAuthServerRequest(request);
-        OAuthParameters params = new OAuthParameters().readRequest(osr);
+        OAuth1Parameters params = new OAuth1Parameters().readRequest(osr);
 
         // apparently not signed with any OAuth parameters; unauthorized
         if (params.size() == 0) {
@@ -198,32 +196,32 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
         supportedOAuthParam(params.getVersion(), versions);
 
         // retrieve secret for consumer key
-        OAuthConsumer consumer = provider.getConsumer(consumerKey);
+        OAuth1Consumer consumer = provider.getConsumer(consumerKey);
         if (consumer == null) {
             throw newUnauthorizedException();
         }
 
-        OAuthSecrets secrets = new OAuthSecrets().consumerSecret(consumer.getSecret());
-        OAuthSecurityContext sc;
+        OAuth1Secrets secrets = new OAuth1Secrets().consumerSecret(consumer.getSecret());
+        OAuth1SecurityContext sc;
 
         if (token == null) {
             if (consumer.getPrincipal() == null) {
                 throw newUnauthorizedException();
             }
-            sc = new OAuthSecurityContext(consumer, request.isSecure());
+            sc = new OAuth1SecurityContext(consumer, request.getSecurityContext().isSecure());
         } else {
-            OAuthToken accessToken = provider.getAccessToken(token);
+            OAuth1Token accessToken = provider.getAccessToken(token);
             if (accessToken == null) {
                 throw newUnauthorizedException();
             }
 
-            OAuthConsumer atConsumer = accessToken.getConsumer();
+            OAuth1Consumer atConsumer = accessToken.getConsumer();
             if (atConsumer == null || !consumerKey.equals(atConsumer.getKey())) {
                 throw newUnauthorizedException();
             }
 
             secrets.tokenSecret(accessToken.getSecret());
-            sc = new OAuthSecurityContext(accessToken, request.isSecure());
+            sc = new OAuth1SecurityContext(accessToken, request.getSecurityContext().isSecure());
         }
 
         if (!verifySignature(osr, params, secrets)) {
@@ -237,31 +235,14 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
         return sc;
     }
 
-    private static String defaultInitParam(ResourceConfig config, String name, String value) {
-        String v = (String) config.getProperty(name);
-        if (v == null || v.length() == 0) {
-            v = value;
-        }
-        return v;
-    }
-
-    private static int intValue(String value) {
-        try {
-            return Integer.valueOf(value);
-        }
-        catch (NumberFormatException nfe) {
-           return -1;
-        }
-    }
-
-    private static String requiredOAuthParam(String value) throws OAuthException {
+    private static String requiredOAuthParam(String value) throws OAuth1Exception {
         if (value == null) {
             throw newBadRequestException();
         }
         return value;
     }
 
-    private static String supportedOAuthParam(String value, Set<String> set) throws OAuthException {
+    private static String supportedOAuthParam(String value, Set<String> set) throws OAuth1Exception {
         if (!set.contains(value)) {
             throw newBadRequestException();
         }
@@ -279,20 +260,20 @@ public class MyOAuthServerFilter implements ContainerRequestFilter {
         return (pattern != null && value != null && pattern.matcher(value).matches());
     }
 
-    private static boolean verifySignature(OAuthServerRequest osr,
-    OAuthParameters params, OAuthSecrets secrets) {
+    private boolean verifySignature(OAuthServerRequest osr, OAuth1Parameters params, OAuth1Secrets secrets) {
         try {
-            return OAuthSignature.verify(osr, params, secrets);
-        } catch (OAuthSignatureException ose) {
+            return oAuth1Signature.verify(osr, params, secrets);
+        } catch (OAuth1SignatureException ose) {
             throw newBadRequestException();
         }
     }
 
-    private static OAuthException newBadRequestException() throws OAuthException {
-        return new OAuthException(Response.Status.BAD_REQUEST, null);
+    private static OAuth1Exception newBadRequestException() throws OAuth1Exception {
+        return new OAuth1Exception(Response.Status.BAD_REQUEST, null);
     }
 
-    private OAuthException newUnauthorizedException() throws OAuthException {
-        return new OAuthException(Response.Status.UNAUTHORIZED, wwwAuthenticateHeader);
+    private OAuth1Exception newUnauthorizedException() throws OAuth1Exception {
+        return new OAuth1Exception(Response.Status.UNAUTHORIZED, wwwAuthenticateHeader);
     }
+
 }

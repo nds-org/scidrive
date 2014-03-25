@@ -16,32 +16,35 @@
 
 package edu.jhu.pha.vospace.keystone;
 
+import javax.ws.rs.Priorities;
+import javax.annotation.Priority;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.ext.Provider;
 
 import org.apache.log4j.Logger;
+import org.glassfish.jersey.server.ContainerRequest;
 
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-
-
+@Priority(Priorities.AUTHENTICATION)
 public class SciServerAuthFilter implements ContainerRequestFilter {
 
 	private static Logger logger = Logger.getLogger(SciServerAuthFilter.class); 
 
     @Override
-    public ContainerRequest filter(ContainerRequest request) {
-        String authHeader = request.getHeaderValue("X-Auth-Token");
-        String share = request.getHeaderValue("X-Share");
+    public void filter(ContainerRequestContext request) {
+        String authHeader = request.getHeaderString("X-Auth-Token");
+        String share = request.getHeaderString("X-Share");
 
         if (authHeader == null && share == null) {
         	logger.error("Not found authHeader and shareHeader");
-            return request;
+            return;
         }
 
     	SciServerSecurityContext sc = null;
 
         if(request.getMethod().equals("OPTIONS"))
-        	return request;
+        	return;
         
     	logger.debug("Continue;");
         
@@ -50,14 +53,12 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         	if(null != authHeader)
         		token = new KeystoneToken(authHeader);
         	
-        	sc = new SciServerSecurityContext(token, share, request.isSecure()); 
+        	sc = new SciServerSecurityContext(token, share, request.getSecurityContext().isSecure()); 
         } catch (KeystoneException e) {
             throw new WebApplicationException(e.toResponse());
         }
         request.setSecurityContext(sc);
 
         logger.debug("Continue;");
-        
-        return request;
     }
 }

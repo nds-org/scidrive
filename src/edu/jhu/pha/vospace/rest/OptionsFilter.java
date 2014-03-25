@@ -15,35 +15,36 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.rest;
 
+import java.io.IOException;
+
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.core.Response.Status;
-
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerResponse;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-
 
 public class OptionsFilter implements ContainerResponseFilter {
 	
 	@Override
-	public ContainerResponse filter(ContainerRequest request,
-			ContainerResponse response) {
+	public void filter(ContainerRequestContext request,
+			ContainerResponseContext response) throws IOException {
 
 		if(request.getMethod().equals("OPTIONS")){
-			response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");
-			response.getHttpHeaders().add("Access-Control-Allow-Headers", request.getHeaderValue("Access-Control-Request-Headers"));
-			response.getHttpHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT");
-			response.getHttpHeaders().add("Access-Control-Max-Age", "10");
+			response.getHeaders().add("Access-Control-Allow-Origin", "*");
+			response.getHeaders().add("Access-Control-Allow-Headers", request.getHeaderString("Access-Control-Request-Headers"));
+			response.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT");
+			response.getHeaders().add("Access-Control-Max-Age", "10");
 		} else {
-			response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");
+			response.getHeaders().add("Access-Control-Allow-Origin", "*");
 		}
 		
 		if(response.getStatus() == Status.UNAUTHORIZED.getStatusCode()){
 //			response.getHttpHeaders().add("WWW-Authenticate", "OAuth realm=\""+request.getBaseUri().getScheme()+"://"+request.getBaseUri().getHost()+"\"");
-			response.getHttpHeaders().add("WWW-Authenticate", "Keystone realm=\""+request.getBaseUri().getScheme()+"://"+request.getBaseUri().getHost()+"\"");
+			response.getHeaders().add("WWW-Authenticate", "Keystone realm=\""+request.getUriInfo().getBaseUri().getScheme()+"://"+request.getUriInfo().getBaseUri().getHost()+"\"");
 		}
 		
-		response.getHttpHeaders().add("Cache-Control", "no-cache");
-		response.getHttpHeaders().add("Expires", "-1");
-		return response;
+		response.getHeaders().add("Cache-Control", "no-cache");
+		response.getHeaders().add("Expires", "-1");
+		return;
 	}
+
 }

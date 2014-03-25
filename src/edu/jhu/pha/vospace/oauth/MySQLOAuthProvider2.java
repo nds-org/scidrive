@@ -30,14 +30,14 @@ import java.util.TimeZone;
 import java.util.Vector;
 
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.Provider;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
-
-import com.sun.jersey.core.util.MultivaluedMapImpl;
-import com.sun.jersey.oauth.server.OAuthException;
-import com.sun.jersey.oauth.server.spi.OAuthConsumer;
+import org.glassfish.jersey.internal.util.collection.MultivaluedStringMap;
+import org.glassfish.jersey.server.oauth1.OAuth1Consumer;
+import org.glassfish.jersey.server.oauth1.OAuth1Token;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
@@ -55,6 +55,7 @@ import edu.jhu.pha.vospace.rest.SciDriveOAuthProvider.Consumer;
  *
  * @author Dmitry Mishin
  */
+@Provider
 public class MySQLOAuthProvider2 {
 
 	private static final Logger logger = Logger.getLogger(MySQLOAuthProvider2.class);
@@ -65,19 +66,19 @@ public class MySQLOAuthProvider2 {
 		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 
-    public static synchronized Token getRequestToken(final String tokenStr) {
+    public static synchronized OAuth1Token getRequestToken(final String tokenStr) {
         
-    	Token tokenObj = DbPoolServlet.goSql("Get oauth token",
+    	OAuth1Token tokenObj = DbPoolServlet.goSql("Get oauth token",
         		"select request_token, token_secret, consumer_key, callback_url, identity, container_name, accessor_write_permission "+
         				"from oauth_accessors "+
         				"join oauth_consumers on oauth_consumers.consumer_id = oauth_accessors.consumer_id "+
         				"left outer join containers on containers.container_id = oauth_accessors.container_id "+
         				"left outer join users on users.user_id = containers.user_id "+
         				"where request_token = ? limit 1",
-                new SqlWorker<Token>() {
+                new SqlWorker<OAuth1Token>() {
                     @Override
-                    public Token go(Connection conn, PreparedStatement stmt) throws SQLException {
-                        Token token = null;
+                    public OAuth1Token go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    	OAuth1Token token = null;
 
                         stmt.setString(1, tokenStr);
                         ResultSet rs = stmt.executeQuery();
@@ -87,7 +88,7 @@ public class MySQLOAuthProvider2 {
             	                    rs.getString("token_secret"), 
             	                    rs.getString("consumer_key"), 
             	                    rs.getString("callback_url"), 
-            	                    new MultivaluedMapImpl());
+            	                    new MultivaluedStringMap());
             	            
             	            if(null != rs.getString("container_name"))
             	            	token.getAttributes().add("root_container", rs.getString("container_name"));
@@ -152,7 +153,7 @@ public class MySQLOAuthProvider2 {
             	                    		userStorageCredentials
             	                    	),
             	                    rolesSet,
-            	                    new MultivaluedMapImpl());
+            	                    new MultivaluedStringMap());
             	            
             			}
             			return token;
@@ -167,7 +168,7 @@ public class MySQLOAuthProvider2 {
 	
 	
 	
-    public static synchronized OAuthConsumer getConsumer(final String consumer_key) {
+    public static synchronized OAuth1Consumer getConsumer(final String consumer_key) {
     	return DbPoolServlet.goSql("Get oauth consumer",
         		"select callback_url, consumer_key, consumer_secret, consumer_description, container from oauth_consumers where consumer_key = ?",
                 new SqlWorker<Consumer>() {
@@ -181,7 +182,7 @@ public class MySQLOAuthProvider2 {
             	            consumer = new Consumer(
             	                    rs.getString("consumer_key"), 
             	                    rs.getString("consumer_secret"), 
-            	                    new MultivaluedMapImpl());
+            	                    new MultivaluedStringMap());
                             consumer.getAttributes().add("name", rs.getString("consumer_key"));
                             consumer.getAttributes().add("description", rs.getString("consumer_description"));
                             consumer.getAttributes().add("container", rs.getString("container"));
@@ -319,7 +320,7 @@ public class MySQLOAuthProvider2 {
      * @param userId the owner userId
      * @throws OAuthException
      */
-    public static synchronized void markAsAuthorized(final Token requestToken, final SciDriveUser userId) {
+    public static synchronized void markAsAuthorized(final OAuth1Token requestToken, final SciDriveUser userId) {
     	
 		try {
 			if(null == requestToken.getAttributes().getFirst("root_container")) { // No predefined one (can be predefined for sharing); in this case set the default one

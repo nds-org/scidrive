@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
+import org.glassfish.jersey.server.oauth1.OAuth1Token;
 import org.openid4java.OpenIDException;
 import org.openid4java.consumer.ConsumerManager;
 import org.openid4java.consumer.VerificationResult;
@@ -265,7 +266,7 @@ public class AuthorizationServlet extends BaseServlet {
             throw new Oops("No request token found in request.");
 		
 		try {
-			Token reqToken = MySQLOAuthProvider2.getRequestToken(token);
+			OAuth1Token reqToken = MySQLOAuthProvider2.getRequestToken(token);
 			if(null == reqToken)
     			throw new PermissionDeniedException("401 Unauthorized");
             if(null != reqToken.getAttributes().getFirst("root_container")){ // pre-shared container accessor
