@@ -27,7 +27,7 @@ import edu.jhu.pha.vospace.SettingsServlet;
  * Provides the REST service for /updates/ path: retrieving realtime updates using SSE
  * @author Dmitry Mishin
  */
-@Path("/updates/")
+@Path("updates")
 
 public class UpdatesController {
 	private static final Logger logger = Logger.getLogger(UpdatesController.class);
@@ -36,7 +36,7 @@ public class UpdatesController {
 	@GET
 	@PermitAll
     @Produces(SseFeature.SERVER_SENT_EVENTS)
-    public EventOutput getServerSentEvents(@Suspended final AsyncResponse asyncResponse) {
+    public EventOutput getServerSentEvents() {
         final EventOutput eventOutput = new EventOutput();
         new Thread() {
             @Override
@@ -56,25 +56,31 @@ public class UpdatesController {
             				QueueingConsumer consumer = new QueueingConsumer(channel);
             				channel.basicConsume(listenQueue.getQueue(), true, consumer);
 
-        					while (!listenThread.isInterrupted()) {
-        						try {
-	    					    	QueueingConsumer.Delivery delivery = consumer.nextDelivery();
-	    					    	
-	    					    	// Job JSON notation
-	    					    	byte[] message = delivery.getBody();
-	    						    JsonNode update = (new ObjectMapper()).readValue(message, 0, message.length, JsonNode.class);
-	    						    String container = update.path("container").getTextValue();
-	    						    
-	        	                	final OutboundEvent.Builder eventBuilder = new OutboundEvent.Builder();
-	        	                    eventBuilder.id(Long.toString(System.currentTimeMillis()));
-	        	                    eventBuilder.data(String.class, new String(message));
-	        	                    final OutboundEvent event = eventBuilder.build();
-	        	                    eventOutput.write(event);
-        						} catch(InterruptedException ex) {
-        							logger.error("Error reading update message from queue: "+ex.getMessage());
-        						}
+//        					while (!listenThread.isInterrupted()) {
+            					while (true) {
+//        						try {
+//	    					    	QueueingConsumer.Delivery delivery = consumer.nextDelivery();
+//	    					    	
+//	    					    	// Job JSON notation
+//	    					    	byte[] message = delivery.getBody();
+//	    						    JsonNode update = (new ObjectMapper()).readValue(message, 0, message.length, JsonNode.class);
+//	    						    String container = update.path("container").getTextValue();
+//	    						    System.out.println(new String(message));
+//	        	                	final OutboundEvent.Builder eventBuilder = new OutboundEvent.Builder();
+//	        	                    eventBuilder.id(Long.toString(System.currentTimeMillis()));
+//	        	                    eventBuilder.data(String.class, new String(message));
+//	        	                    final OutboundEvent event = eventBuilder.build();
+//	        	                    eventOutput.write(event);
+//        						} catch(InterruptedException ex) {
+//        							logger.error("Error reading update message from queue: "+ex.getMessage());
+//        						}
+        	                	final OutboundEvent.Builder eventBuilder = new OutboundEvent.Builder();
+        	                    eventBuilder.id(Long.toString(System.currentTimeMillis()));
+        	                    eventBuilder.data(String.class, new String("aaaaaaaa"));
+        	                    final OutboundEvent event = eventBuilder.build();
+        	                    eventOutput.write(event);
         					}
-            		    	return true;
+            		    	//return true;
             			}
             		});	
                 } finally {
