@@ -16,6 +16,8 @@
 package edu.jhu.pha.vospace.api;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -29,7 +31,16 @@ public class AccountInfo {
 	private long bytesUsed;
 	private int softLimit;
 	private int hardLimit;
+	private List<String> aliases;
 
+	public List<String> getAliases() {
+		if(null == aliases)
+			aliases = new ArrayList<String>();
+		return aliases;
+	}
+	public void setAliases(List<String> aliases) {
+		this.aliases = aliases;
+	}
 	public String getUsername() {
 		return username;
 	}

@@ -21,7 +21,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -37,6 +39,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -45,9 +48,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -70,9 +76,13 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.util.TokenBuffer;
-
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.openid4java.OpenIDException;
+import org.openid4java.association.AssociationSessionType;
+import org.openid4java.consumer.ConsumerManager;
+import org.openid4java.consumer.VerificationResult;
+import org.openid4java.message.ParameterList;
 
 import edu.jhu.pha.vospace.DbPoolServlet;
 import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
@@ -93,6 +103,8 @@ import edu.jhu.pha.vospace.node.NodeInfo;
 import edu.jhu.pha.vospace.node.NodePath;
 import edu.jhu.pha.vospace.node.NodeType;
 import edu.jhu.pha.vospace.node.VospaceId;
+import edu.jhu.pha.vospace.oauth.AuthorizationServlet;
+import edu.jhu.pha.vospace.oauth.OauthCookie;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
 import edu.jhu.pha.vospace.process.NodeProcessor;
 import edu.jhu.pha.vospace.process.ProcessorConfig;
@@ -256,6 +268,12 @@ public class DropboxService {
 			}
 			g2.writeEndArray();
 
+			g2.writeArrayFieldStart("aliases");
+			for(String alias: info.getAliases()) {
+				g2.writeString(alias);
+			}
+			g2.writeEndArray();
+
 			g2.close();
 			byteOut.close();
 	
@@ -400,7 +418,6 @@ public class DropboxService {
 			@QueryParam("start") @DefaultValue("0") int start, 
 			@QueryParam("count") @DefaultValue("-1") int count,
 			@QueryParam("include_deleted") @DefaultValue("false") boolean includeDeleted) {
-		logger.debug(includeDeleted);
 		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
 		VospaceId identifier;
 		try {
@@ -1180,6 +1197,81 @@ public class DropboxService {
 		} catch (IOException e) {
 			throw new InternalServerErrorException(e.getMessage());
 		}
+	}
+	
+	@PUT @Path("account/info/identity")
+	public Response addAccountAlias(@Context UriInfo uriInfo, @HeaderParam("Accept") String acceptParam, @QueryParam("provider") String provider) {
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+        String idLess = AuthorizationServlet.getIdentityless(provider);
+        
+       	logger.debug("Created third party app cookie.");
+       	try {
+       		URI returnUri = new URI(uriInfo.getRequestUri().toString());
+       		UriBuilder uriBuilder = UriBuilder.fromUri(returnUri);
+       		uriBuilder.replaceQueryParam("userId", user.getName());
+            String redirectUrl = AuthorizationServlet.initiateOpenid(uriBuilder.toString(), idLess);
+       		logger.debug(redirectUrl);
+			ResponseBuilder response = Response.ok().entity(redirectUrl);
+        	logger.debug("Created OpenID request for user "+user.getName());
+            return response.build();
+       	} catch(OpenIDException ex) {
+       		throw new InternalServerErrorException(ex);
+       	} catch (URISyntaxException e) {
+       		throw new InternalServerErrorException(e);
+		}
+	}
+	
+	@GET @Path("account/info/identity") //OpenID response
+	public Response addAccountAliasResponse(@Context UriInfo uriInfo, @HeaderParam("Accept") String acceptParam, @QueryParam("provider") String provider, @QueryParam("userId") String userId) {
+        ConsumerManager manager = new ConsumerManager();
+        manager.setAssociations(AuthorizationServlet.assocStore); 
+        manager.setNonceVerifier(AuthorizationServlet.nonceVer); 
+        manager.setMinAssocSessEnc(AssociationSessionType.DH_SHA256);
+        manager.setAllowStateless(true);
+
+        Map<String, String> params = new HashMap<String, String>();
+        for(String curParamKey: uriInfo.getQueryParameters().keySet()) {
+        	params.put(curParamKey, uriInfo.getQueryParameters().get(curParamKey).get(0));
+        }
+
+        try {
+        	logger.debug(uriInfo.getRequestUri().toString());
+            VerificationResult verification = manager.verify(uriInfo.getRequestUri().toString(), new ParameterList(params), null);
+            if (null == verification.getVerifiedId() || !AuthorizationServlet.isBlank(verification.getStatusMsg()))
+                throw new ForbiddenException("OpenID authentication failed. " + ((null != verification.getStatusMsg())?verification.getStatusMsg():""));
+            // We're authenticated!  Now approve the request token.
+
+            String openId = verification.getVerifiedId().getIdentifier();
+            
+            MetaStoreFactory.getUserHelper().addUserAlias(userId, openId);
+            
+            ResponseBuilder response = Response.ok();
+            
+        	if(null != acceptParam && acceptParam.contains("text/html")){
+        		response.type(MediaType.TEXT_HTML_TYPE);
+        		response.entity("<html><head><script type='text/javascript'>window.close();</script></head></html>");
+        	} else {
+                response.type(MediaType.TEXT_PLAIN_TYPE);
+                response.entity("You have successfully authorized " 
+				+ ".\nPlease close this browser window and click continue"
+				+ " in the client.");
+        	}
+
+        	return response.build();
+        } catch (OpenIDException e) {
+            logger.info("Exception verifying OpenID response.", e);
+            throw new InternalServerErrorException("Unable to verify OpenID response: " + e.getMessage());
+        }
+	}
+
+
+	
+	@DELETE @Path("account/info/identity/{identity:.+}")
+	@RolesAllowed({"user"})
+	public Response deleteAccountAlias(@PathParam("identity") String identity) {
+		SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+		MetaStoreFactory.getUserHelper().removeUserAlias(user.getName(), identity);
+		return getAccountInfo();
 	}
 }
 

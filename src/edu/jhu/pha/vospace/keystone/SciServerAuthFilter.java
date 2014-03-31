@@ -46,8 +46,6 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         if(request.getMethod().equals("OPTIONS"))
         	return;
         
-    	logger.debug("Continue;");
-        
         try {
         	KeystoneToken token = null;
         	if(null != authHeader)
@@ -58,7 +56,5 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
             throw new WebApplicationException(e.toResponse());
         }
         request.setSecurityContext(sc);
-
-        logger.debug("Continue;");
     }
 }

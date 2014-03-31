@@ -32,7 +32,10 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.glassfish.jersey.server.oauth1.OAuth1Token;
 import org.openid4java.OpenIDException;
+import org.openid4java.association.AssociationSessionType;
+import org.openid4java.consumer.ConsumerAssociationStore;
 import org.openid4java.consumer.ConsumerManager;
+import org.openid4java.consumer.NonceVerifier;
 import org.openid4java.consumer.VerificationResult;
 import org.openid4java.discovery.DiscoveryException;
 import org.openid4java.discovery.DiscoveryInformation;
@@ -57,7 +60,10 @@ public class AuthorizationServlet extends BaseServlet {
             AX_URL_CERTIFICATE = "http://sso.usvao.org/schema/credential/x509";
     
 	private static Configuration conf = SettingsServlet.getConfig();
-    
+
+	public static ConsumerAssociationStore assocStore = new OpenidConsumerAssociationStore();
+	public static NonceVerifier nonceVer = new OpenidNonceVerifier(5000);
+
     @Override
     /** Handle GET & POST the same way, because OpenID response may be a URL redirection (GET)
      *  or a form submission (POST). */
@@ -93,79 +99,38 @@ public class AuthorizationServlet extends BaseServlet {
                 handleOpenidResponse(request, response);
             } else { // initial login
             	logger.debug("Initiate");
-            	SciDriveUser userName = SciDriveUser.fromBoundName(checkCertificate(request));
-            	if(null != userName){ // made X.509 authentication
-            		logger.debug("Certificate checked. Username: "+userName);
-
-                    if (!MetaStoreFactory.getUserHelper().userExists(userName)) {
-                    	MetaStoreFactory.getUserHelper().addDefaultUser(userName);
-                    }
-
-            		authorizeRequestToken(request, response, userName);
-            	} else { // need to do openid
-            		logger.debug("OpenID init");
-	                String provider = request.getParameter("provider");
-	                String idLess = getIdentityless(provider);
-	                
-	                // set cookie for cases when user came directly to authorize from 3rd party application
-	                if(null != request.getParameter("oauth_token")){
-	                	OauthCookie cookie = new OauthCookie();
-	                	cookie.setRequestToken(request.getParameter("oauth_token"));
-	                	cookie.setCallbackUrl(request.getParameter("oauth_callback"));
-	                	cookie.setRegion(conf.getString("region"));
-	                	cookie.setShareId(request.getParameter("share"));
-	                	response.addCookie(new Cookie(OauthCookie.COOKIE_NAME, cookie.toString()));
-	                	logger.debug("Created third party app cookie.");
-	                }
-	                
-	                String error = initiateOpenid(request, response, idLess);
-	                if (error != null)
-	                    throw new Oops(error);
-            	}
+        		logger.debug("OpenID init");
+                String provider = request.getParameter("provider");
+                String idLess = getIdentityless(provider);
+                
+                // set cookie for cases when user came directly to authorize from 3rd party application
+                if(null != request.getParameter("oauth_token")){
+                	OauthCookie cookie = new OauthCookie();
+                	cookie.setRequestToken(request.getParameter("oauth_token"));
+                	cookie.setCallbackUrl(request.getParameter("oauth_callback"));
+                	cookie.setRegion(conf.getString("region"));
+                	cookie.setShareId(request.getParameter("share"));
+                	response.addCookie(new Cookie(OauthCookie.COOKIE_NAME, cookie.toString()));
+                	logger.debug("Created third party app cookie.");
+                }
+                
+                response.sendRedirect(initiateOpenid(request.getRequestURI().toString(), idLess));
             } 
         }
         // for local error-reporting, use a private Exception class, Oops (see below)
-        catch(Oops e) {
+        catch(OpenIDException e) {
             handleError(request, response, e.getMessage());
-        }
-    }
-
-    private String checkCertificate(HttpServletRequest request) {
-    	java.security.cert.X509Certificate[] certs =
-    		(java.security.cert.X509Certificate[]) request.getAttribute(
-    				"javax.servlet.request.X509Certificate");
-
-    	if(null != certs){
-    		if (certs[0] != null) {
-    			String dn = certs[0].getSubjectX500Principal().getName();
-    			try {
-    				LdapName ldn = new LdapName(dn);
-    				Iterator<Rdn> rdns = ldn.getRdns().iterator();
-    				String org = null, cn = null;
-    				while (rdns.hasNext()) {
-    					Rdn rdn = (Rdn) rdns.next();
-    					if (rdn.getType().equalsIgnoreCase("O"))
-    						org = (String) rdn.getValue();
-    					else if (rdn.getType().equalsIgnoreCase("CN"))
-    						cn = (String) rdn.getValue();
-    				}
-    				if (cn != null){
-    					return cn;
-    				} else {
-    					logger.error("Error authenticating the user: cn not found in certificate.");
-    					throw new PermissionDeniedException("401 Unauthorized");
-    				}
-    			} catch (javax.naming.InvalidNameException e) {
-    			}
-    		}
-    	}
-    	return null;
+        } catch (Oops e) {
+            handleError(request, response, e.getMessage());
+		}
     }
     
     private void handleOpenidResponse(HttpServletRequest request, HttpServletResponse response)
             throws IOException, Oops {
         ConsumerManager manager = new ConsumerManager();
-        manager.setAllowStateless(false);
+        manager.setAssociations(assocStore); 
+        manager.setNonceVerifier(nonceVer); 
+        manager.setMinAssocSessEnc(AssociationSessionType.DH_SHA256);
         ParameterList params = new ParameterList(request.getParameterMap());
         try {
             VerificationResult verification = manager.verify(request.getRequestURL().toString(), params, null);
@@ -303,39 +268,42 @@ public class AuthorizationServlet extends BaseServlet {
 	}
 
     /** Initiate OpenID authentication.  Return null if successful and no further action is necessary;
-     *  return an error message if there was a problem. */
-    private String initiateOpenid(HttpServletRequest request, HttpServletResponse response, String idLess)
-            throws IOException
+     *  return an error message if there was a problem. 
+     * @throws Oops 
+     * @throws OpenIDException */
+    public static String initiateOpenid(String returnUrl, String idLess)
+            throws OpenIDException
     {
         ConsumerManager manager = new ConsumerManager();
-        manager.setAllowStateless(false);
+        manager.setAssociations(assocStore); 
+        manager.setNonceVerifier(nonceVer); 
+        manager.setMinAssocSessEnc(AssociationSessionType.DH_SHA256);
         try {
             List discoveries = manager.discover(idLess);
             DiscoveryInformation discovered = manager.associate(discoveries);
-            String returnUrl = request.getRequestURL().toString();
-            if (returnUrl.indexOf('?') > 0)
-                returnUrl = returnUrl.substring(0, returnUrl.indexOf('?'));
+//            if (returnUrl.indexOf('?') > 0)
+//                returnUrl = returnUrl.substring(0, returnUrl.indexOf('?'));
             AuthRequest authRequest = manager.authenticate(discovered, returnUrl);
 
             // attribute request: get Certificate (could also get name)
-            FetchRequest fetch = FetchRequest.createFetchRequest();
-            fetch.addAttribute(ALIAS_CERTIFICATE, AX_URL_CERTIFICATE, true);
-            authRequest.addExtension(fetch);
+//            FetchRequest fetch = FetchRequest.createFetchRequest();
+//            fetch.addAttribute(ALIAS_CERTIFICATE, AX_URL_CERTIFICATE, true);
+//            authRequest.addExtension(fetch);
 
-            response.sendRedirect(authRequest.getDestinationUrl(true));
+            return authRequest.getDestinationUrl(true);
         } catch (DiscoveryException e) {
             logger.warn("Exception during OpenID discovery.", e);
-            return "Unable to contact OpenID provider: " + e.getMessage();
+            throw new OpenIDException("Unable to contact OpenID provider: " + e.getMessage());
         } catch (OpenIDException e) {
             logger.warn("Exception processing authentication request.", e);
+            throw new OpenIDException("Exception processing authentication request."+ e.getMessage());
         }
-        return null; // no errors
     }
 
     /** The URL to use for identityless authentication for a provider.  Not all providers support it
      * -- we will need to do something fancier with discovery etc. for the general case, although
      * this will work fine with VAO SSO. */
-    private static String getIdentityless(String providerName) {
+    public static String getIdentityless(String providerName) {
         if (isBlank(providerName))
             throw new IllegalArgumentException("No provider specified.  Try provider=vao.");
         if(null != conf.getString(providerName+".identityless.url"))

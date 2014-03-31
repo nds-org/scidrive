@@ -182,22 +182,26 @@ public class UserHelperImpl implements UserHelper {
 	 */
 	@Override
 	public AccountInfo getAccountInfo(final SciDriveUser username) {
-		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username + "\" limits from DB.",
-                "select hardlimit, softlimit from users WHERE identity = ?;",
+		AccountInfo info = DbPoolServlet.goSql("Getting user \"" + username.getName() + "\" limits from DB.",
+                "select hardlimit, softlimit, bound_identity from users "
+				+ "LEFT OUTER JOIN user_bindings ON users.user_id = user_bindings.user_id "
+                + "WHERE identity = ?;",
                 new SqlWorker<AccountInfo>() {
                     @Override
                     public AccountInfo go(Connection conn, PreparedStatement stmt) throws SQLException {
                         stmt.setString(1, username.getName());
                         ResultSet rs = stmt.executeQuery();
-                        if (rs.next()){
-                            AccountInfo info = new AccountInfo();
+                        AccountInfo info = new AccountInfo();
+                        while (rs.next()){
                             info.setUsername(username.getName());
                             info.setHardLimit(rs.getInt("hardlimit"));
                             info.setSoftLimit(rs.getInt("softlimit"));
-                        	return info;
-                        } else {
-                            throw new IllegalStateException("No result from query.");
+                            String boundIdentity = rs.getString("bound_identity");
+                            if(null != boundIdentity) {
+                            	info.getAliases().add(boundIdentity);
+                            }
                         }
+                    	return info;
                     }
                 }
         );
@@ -484,4 +488,46 @@ public class UserHelperImpl implements UserHelper {
                 }
         );
 	}	
+	
+
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#removeUserAlias(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void removeUserAlias(final String userName, final String alias) {
+        DbPoolServlet.goSql("Removing user's alias",
+                "delete from user_bindings WHERE bound_identity = ? and user_id = (select user_id from users where identity = ?);",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                        stmt.setString(1, alias);
+                        stmt.setString(2, userName);
+                        return stmt.execute();
+                    }
+                }
+        );
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see edu.jhu.pha.vospace.meta.UserHelper#addUserAlias(java.lang.String, java.lang.String)
+	 */
+	@Override
+	public void addUserAlias(final String username, final String alias) {
+		DbPoolServlet.goSql("Add user alias",
+				"insert IGNORE into user_bindings (user_id, bound_identity) " +
+				"select users.user_id, ? from users WHERE identity = ?",
+                new SqlWorker<Boolean>() {
+                    @Override
+                    public Boolean go(Connection conn, PreparedStatement stmt) throws SQLException {
+                    	stmt.setString(1, alias);
+                    	stmt.setString(2, username);
+                        stmt.executeUpdate();
+                        return true;
+                    }
+		});
+    }
+	
+
 }

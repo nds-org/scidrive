@@ -53,4 +53,8 @@ public interface UserHelper {
 	public abstract List<String> getGroupUsers(SciDriveUser user, String groupId);
 	
 	public abstract Share getSharePermission(String userId, String shareId);
+
+	public abstract void removeUserAlias(String userId, String alias);
+
+	public abstract void addUserAlias(String userId, String alias);
 }

@@ -64,7 +64,6 @@ public class KeystoneAuthenticator {
 	 * If login is already in call, just waits for success, otherwise assigns the token to static var.
 	 */
 	public static void login(long delay) {
-		logger.debug("Login "+delay);
 		try {
 			if(loginLock.tryLock()) {
 				try {
