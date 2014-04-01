@@ -29,6 +29,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -57,6 +58,8 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
@@ -89,6 +92,8 @@ import edu.jhu.pha.vospace.DbPoolServlet.SqlWorker;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.AccountInfo;
 import edu.jhu.pha.vospace.jobs.JobsProcessor;
+import edu.jhu.pha.vospace.jobs.MyHttpConnectionPoolProvider;
+import edu.jhu.pha.vospace.keystone.KeystoneAuthenticator;
 import edu.jhu.pha.vospace.meta.MetaStore;
 import edu.jhu.pha.vospace.meta.MetaStoreDistributed;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
@@ -893,6 +898,29 @@ public class DropboxService {
 	@RolesAllowed({"user"})
 	public byte[] getShares() {
 		final SciDriveUser user = ((SciDriveUser)security.getUserPrincipal());
+
+		final Map<String, String> groups = new HashMap<String, String>();
+        HttpGet method = new HttpGet(conf.getString("keystone.url")+"/v3/groups/");
+        method.setHeader("X-Auth-Token",KeystoneAuthenticator.getAdminToken());
+		try {
+	        HttpResponse resp = MyHttpConnectionPoolProvider.getHttpClient().execute(method);
+	        if (resp.getStatusLine().getStatusCode() == 200) {
+	        	try(InputStream entityInp = resp.getEntity().getContent()) {
+	        		JsonNode groupsNode = new ObjectMapper().readTree(entityInp);
+	        		for(Iterator<JsonNode> it =  groupsNode.path("groups").iterator(); it.hasNext();) {
+	        			JsonNode groupNode = it.next();
+	        			groups.put(groupNode.get("id").getTextValue(), groupNode.get("name").getTextValue());
+	        		}
+	        	}
+	        } else {
+	        	logger.error("Error requesting group names from Keystone: "+resp.getStatusLine().getReasonPhrase());
+	        	throw new InternalServerErrorException("Error requesting group names from Keystone: "+resp.getStatusLine().getReasonPhrase());
+	        }
+		} catch (IOException e) {
+			logger.error("Error checking group users: "+e.getMessage());
+			e.printStackTrace();
+			throw new InternalServerErrorException(e);
+		}
 		
     	ByteArrayOutputStream byteOut = null;
     	try {
@@ -903,8 +931,7 @@ public class DropboxService {
 			g2.writeStartArray();
 
 			DbPoolServlet.goSql("Get shares",
-	        		"select share_id, container_name, group_name, share_write_permission FROM container_shares "+
-	        		"LEFT JOIN groups ON container_shares.group_id = groups.group_id "+
+	        		"select share_id, container_name, group_id, share_write_permission FROM container_shares "+
 	        		"JOIN containers ON container_shares.container_id = containers.container_id "+
 	        		"JOIN users ON containers.user_id = users.user_id WHERE identity = ?",
 	                new SqlWorker<Boolean>() {
@@ -917,7 +944,7 @@ public class DropboxService {
 	            					g2.writeStartObject();
 	            					g2.writeStringField("share_id", rs.getString("share_id"));
 	            					g2.writeStringField("container", rs.getString("container_name"));
-	            					g2.writeStringField("group", rs.getString("group_name"));
+	            					g2.writeStringField("group", groups.get(rs.getString("group_id")));
 	            					g2.writeBooleanField("write_permission", rs.getBoolean("share_write_permission"));
 	            					g2.writeEndObject();
 	            				} catch(IOException ex) {logger.error(ex.getMessage());}
