@@ -152,7 +152,7 @@ public class DataNode extends Node implements Cloneable {
 
 				Map<String,Object> nodeData = new HashMap<String,Object>();
 				nodeData.put("uri",getUri().toString());
-				nodeData.put("owner",getOwner());
+				nodeData.put("owner",getOwner().getName());
     			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);

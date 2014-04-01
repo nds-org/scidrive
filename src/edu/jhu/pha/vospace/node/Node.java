@@ -143,7 +143,7 @@ public abstract class Node implements Cloneable {
 
 				Map<String,Object> nodeData = new HashMap<String,Object>();
 				nodeData.put("uri", newDataNode.getUri().toString());
-				nodeData.put("owner",getOwner());
+				nodeData.put("owner",getOwner().getName());
     			nodeData.put("container", newDataNode.getUri().getNodePath().getParentPath().getNodeStoragePath());
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
@@ -153,7 +153,7 @@ public abstract class Node implements Cloneable {
 				if(!keepBytes) {
 					Map<String,Object> oldNodeData = new HashMap<String,Object>();
 					oldNodeData.put("uri",getUri().toString());
-					oldNodeData.put("owner",getOwner());
+					oldNodeData.put("owner",getOwner().getName());
 					oldNodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
 	
 	    			byte[] oldNodejobSer = (new ObjectMapper()).writeValueAsBytes(oldNodeData);
@@ -369,7 +369,7 @@ public abstract class Node implements Cloneable {
 
 				Map<String,Object> nodeData = new HashMap<String,Object>();
 				nodeData.put("uri",getUri().toString());
-				nodeData.put("owner",getOwner());
+				nodeData.put("owner",getOwner().getName());
     			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
@@ -406,7 +406,7 @@ public abstract class Node implements Cloneable {
 
 				Map<String,Object> nodeData = new HashMap<String,Object>();
 				nodeData.put("uri",getUri().toString());
-				nodeData.put("owner",getOwner());
+				nodeData.put("owner",getOwner().getName());
     			nodeData.put("container", getUri().getNodePath().getParentPath().getNodeStoragePath());
 
     			byte[] jobSer = (new ObjectMapper()).writeValueAsBytes(nodeData);
