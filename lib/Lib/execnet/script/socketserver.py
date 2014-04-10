@@ -101,7 +101,7 @@ if __name__ == '__main__':
     if len(sys.argv)>1:
         hostport = sys.argv[1]
     else:
-        hostport = ':8888'
+        hostport = ':8889'
     serversock = bind_and_listen(hostport)
     startserver(serversock, loop=False)
 elif __name__=='__channelexec__':

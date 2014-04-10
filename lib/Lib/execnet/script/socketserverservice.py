@@ -61,7 +61,7 @@ class SocketServerService(win32serviceutil.ServiceFramework):
                                     (self._svc_name_, ''))
         print("Begin: %s" % (self._svc_display_name_))
 
-        hostport = ':8888'
+        hostport = ':8889'
         print('Starting py.execnet SocketServer on %s' % hostport)
         serversock = socketserver.bind_and_listen(hostport)
         thread = threading.Thread(target=socketserver.startserver,
