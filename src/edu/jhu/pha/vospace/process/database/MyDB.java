@@ -459,9 +459,9 @@ public class MyDB implements Database {
 				if (i!=0) {
 					createTableQuery.append(",");
 				}
-				createTableQuery.append("\"");
+				//createTableQuery.append("\"");
 				createTableQuery.append(databaseFormat.formatObjectName(table.getColumnNames()[i].replaceAll("\\[", "").replaceAll("\\]", "")));
-				createTableQuery.append("\"");
+				//createTableQuery.append("\"");
 				createTableQuery.append(" ");
 				createTableQuery.append(databaseFormat.getDatabaseType(table.getColumnTypes()[i]));
 			}
