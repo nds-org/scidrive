@@ -74,6 +74,7 @@
 		<dependency org="com.jayway.restassured" name="json-path" rev="2.3.0" conf="test->default"/>
 		<dependency org="com.jayway.restassured" name="xml-path" rev="2.3.0" conf="test->default"/>
 		<dependency org="com.jayway.restassured" name="json-schema-validator" rev="2.3.0" conf="test->default"/>
+		<dependency org="junit" name="junit" rev="4.11" conf="test->default"/>
 		
     </dependencies>
 </ivy-module>

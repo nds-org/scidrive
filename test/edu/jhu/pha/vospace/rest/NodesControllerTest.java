@@ -267,7 +267,7 @@ public class NodesControllerTest {
 	@Test
 	public void deleteTestCont() {
 		expect().
-			statusCode(200).
+			statusCode(204).
 		given().
 			delete("/nodes/test_cont1");
 	}

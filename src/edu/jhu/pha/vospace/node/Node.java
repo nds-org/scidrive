@@ -218,7 +218,7 @@ public abstract class Node implements Cloneable {
 			xsw.writeAttribute("xsi:type", this.getType().getTypeName());
 			xsw.writeAttribute("uri", this.getUri().toString());
 
-			if(detail == Detail.max) {
+			if(detail == Detail.max || detail == Detail.properties) {
 			    xsw.writeStartElement("properties");
 					Map<String, String> properties = this.getMetastore().getProperties(this.getUri());
 					properties.put(LENGTH_PROPERTY, Long.toString(getNodeInfo().getSize()));
@@ -233,10 +233,12 @@ public abstract class Node implements Cloneable {
 					    xsw.writeCharacters(properties.get(propUri));
 					    xsw.writeEndElement();
 					}
-
+	
 				    
 				xsw.writeEndElement();
-	
+			}
+			
+			if(detail == Detail.max) {
 			    xsw.writeStartElement("accepts");
 				xsw.writeEndElement();
 	
