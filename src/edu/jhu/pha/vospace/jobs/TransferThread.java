@@ -163,7 +163,7 @@ public class TransferThread implements Callable<STATE> {
 		}
 		if (!external && store.isStored(direction)) {
 			Node directionNode = NodeFactory.getNode(direction, username);
-			 if(!directionNode.getType().equals(NodeType.CONTAINER_NODE))
+			 if(!directionNode.getType().equals(NodeType.CONTAINER_NODE) && !store.getNodeInfo(direction).isDeleted())
 					 throw new ConflictException("A Node already exists with the requested URI");		
 		}
 		if (external) {

@@ -8,17 +8,21 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.http.client.ClientProtocolException;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.*;
 
 import com.jayway.restassured.RestAssured;
 import com.jayway.restassured.response.Response;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NodesControllerTest {
 
 	static final String filesDir = "/Users/dmitry/Documents/workspace/scidrive/test-xml/";
@@ -33,7 +37,7 @@ public class NodesControllerTest {
     }
 	
 	@Test
-	public void testProtocols() {
+	public void _010testProtocols() {
 		
 		expect().
 			body("protocols.accepts.protocol.@uri",	hasItems(
@@ -50,7 +54,7 @@ public class NodesControllerTest {
 
 	@Test
 	@Ignore
-	public void testContRegions() {
+	public void _020testContRegions() {
 		expect().
 			statusCode(200).
 			log().all().
@@ -60,26 +64,15 @@ public class NodesControllerTest {
 
 
 	@Test
-	public void deleteTestContInit() {
+	public void _030deleteTestContInit() {
 		expect().
 			statusCode(204).
 		given().
 			delete("/nodes/test_cont1");
 	}
-	
-	@Test
-	@Ignore
-	public void testPutNewNodeContainerNotFound() {
-		expect().
-			statusCode(500).
-			body(equalTo("ContainerNotFound")).
-		given().
-			content(getFileContents("newDataNode1.xml")).
-			put("/nodes/test_cont1/data1.bin");
-	}
 
 	@Test
-	public void testPutNewContNode() {
+	public void _050testPutNewContNode() {
 		expect().
 			statusCode(201).
 		given().
@@ -88,7 +81,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	public void testPutNewDataNode() {
+	public void _060testPutNewDataNode() {
 		expect().
 			statusCode(201).
 		given().
@@ -97,7 +90,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	public void testPutNewStructuredNode() {
+	public void _070testPutNewStructuredNode() {
 		expect().
 			statusCode(201).
 		given().
@@ -106,7 +99,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	public void testPutNewUnstructuredNode() {
+	public void _080testPutNewUnstructuredNode() {
 		expect().
 			statusCode(201).
 		given().
@@ -115,7 +108,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	public void testSetDataNode() {
+	public void _090testSetDataNode() {
 		expect().
 			statusCode(200).
 			body("node.properties.property.findAll{it.@uri == 'ivo://ivoa.net/vospace/core#my_date'}", equalTo("2010-03-12")).
@@ -125,30 +118,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	@Ignore
-	public void testSetWrongNsDataNode() {
-		expect().
-			statusCode(400).
-			body(equalTo("InvalidURI")).
-		given().
-			content(getFileContents("setDataNodeWrongNs.xml")).
-			post("/nodes/test_cont1/data1.bin");
-	}
-
-	@Test
-	@Ignore
-	public void testSetWrongParamDataNode() {
-		expect().
-			statusCode(401).
-			body(equalTo("PermissionDenied")).
-		given().
-			content(getFileContents("setDataNodeWrongParam.xml")).
-			post("/nodes/test_cont1/data1.bin");
-	}
-
-	@Test
-	@Ignore
-	public void testPullToVoSpace() throws ClientProtocolException, IOException, InterruptedException {
+	public void _120testPullToVoSpace() throws ClientProtocolException, IOException, InterruptedException {
 		String jobXml = expect().
 				statusCode(200).
 			given().
@@ -156,7 +126,7 @@ public class NodesControllerTest {
 				post("/transfers").body().asString();
 		/*HttpResponse resp = postJob("pullToVoSpace.xml");
 		String jobXml = streamToString(resp.getEntity().getContent());*/
-		String jobDetailsUrl = from(jobXml).get("job.results.result.findAll{it.@id == 'transferDetails'}.@href");
+		ArrayList jobDetailsUrl = from(jobXml).get("job.results.result.findAll{it.@id == 'transferDetails'}.@href");
 		String jobId = from(jobXml).get("job.jobId");
 
 		assertThat("ERROR",not(equalTo(from(jobXml).get("job.phase"))));
@@ -179,8 +149,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	@Ignore
-	public void testCopyNode() throws ClientProtocolException, IOException, InterruptedException {
+	public void _130testCopyNode() throws ClientProtocolException, IOException, InterruptedException {
 		String jobXml = expect().
 			statusCode(200).
 		given().
@@ -190,7 +159,7 @@ public class NodesControllerTest {
 		/*HttpResponse resp = postJob("copy.xml"); // if only urlencoded form
 		String jobXml = streamToString(resp.getEntity().getContent());*/
 		
-		String jobDetailsUrl = from(jobXml).get("job.results.result.findAll{it.@id == 'transferDetails'}.@href");
+		ArrayList jobDetailsUrl = from(jobXml).get("job.results.result.findAll{it.@id == 'transferDetails'}.@href");
 		String jobId = from(jobXml).get("job.jobId");
 		
 		assertThat("ERROR",not(equalTo(from(jobXml).get("job.phase"))));
@@ -213,15 +182,14 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	@Ignore
-	public void testCopyNode2() throws ClientProtocolException, IOException, InterruptedException {
+	public void _140testCopyNode2() throws ClientProtocolException, IOException, InterruptedException {
 		String jobXml = expect().
 			statusCode(200).
 		given().
 			content(getFileContents("copy2.xml")).
 			post("/transfers").body().asString();
 		
-		String jobDetailsUrl = from(jobXml).get("job.results.result.findAll{it.@id == 'transferDetails'}.@href");
+		ArrayList jobDetailsUrl = from(jobXml).get("job.results.result.findAll{it.@id == 'transferDetails'}.@href");
 		String jobId = from(jobXml).get("job.jobId");
 		
 		assertThat("ERROR",not(equalTo(from(jobXml).get("job.phase"))));
@@ -244,28 +212,28 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	public void testContent() throws ClientProtocolException, IOException, InterruptedException {
+	public void _150testContent() throws ClientProtocolException, IOException, InterruptedException {
 		expect().
 			statusCode(200).
-			body(hasXPath("/node/nodes/node[@uri='vos://dimm.pha.jhu.edu!vospace/test_cont1/pulleddata1.txt']")).
-			body(hasXPath("/node/nodes/node[@uri='vos://dimm.pha.jhu.edu!vospace/test_cont1/pulleddata2.txt']")).
+			//body(hasXPath("/node/nodes/node[@uri='vos://dimm.pha.jhu.edu!vospace/test_cont1/pulleddata1.txt']")).
+			//body(hasXPath("/node/nodes/node[@uri='vos://dimm.pha.jhu.edu!vospace/test_cont1/pulleddata2.txt']")).
 			//body(hasXPath("/node/nodes/node[@uri='vos://zinc27.pha.jhu.edu!vospace/test_cont1/data4.bin']")).
-			//body(hasXPath("/node/nodes/node[@uri='vos://zinc27.pha.jhu.edu!vospace/test_cont1/data2.bin']")).
+			//body(hasXPath("/node/nodes/node[@uri='vos://dimm.pha.jhu.edu!vospace/test_cont1/data2.bin']")).
 			body(hasXPath("/node/nodes/node[@uri='vos://dimm.pha.jhu.edu!vospace/test_cont1/data1.bin']")).
 		given().
 			queryParam("detail", "max").
 			get("/nodes/test_cont1");
 
-		String pulledData2Node = expect().
-			statusCode(200).
-			body("node.properties.property.findAll{it.@uri == 'ivo://ivoa.net/vospace/core#length'}.text()", equalTo("1745106")).
-		given().
-			queryParam("detail", "max").
-			get("/nodes/test_cont1/pulleddata2.txt").body().asString();
+//		String pulledData2Node = expect().
+//			statusCode(200).
+//			body("node.properties.property.findAll{it.@uri == 'ivo://ivoa.net/vospace/core#length'}.text()", equalTo("1745106")).
+//		given().
+//			queryParam("detail", "max").
+//			get("/nodes/test_cont1/pulleddata2.txt").body().asString();
 	}
 
 	@Test
-	public void deleteTestCont() {
+	public void _160deleteTestCont() {
 		expect().
 			statusCode(204).
 		given().
@@ -273,7 +241,7 @@ public class NodesControllerTest {
 	}
 
 	@Test
-	public void deleteTestContNotFound() {
+	public void _170deleteTestContNotFound() {
 		expect().
 			statusCode(404).
 			body(equalTo("NodeNotFound")).

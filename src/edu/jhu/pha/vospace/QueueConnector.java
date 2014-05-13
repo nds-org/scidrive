@@ -55,7 +55,7 @@ public class QueueConnector {
             T result = goer.go(conn, channel);
             conn.addShutdownListener(new ShutdownListener() {
                 public void shutdownCompleted(ShutdownSignalException cause) {
-                	logger.info("RabbitMQ connection shutdown");
+                	//logger.info("RabbitMQ connection shutdown");
                 }
             });            return result;
         } catch (IOException e) {

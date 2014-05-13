@@ -3,6 +3,6 @@
 	<vos:direction>pullToVoSpace</vos:direction>
 	<vos:view>ivo://net.ivoa/vospace/core#fits</vos:view>
 	<vos:protocol uri="ivo://ivoa.net/vospace/core#httpget">
-		<vos:protocolEndpoint>http://dimm.pha.jhu.edu/00Z.TXT</vos:protocolEndpoint>
+		<vos:protocolEndpoint>http://www.scidrive.org/scidrive/resources/interface/sd_logo.png</vos:protocolEndpoint>
 	</vos:protocol>
 </vos:transfer>

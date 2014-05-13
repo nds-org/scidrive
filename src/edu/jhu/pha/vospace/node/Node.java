@@ -100,7 +100,10 @@ public abstract class Node implements Cloneable {
 			throw new NotFoundException("NodeNotFound");
 		
 		if(getMetastore().isStored(newLocationId))
-			throw new ForbiddenException("DestinationNodeExists");
+			if(!getMetastore().getNodeInfo(newLocationId).isDeleted()) {
+				logger.error("The destination node already exists. "+newLocationId.getId().toString());
+				throw new ForbiddenException("DestinationNodeExists");
+			}
 
 		getStorage().copyBytes(getUri().getNodePath(), newLocationId.getNodePath(), keepBytes);
 
