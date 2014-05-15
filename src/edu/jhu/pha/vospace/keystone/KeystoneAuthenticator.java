@@ -80,7 +80,6 @@ public class KeystoneAuthenticator {
 	
 					loginFuture = scheduler.schedule(new TokenUpdater(), (expireDelay < 0)?0:expireDelay-16, SECONDS); // 16 sec just in case..
 		            
-		            authToken = tokenNode.path("access").path("token").path("id").getTextValue();
 				} finally {
 		            loginLock.unlock();
 				}
@@ -117,6 +116,7 @@ public class KeystoneAuthenticator {
     	        
     	        if (response.loginSuccess()) {
     	            JsonNode tokenNode = new ObjectMapper().readValue(response.getResponseBodyAsStream(), JsonNode.class);
+		            authToken = tokenNode.path("access").path("token").path("id").getTextValue();
     	        	return tokenNode;
     	        }
     		} catch (UnsupportedEncodingException e) {
