@@ -49,6 +49,14 @@ public class KeystoneToken {
 		
 		try {
 			HttpResponse tokenResp = client.execute(tokenGet);
+			
+			if(tokenResp.getStatusLine().getStatusCode() == 401) { // token expired; relogin
+				KeystoneAuthenticator.login(0);
+				tokenGet = new HttpGet(conf.getString("keystone.url")+"/v2.0/tokens/"+token);
+				tokenGet.setHeader("X-Auth-Token", KeystoneAuthenticator.getAdminToken());
+				tokenResp = client.execute(tokenGet);
+			}
+			
 			if(tokenResp.getStatusLine().getStatusCode() != 200)
 				throw new KeystoneException(Response.Status.UNAUTHORIZED, "Keystone");
 
