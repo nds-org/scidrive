@@ -18,7 +18,7 @@ package edu.jhu.pha.vospace.rest;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 
 import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.DELETE;
@@ -83,7 +83,7 @@ public class NodesController {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		logger.debug("Get node: "+identifier);
@@ -138,7 +138,7 @@ public class NodesController {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()).resolve());
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		
@@ -181,7 +181,7 @@ public class NodesController {
 			VospaceId identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
 			Node node = NodeFactory.getNode(identifier, user);
 			node.markRemoved(true);
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		return Response.noContent().build();
@@ -203,7 +203,7 @@ public class NodesController {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 

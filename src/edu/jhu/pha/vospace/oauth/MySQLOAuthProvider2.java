@@ -15,7 +15,7 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.oauth;
 import java.io.IOException;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -362,7 +362,7 @@ public class MySQLOAuthProvider2 {
 	                    }
 	            );
 			}
-		} catch(URISyntaxException ex) {
+		} catch(URIException ex) {
 			logger.error("Error creating root (app) node for user: "+ex.getMessage());
 		}
     	

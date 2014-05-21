@@ -15,7 +15,7 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.meta;
 
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -122,7 +122,7 @@ public class MySQLMetaStore2 implements MetaStore{
         			    			newNode.setNodeInfo(info);
                                 	
     								result.add(newNode);
-    							} catch (URISyntaxException e) {
+    							} catch (URIException e) {
     								logger.error("Error in child URI: "+e.getMessage());
     							}
                 			}
@@ -177,7 +177,7 @@ public class MySQLMetaStore2 implements MetaStore{
 	    			    			newNode.setNodeInfo(info);
 	                            	
 									result.add(newNode);
-								} catch (URISyntaxException e) {
+								} catch (URIException e) {
 									logger.error("Error in child URI: "+e.getMessage());
 								}
 	            			}
@@ -384,7 +384,7 @@ public class MySQLMetaStore2 implements MetaStore{
     			    		try {
     			    			NodePath npath = new NodePath("/"+rs.getString(1)+"/"+rs.getString(2));
 								result.add(new VospaceId(npath));
-							} catch (URISyntaxException e) {
+							} catch (URIException e) {
 								logger.error("Error in child URI: "+e.getMessage());
 							}
             			}

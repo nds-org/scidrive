@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -95,7 +95,7 @@ public class ContainerNode extends DataNode {
 				VospaceId newChildId = newLocationId.appendPath(new NodePath(relativePath));
 				logger.debug("Copying child "+childNode.getUri()+" with relpath "+relativePath+" to "+newChildId.toString());
 				childNode.copy(newChildId, keepBytes);
-			} catch (URISyntaxException e) {
+			} catch (URIException e) {
 				logger.error("Error copying child "+childNode.getUri().toString()+": "+e.getMessage());
 			}
 		}
@@ -381,7 +381,7 @@ public class ContainerNode extends DataNode {
 				DataNode node = NodeFactory.<DataNode>createNode(newNodeUri, owner, NodeType.DATA_NODE);
 				node.setNode(null);
 			}
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new InternalServerErrorException("InvalidURI");
 		}
 	}

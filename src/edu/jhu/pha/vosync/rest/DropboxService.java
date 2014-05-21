@@ -21,8 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
+
+import org.apache.commons.httpclient.URI;
+import org.apache.commons.httpclient.URIException;
+
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -158,7 +160,7 @@ public class DropboxService {
 		try {
 			fromId = new VospaceId(new NodePath(fromPath, user.getRootContainer()));
 			toId = new VospaceId(new NodePath(toPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -194,7 +196,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(path, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -224,7 +226,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(path, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -350,7 +352,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -366,7 +368,7 @@ public class DropboxService {
 			nodeInputStream = node.exportData(); 
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
 			logger.error("Node "+node.getUri().toString()+" data  not found.");
-			throw new NotFoundException(identifier.getId().toASCIIString());
+			throw new NotFoundException(identifier.getId().toString());
 		}
 		
 		logger.debug("Node "+node.getUri().toString()+" size: "+node.getNodeInfo().getSize());
@@ -387,7 +389,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		Node node;
@@ -430,7 +432,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			logger.debug(e.getMessage());
 			throw new BadRequestException("InvalidURI");
 		}
@@ -453,7 +455,7 @@ public class DropboxService {
 				nodeExport = (byte[])(node.export("json-dropbox", detailLevel));
 			}
 		} catch(edu.jhu.pha.vospace.api.exceptions.NotFoundException ex) {
-			throw new NotFoundException(identifier.getId().toASCIIString());
+			throw new NotFoundException(identifier.getId().toString());
 		}
 		logger.debug("Generated node contents in "+(System.currentTimeMillis()-time)/1000.0);
 		
@@ -548,7 +550,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -577,7 +579,7 @@ public class DropboxService {
 						node = (DataNode)NodeFactory.createNode(newId, user, NodeType.DATA_NODE);
 						node.createParent();
 						node.setNode(null);
-					} catch(URISyntaxException e) {
+					} catch(URIException e) {
 						throw new InternalServerErrorException("InvalidURI");
 					}
 				} else {
@@ -613,7 +615,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -649,7 +651,7 @@ public class DropboxService {
 							node = (DataNode)NodeFactory.getDefaultNode(newId, username);
 							node.createParent();
 							node.setNode();
-						} catch(URISyntaxException e) {
+						} catch(URIException e) {
 							throw new InternalServerErrorException("InvalidURI");
 						}*/
 					}
@@ -694,7 +696,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -800,7 +802,7 @@ public class DropboxService {
 		
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		Node node;
@@ -863,7 +865,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			logger.debug(e.getMessage());
 			throw new BadRequestException("InvalidURI");
 		}
@@ -1054,7 +1056,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			logger.debug(e.getMessage());
 			throw new BadRequestException("InvalidURI");
 		}
@@ -1076,7 +1078,7 @@ public class DropboxService {
 	
 			g2.writeStartObject();
 			
-			g2.writeStringField("url", ((DataNode)node).getHttpDownloadLink().toASCIIString());
+			g2.writeStringField("url", ((DataNode)node).getHttpDownloadLink().toString());
 			g2.writeStringField("expires", "never (yet)");
 			
 			g2.writeEndObject();
@@ -1135,7 +1137,7 @@ public class DropboxService {
 			byte[] resp = genChunkResponse(uploadId, newChunk.getChunkStart()+newChunk.getSize());
 			
 			return Response.ok(resp).build();
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			e.printStackTrace();
 			throw new InternalServerErrorException(e.getMessage());
 		}
@@ -1156,7 +1158,7 @@ public class DropboxService {
 		VospaceId identifier;
 		try {
 			identifier = new VospaceId(new NodePath(fullPath, user.getRootContainer()));
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 
@@ -1236,8 +1238,8 @@ public class DropboxService {
         
        	logger.debug("Created third party app cookie.");
        	try {
-       		URI returnUri = new URI(uriInfo.getRequestUri().toString());
-       		UriBuilder uriBuilder = UriBuilder.fromUri(returnUri);
+       		URI returnUri = new URI(uriInfo.getRequestUri().toString(), false);
+       		UriBuilder uriBuilder = UriBuilder.fromUri(returnUri.toString());
        		uriBuilder.replaceQueryParam("userId", user.getName());
             String redirectUrl = AuthorizationServlet.initiateOpenid(uriBuilder.toString(), idLess);
        		logger.debug(redirectUrl);
@@ -1246,7 +1248,7 @@ public class DropboxService {
             return response.build();
        	} catch(OpenIDException ex) {
        		throw new InternalServerErrorException(ex);
-       	} catch (URISyntaxException e) {
+       	} catch (URIException e) {
        		throw new InternalServerErrorException(e);
 		}
 	}

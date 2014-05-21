@@ -17,7 +17,7 @@ package edu.jhu.pha.vospace.protocol;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,7 +62,7 @@ public class HttpGetProtocolHandler implements ProtocolHandler {
      * @see edu.jhu.pha.vospace.protocol.ProtocolHandler#invoke(edu.jhu.pha.vospace.rest.JobDescription)
      */
 	@Override
-    public void invoke(JobDescription job) throws IOException, JobException, URISyntaxException{
+    public void invoke(JobDescription job) throws IOException, JobException, URIException{
 		String getFileUrl = job.getProtocols().get(SettingsServlet.getConfig().getString("transfers.protocol.httpget"));
 		SciDriveUser user = SciDriveUser.fromName(job.getUsername());
 		MetaStore store = MetaStoreFactory.getMetaStore(user);

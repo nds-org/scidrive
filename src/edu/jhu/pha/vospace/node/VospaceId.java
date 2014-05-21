@@ -16,13 +16,13 @@
 package edu.jhu.pha.vospace.node;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.net.URLDecoder;
 import java.text.ParseException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.httpclient.URI;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -38,21 +38,21 @@ public class VospaceId {
 	private NodePath nodePath;
 	private String uri;
 	
-	public VospaceId(String idStr) throws URISyntaxException {
-		URI voURI = new URI(idStr);
+	public VospaceId(String idStr) throws URIException {
+		URI voURI = new URI(idStr, false, "UTF-8");
 
 		if(!validId(voURI)){
-			throw new URISyntaxException(idStr,"InvalidURI");
+			throw new URIException(idStr);
 		}
 		
 		if(!StringUtils.contains(idStr, "vospace")) {
-			throw new URISyntaxException(idStr,"InvalidURI");
+			throw new URIException(idStr);
 		}
 		
 		this.uri = StringUtils.substringBetween(idStr, "vos://", "!vospace");
 		
 		if(this.uri == null)
-			throw new URISyntaxException(idStr, "InvalidURI");
+			throw new URIException(idStr);
 			
 		try {
 			String pathStr = URLDecoder.decode(StringUtils.substringAfter(idStr, "!vospace"), "UTF-8");
@@ -67,9 +67,9 @@ public class VospaceId {
 	/**
 	 * Creates new Vospace ID with current URI
 	 * @param path Node path
-	 * @throws URISyntaxException
+	 * @throws URIException
 	 */
-	public VospaceId (NodePath path) throws URISyntaxException {
+	public VospaceId (NodePath path) throws URIException {
 		this(path, DEFAULT_URI);
 	}
 	
@@ -77,9 +77,9 @@ public class VospaceId {
 	 * Creates new Vospace ID
 	 * @param path Node path
 	 * @param uri Node ID uri
-	 * @throws URISyntaxException
+	 * @throws URIException
 	 */
-	private VospaceId (NodePath path, String uri) throws URISyntaxException {
+	private VospaceId (NodePath path, String uri) throws URIException {
 		this.nodePath = new NodePath(path.getNodeStoragePath(), path.isEnableAppContainer());
 		this.uri = uri;
 		this.nodePath.setEnableAppContainer(path.isEnableAppContainer());
@@ -88,14 +88,14 @@ public class VospaceId {
 	public URI getId() {
 		try {
 			return toUri(nodePath.getNodeStoragePath(), uri);
-		} catch(URISyntaxException ex) {
+		} catch(URIException ex) {
 			// Should be already checked in the constructor
 			logger.error(ex.getMessage());
 			return null;
 		}
 	}
 	
-	private static URI toUri(String path, String uri) throws URISyntaxException {
+	private static URI toUri(String path, String uri) throws URIException {
 		return new URI("vos", "//"+uri+"!vospace"+path, null);
 	}
 	
@@ -118,7 +118,7 @@ public class VospaceId {
 		return this.uri.equals(uri);
 	}
 
-	public VospaceId appendPath(NodePath path) throws URISyntaxException {
+	public VospaceId appendPath(NodePath path) throws URIException {
 		return new VospaceId(this.nodePath.append(path), this.uri);
 	}
 	
@@ -127,16 +127,16 @@ public class VospaceId {
 	}
 	
 	public String toString() {
-		return this.getId().toASCIIString();
+		return this.getId().toString();
 	}
 	
-	public VospaceId getParent() throws URISyntaxException {
+	public VospaceId getParent() throws URIException {
 		return new VospaceId(this.getNodePath().getParentPath(), this.uri);
 	}
 
-	public static final void main(String[] s) throws URISyntaxException, ParseException {
+	public static final void main(String[] s) throws URIException, ParseException {
 		VospaceId[] ids = new VospaceId[]{
-				new VospaceId("vos://edu.jhu!vospace/cont3/data1"),
+				new VospaceId("vos://edu.jhu!vospace/cont3/dat a1"),
 				new VospaceId("vos://edu.jhu!vospace/cont3"),
 				new VospaceId("vos://edu.jhu!vospace/"),
 				new VospaceId("vos://edu.jhu!vospace"),

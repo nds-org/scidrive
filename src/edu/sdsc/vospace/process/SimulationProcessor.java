@@ -16,7 +16,7 @@
 package edu.sdsc.vospace.process;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -65,7 +65,7 @@ public class SimulationProcessor extends Processor {
 	        		StringUtils.join(metadata.getValues(SimulationParser.METADATA_DATASET_UUID), " "));
 	        node.getMetastore().updateUserProperties(node.getUri(), properties);
 	        
-			final String simEndpointUrl = node.getHttpDownloadLink().toASCIIString();
+			final String simEndpointUrl = node.getHttpDownloadLink().toString();
 			
 			QueueConnector.goAMQP("submit new simulation", new QueueConnector.AMQPWorker<Boolean>() {
 				@Override
@@ -81,7 +81,7 @@ public class SimulationProcessor extends Processor {
 			    	return true;
 				}
 			});	
-        } catch (URISyntaxException ex) {
+        } catch (URIException ex) {
         	throw new ProcessingException(ex);
         }
 		

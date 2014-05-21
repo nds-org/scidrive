@@ -20,7 +20,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -140,8 +140,9 @@ public class TransfersController {
 				if(param.getName().equals("target")){
 					try {
 						job.setTarget(param.getValue());
-					} catch (URISyntaxException e) {
+					} catch (URIException e) {
 						logger.error("Error in job parse: "+e.getMessage());
+						e.printStackTrace();
 						throw new BadRequestException("InvalidURI");
 					}
 				} else if(param.getName().equals("direction")){
@@ -159,7 +160,7 @@ public class TransfersController {
 					} else if(direct == JobDescription.DIRECTION.LOCAL)  {
 						try {
 							job.setDirectionTarget(param.getValue());
-						} catch (URISyntaxException e) {
+						} catch (URIException e) {
 							logger.error("Error in job parse: "+e.getMessage());
 							throw new BadRequestException("InvalidURI");
 						}

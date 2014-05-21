@@ -18,7 +18,7 @@ package edu.jhu.pha.vospace.node;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -30,6 +30,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.httpclient.URIException;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -115,7 +116,7 @@ public abstract class Node implements Cloneable {
     					getOwner());
     			getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
     			getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-    		} catch (URISyntaxException e) {
+    		} catch (URIException e) {
     			logger.error("Updating root node size failed: "+e.getMessage());
     		}
 		}
@@ -174,7 +175,7 @@ public abstract class Node implements Cloneable {
 					Node parentNode = NodeFactory.createNode(getUri().getParent(), owner, NodeType.CONTAINER_NODE);
 					parentNode.createParent();
 					parentNode.setNode(null);
-				} catch(URISyntaxException ex) {
+				} catch(URIException ex) {
 					throw new BadRequestException("InvalidURI");
 				}
 			}
@@ -297,7 +298,7 @@ public abstract class Node implements Cloneable {
 		VospaceId parentId;
 		try {
 			parentId = this.getUri().getParent();
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		Node parent = NodeFactory.getNode(parentId, owner);
@@ -334,7 +335,7 @@ public abstract class Node implements Cloneable {
 		VospaceId parent;
 		try {
 			parent = getUri().getParent();
-		} catch (URISyntaxException e) {
+		} catch (URIException e) {
 			throw new BadRequestException("InvalidURI");
 		}
 		
@@ -342,7 +343,7 @@ public abstract class Node implements Cloneable {
 			return true;
 
 		if(!getMetastore().isStored(parent)) {
-			logger.debug(parent.getId().toASCIIString()+" is not stored");
+			logger.debug(parent.getId().toString()+" is not stored");
 			return false;
 		}
 		

@@ -17,7 +17,7 @@ package edu.jhu.pha.vospace.process;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -144,7 +144,7 @@ public class NodeProcessor implements Runnable {
 					            		nodeTikaMeta.set(TikaCoreProperties.TITLE,node.getUri().getNodePath().getNodeName());
 					            		nodeTikaMeta.add(TikaCoreProperties.METADATA_DATE,dateFormat.format(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime()));
 			            				
-					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toASCIIString());
+					            		nodeTikaMeta.set(Metadata.CONTENT_LOCATION, ((DataNode)node).getHttpDownloadLink().toString());
 					            		nodeTikaMeta.set(Metadata.CONTENT_TYPE, type.toString());
 
 			            				AbstractParser parser;
@@ -217,7 +217,7 @@ public class NodeProcessor implements Runnable {
 				            					node.getOwner());
 				            			node.getStorage().updateNodeInfo(contNode.getUri().getNodePath(), contNode.getNodeInfo());
 				            			node.getMetastore().storeInfo(contNode.getUri(), contNode.getNodeInfo());
-				            		} catch (URISyntaxException e) {
+				            		} catch (URIException e) {
 				            			logger.error("Updating root node size failed: "+e.getMessage());
 				            		}
 				            		
@@ -283,9 +283,6 @@ public class NodeProcessor implements Runnable {
 	            	} catch (IOException ex) {
 	            		ex.printStackTrace();
 	            		logger.error("Error reading the changed node JSON: "+ex.getMessage());
-            			processError(node, ex);
-					} catch (URISyntaxException ex) {
-	            		logger.error("Error parsing VospaceId from changed node JSON: "+ex.getMessage());
             			processError(node, ex);
 					}
 	            }

@@ -15,7 +15,7 @@
  ******************************************************************************/
 package edu.jhu.pha.vospace.jobs;
 
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 
 import org.apache.log4j.Logger;
 
@@ -140,7 +140,7 @@ public class TransferThread implements Callable<STATE> {
 				if(!directionParentNode.isStoredMetadata() || !(directionParentNode.getType() == NodeType.CONTAINER_NODE)) 
 					throw new BadRequestException("The parent node is not valid.");
 			}
-		} catch(URISyntaxException ex) {
+		} catch(URIException ex) {
 			throw new BadRequestException("The parent node is not valid.");
 		}
 		//TODO check logic: when container is removed but not purged and want to create datanode with same name

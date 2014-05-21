@@ -20,8 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
+
+import org.apache.commons.httpclient.URI;
+import org.apache.commons.httpclient.URIException;
+
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -186,8 +188,8 @@ public class DataNode extends Node implements Cloneable {
 			String endpointUrl = null;
 			JobsProcessor.getDefaultImpl().submitJob(owner.getName(), job);
 			endpointUrl = conf.getString("application.url")+"/data/"+job.getId();
-			return new URI(endpointUrl);
-		} catch(URISyntaxException ex) {
+			return new URI(endpointUrl, false);
+		} catch(URIException ex) {
 			throw new InternalServerErrorException(ex.getMessage());
 		} catch (SecurityException e) {
 			throw new InternalServerErrorException("Unable to create local job: "+e.getMessage());

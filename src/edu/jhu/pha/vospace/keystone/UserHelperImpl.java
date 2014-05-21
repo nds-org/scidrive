@@ -16,7 +16,7 @@
 package edu.jhu.pha.vospace.keystone;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -166,7 +166,7 @@ public class UserHelperImpl implements UserHelper {
 					firstNode.setNode(null);
 				}
 				logger.debug("new toor node was created");
-			} catch(URISyntaxException ex) {
+			} catch(URIException ex) {
 				logger.error("Error creating root node for user: "+ex.getMessage());
 				return false;
 			}

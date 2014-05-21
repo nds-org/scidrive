@@ -16,7 +16,7 @@
 package edu.jhu.pha.vospace.rest;
 
 import java.io.Serializable;
-import java.net.URISyntaxException;
+import org.apache.commons.httpclient.URIException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -88,7 +88,7 @@ public class JobDescription implements Serializable {
 	public VospaceId getDirectionTargetId() {
 		return directionTarget;
 	}
-	public void setDirectionTarget(String directionTarget) throws URISyntaxException {
+	public void setDirectionTarget(String directionTarget) throws URIException {
 		if(null == directionTarget)
 			this.directionTarget = null;
 		else
@@ -115,7 +115,7 @@ public class JobDescription implements Serializable {
 	public VospaceId getTargetId() {
 		return target;
 	}
-	public void setTarget(String target) throws URISyntaxException {
+	public void setTarget(String target) throws URIException {
 		if(null == target)
 			this.target = null;
 		else
