@@ -18,6 +18,22 @@
 		</schema>
 	</processor>
 	<processor>
+		<id>fitsprocessor_v2</id>
+		<title>CasJobs/MyDB v2</title>
+		<description>Extracts tabular data from csv\, fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database. &lt;b&gt;You can find your wsid in CasJobs profile menu after registration.&lt;/b&gt;</description>
+		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
+		<mimetype>application/vnd.ms-excel</mimetype>
+		<mimetype>application/fits</mimetype>
+		<mimetype>text/plain</mimetype>
+		<mimetype>image/tiff</mimetype>
+		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessorV2</processor>
+		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
+		<config>tika/tika-conf.xml</config>
+		<schema>
+			<field name="endpoint" required="true" default="http://dev.sciserver.org/CasJobs/RestApi"/>
+		</schema>
+	</processor>
+	<processor>
 		<id>sqlshareprocessor</id>
 		<title>SQLShare</title>
 		<description>Extracts tabular data from plain text files using NumPY library and stores it in connected 
