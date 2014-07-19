@@ -205,6 +205,9 @@ public class DropboxService {
 		if(node.getNodeInfo().isDeleted())
 			node.getNodeInfo().setDeleted(false);
 		
+		if(node.getNodeInfo().isDeleted())
+			node.getNodeInfo().setDeleted(false);
+		
 		node.createParent();
 		node.setNode(null);
 

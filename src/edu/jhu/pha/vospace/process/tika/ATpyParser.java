@@ -47,7 +47,7 @@ public class ATpyParser implements Parser {
 			ParseContext context) throws IOException, SAXException, TikaException {
 
 		try {
-		ATpyTable table = parseATpy(metadata.get(Metadata.CONTENT_LOCATION),"127.0.0.1",8888);
+		ATpyTable table = parseATpy(metadata.get(Metadata.CONTENT_LOCATION),"127.0.0.1",8889);
 		
         XHTMLContentHandler xhtml = new XHTMLContentHandler(handler, metadata);
         
