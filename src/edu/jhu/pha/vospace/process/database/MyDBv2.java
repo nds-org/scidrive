@@ -162,7 +162,7 @@ public class MyDBv2 implements Database {
 		quickJob.setIsSystem(false);
 		*/
 		
-		this.client = new CasRestClient(endpoint);
+		this.client = new CasRestClient(endpoint+"/RestApi");
 		this.authToken = KeystoneAuthenticator.getAdminToken();
 	}
 	
