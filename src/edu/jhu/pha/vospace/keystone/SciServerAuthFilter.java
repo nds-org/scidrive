@@ -37,6 +37,7 @@ public class SciServerAuthFilter implements ContainerRequestFilter {
         String share = request.getHeaderString("X-Share");
 
         if (authHeader == null && share == null) {
+        	// Report an error here but this doesn't necessarily mean a problem.
         	logger.error("Not found authHeader and shareHeader");
             return;
         }

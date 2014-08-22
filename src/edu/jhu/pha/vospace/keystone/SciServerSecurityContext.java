@@ -22,9 +22,11 @@ import java.util.HashMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.meta.MetaStoreFactory;
 import edu.jhu.pha.vospace.meta.Share;
 import edu.jhu.pha.vospace.oauth.SciDriveUser;
@@ -34,6 +36,7 @@ public class SciServerSecurityContext implements SecurityContext {
     private final boolean isSecure;
     private final SciDriveUser user;
 	private static Logger logger = Logger.getLogger(SciServerSecurityContext.class); 
+	private final static Configuration conf = SettingsServlet.getConfig();
 	private Share share;
 	
     public SciServerSecurityContext(KeystoneToken token, String shareId, boolean isSecure) {
@@ -77,8 +80,10 @@ public class SciServerSecurityContext implements SecurityContext {
 
     @Override
     public boolean isUserInRole(String role) {
+    	
+    	// Check if user is in default role
 		if(role.equals("user"))
-			return this.share == null && this.token.getRoles().contains("user");
+			return this.share == null && this.token.getRoles().contains(conf.getString("keystone.role"));
 	
 		return(
 				(role.equals("rwshareuser") && this.share.getPermission().equals(Share.SharePermission.RW_USER)) ||

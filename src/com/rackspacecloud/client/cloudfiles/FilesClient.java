@@ -979,6 +979,10 @@ public class FilesClient
 	    			{	
 	    				throw new FilesContainerExistsException(name, response.getResponseHeaders(), response.getStatusLine());
 	    			}
+	    			else if (response.getStatusCode() == HttpStatus.SC_FORBIDDEN)
+	    			{
+	    				throw new FilesAuthorizationException(name, response.getResponseHeaders(), response.getStatusLine());
+	    			}
 	    			else {
 	    				throw new FilesException("Unexpected Response", response.getResponseHeaders(), response.getStatusLine());
 	    			}
