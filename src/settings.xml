@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!-- The main configuration file for the application. You can overlay the default application parameters by system environmental parameters.-->
 <configuration>
-  <properties fileName="/etc/vospace/application.properties"/>
+  <properties fileName="application.properties"/>
 </configuration>

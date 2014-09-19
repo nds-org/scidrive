@@ -585,7 +585,7 @@ public class MySQLMetaStore2 implements MetaStore{
                     }
                 }
         );
-        DbPoolServlet.goSql("Deleting properties",
+      /*  DbPoolServlet.goSql("Deleting properties",
         		"DELETE from node_properties WHERE node_id = (SELECT nodes.`node_id` FROM nodes "+
         		"JOIN containers ON nodes.container_id = containers.container_id "+ 
         		"JOIN user_identities ON containers.user_id = user_identities.user_id "+ 
@@ -606,7 +606,7 @@ public class MySQLMetaStore2 implements MetaStore{
                         return true;
                     }
                 }
-        );
+        );*/
 	}
 	
 	@Override

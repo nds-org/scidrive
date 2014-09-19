@@ -58,6 +58,7 @@ public class DocumentsProcessor extends Processor {
 
 		Field contents = new TextField("content", handler.toString(), Store.YES);
         doc.add(contents);
+        
 
         if(null != metadata.get(Office.AUTHOR)) {
 	        Field author = new TextField("author", metadata.get(Office.AUTHOR), Store.YES);
