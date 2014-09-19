@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<properties>
+  <parsers>
+    <parser class="edu.jhu.pha.vospace.process.tika.FITSParser"/>
+    <parser class="edu.jhu.pha.vospace.process.tika.ExcelParser"/>
+    <parser class="edu.jhu.pha.vospace.process.tika.CSVParser"/> 
+    <parser class="edu.jhu.pha.vospace.process.tika.AVMParser"/>
+    <parser class="edu.jhu.pha.vospace.process.tika.ATpyParser"/>
+  </parsers>
+</properties>

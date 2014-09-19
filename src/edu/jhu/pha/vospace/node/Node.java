@@ -54,9 +54,9 @@ public abstract class Node implements Cloneable {
 	private final String VOS_NAMESPACE = "http://www.ivoa.net/xml/VOSpace/v2.0";
 	private final String XSI_NAMESPACE = "http://www.w3.org/2001/XMLSchema-instance";
 
-	private static final String DATE_PROPERTY = "ivo://ivoa.net/vospace/core#date";
-	private static final String LENGTH_PROPERTY = "ivo://ivoa.net/vospace/core#length";
-	private static final String CONTENTTYPE_PROPERTY = "ivo://ivoa.net/vospace/core#contenttype";
+	private static final String DATE_PROPERTY = "ivo://ivoa.net/vospace/core#datexyz";
+	private static final String LENGTH_PROPERTY = "ivo://ivoa.net/vospace/core#lengthxyz";
+	private static final String CONTENTTYPE_PROPERTY = "ivo://ivoa.net/vospace/core#contenttypexyz";
 	
 	MetaStore _metastore = null;
 	StorageManager _storage = null;
