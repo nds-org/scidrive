@@ -1,4 +1,48 @@
 <fileprocessors>
+<processor>
+		<id>fitsprocessor</id>
+		<title>CasJobs/MyDB</title>
+		<description>Extracts tabular data from csv\, fits\, Excel and special tiff files and stores it in connected &lt;a href=&quot;http://skyserver.sdss3.org/CasJobs&quot; target=&quot;_blank&quot;&gt;CasJobs&lt;/a&gt; database. &lt;b&gt;You can find your wsid in CasJobs profile menu after registration.&lt;/b&gt;</description>
+		<mimetype>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mimetype>
+		<mimetype>application/vnd.ms-excel</mimetype>
+		<mimetype>application/fits</mimetype>
+		<mimetype>text/plain</mimetype>
+		<mimetype>image/tiff</mimetype>
+		<processor>edu.jhu.pha.vospace.process.FileToDatabaseProcessor</processor>
+		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
+		<config>tika/tika-conf.xml</config>
+		<schema>
+			<field name="endpoint" required="true" default="http://skyserver.sdss3.org/CasJobs"/>
+			<field name="wsid" required="true"/>
+			<field name="password" required="true" ispassword="true"/>
+		</schema>
+	</processor>
+	<processor>
+		<id>sqlshareprocessor</id>
+		<title>SQLShare</title>
+		<description>Extracts tabular data from plain text files using NumPY library and stores it in connected 
+		    &lt;a href=&quot;http://sqlshare.escience.washington.edu&quot;&gt;SQLShare&lt;/a&gt; database. 
+		    You can obtain your API key by visiting 
+		    &lt;a href=&quot;https://sqlshare.escience.washington.edu/sqlshare/#s=credentials&quot; target=&quot;_blank&quot;&gt;credentials service&lt;/a&gt; after registering at the service.</description>
+		<mimetype>text/plain</mimetype>
+		<processor>edu.jhu.pha.vospace.process.FileToSQLShareProcessor</processor>
+		<handler>edu.jhu.pha.vospace.process.sax.AsciiTableContentHandler</handler>
+		<config>tika/tika-conf.xml</config>
+		<schema>
+			<field name="endpoint" required="true" default="https://sqlshare-rest.cloudapp.net/REST.svc/v3/file"/>
+		   	<field name="userId" required="true"/>
+			<field name="apiKey" required="true"/>
+		</schema>
+	</processor>
+	<processor>
+		<id>simprocessor</id>
+		<title>ENZO simulations</title>
+		<description>Extracts the simulation ID and simulation datasets ID from ENZO simulations and stores these in file metadata.</description>
+		<mimetype>application/enzoparameterfile</mimetype>
+		<mimetype>application/enzosimulation</mimetype>
+		<processor>edu.sdsc.vospace.process.SimulationProcessor</processor>
+		<config>tika/tika-simulation.xml</config>
+	</processor>
     <processor>
 		<id>FileProcessor</id>
 		<title>ProcessAnyFile</title>
