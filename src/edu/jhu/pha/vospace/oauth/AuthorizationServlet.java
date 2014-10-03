@@ -17,6 +17,7 @@ package edu.jhu.pha.vospace.oauth;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
@@ -30,6 +31,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 import org.openid4java.OpenIDException;
 import org.openid4java.consumer.ConsumerManager;
 import org.openid4java.consumer.VerificationResult;
@@ -42,6 +44,22 @@ import org.openid4java.message.ax.FetchRequest;
 import edu.jhu.pha.vospace.BaseServlet;
 import edu.jhu.pha.vospace.SettingsServlet;
 import edu.jhu.pha.vospace.api.exceptions.PermissionDeniedException;
+
+import edu.uiuc.ncsa.myproxy.oa4mp.client.Asset;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.OA4MPResponse;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.servlet.ClientServlet;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.servlet.sample.SimpleStartRequest;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.servlet.sample.SimpleReadyServlet;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.storage.AssetStore;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.storage.AssetStoreUtil;
+import edu.uiuc.ncsa.security.core.Identifier;
+import edu.uiuc.ncsa.security.servlet.JSPUtil;
+import edu.uiuc.ncsa.security.util.pkcs.KeyUtil;
+
+import edu.uiuc.ncsa.myproxy.oa4mp.client.OA4MPService;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.ClientEnvironment;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.loader.ClientEnvironmentUtil;
+import edu.uiuc.ncsa.myproxy.oa4mp.client.AssetResponse;
 
 /** A simple implementation of an OpenID relying party, specialized for VOSpace & VAO OpenID.
  *  For more sample code, see OpenID4Java's sample code or the USVAO SSO example
@@ -89,6 +107,9 @@ public class AuthorizationServlet extends BaseServlet {
             if (isOpenIdResponse(request)) {
             	logger.debug("Handle OpenID");
                 handleOpenidResponse(request, response);
+            } else if (isOA4MPResponse(request)) {
+            	logger.debug("Handle OA4MP response");
+                handleOA4MPResponse(request, response);
             } else { // initial login
             	logger.debug("Initiate");
             	String userName = checkCertificate(request);
@@ -116,7 +137,8 @@ public class AuthorizationServlet extends BaseServlet {
 	                	logger.debug("Created third party app cookie.");
 	                }
 	                
-	                String error = initiateOpenid(request, response, idLess);
+	                // String error = initiateOpenid(request, response, idLess);
+	                String error = initiateOA4MP(request, response);
 	                if (error != null)
 	                    throw new Oops(error);
             	}
@@ -177,6 +199,26 @@ public class AuthorizationServlet extends BaseServlet {
         }
     }
 
+    private void handleOA4MPResponse(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, Oops {
+        try {
+        logger.debug("IN OA4MP response ");
+        ClientEnvironment ce = ClientEnvironmentUtil.load(new File("/etc/vospace/client-cfg.xml"));
+        logger.debug("READ FILE ");
+        OA4MPService service = new OA4MPService(ce);
+        logger.debug("OA4MP SERVICE");
+        String accessToken = request.getParameter("oauth_token"); // from  the callback URL
+        String verifier = request.getParameter("oauth_verifier");   // from  the callback URL
+        logger.debug("OA4MP accessToken " + accessToken + " verifier " + verifier);
+        AssetResponse assetResponse = service.getCert(accessToken, verifier);
+        logger.debug("OA4MP assetResponse " + assetResponse);
+        authorizeRequestToken2(request, response, assetResponse.getUsername());
+        } catch (Exception e) {
+            logger.info("Exception verifying OA4MP response.", e);
+            throw new Oops("Unable to verify OA4MP response: " + e.getMessage());
+        }
+    }
+
     /** OpenID authentication succeeded. */
     private void handleAuthenticated
             (VerificationResult verification, HttpServletRequest request, HttpServletResponse response)
@@ -231,9 +273,89 @@ public class AuthorizationServlet extends BaseServlet {
         String shareId = null;
         
         if (null != request.getParameter("oauth_token")) {
-        	token = request.getParameter("oauth_token");
-        	callbackUrl = request.getParameter("oauth_callback");
+         	token = request.getParameter("oauth_token");
+         	callbackUrl = request.getParameter("oauth_callback");
         } else if(cookies != null) {
+        	OauthCookie parsedCookie = null;
+        	
+        	for (Cookie cookie : cookies) {
+	            if (cookie.getName().equals(OauthCookie.COOKIE_NAME)){
+	            	// Remove the temporary 3rd party app cookie
+	            	Cookie removeCookie = new Cookie(OauthCookie.COOKIE_NAME, "");
+	            	removeCookie.setMaxAge(0);
+	            	response.addCookie(removeCookie);
+	            	try {
+	            		parsedCookie = OauthCookie.create(cookie);
+	            		shareId = parsedCookie.getShareId();
+		    	        if (isBlank(parsedCookie.getRequestToken()))
+		    	            throw new Oops("No request token present in oauth cookie (\"" + cookie.getValue() + "\").");
+		    	        logger.debug("Parsed oauth cookie \"" + cookie.getValue() + "\" as \"" + parsedCookie.toString() + "\".");
+					} catch (IOException e) {
+	            		logger.debug("Error parsing cookie. Just removing it.");
+					}
+	            }
+        	}
+        	
+        	if(null != parsedCookie) {
+    	        token = parsedCookie.getRequestToken();
+    	        callbackUrl = parsedCookie.getCallbackUrl();
+        	}
+        }
+
+        if(null == token)
+            throw new Oops("No request token found in request.");
+		
+		try {
+			Token reqToken = MySQLOAuthProvider2.getRequestToken(token);
+			if(null == reqToken)
+    			throw new PermissionDeniedException("401 Unauthorized");
+            if(null != reqToken.getAttributes().getFirst("root_container")){ // pre-shared container accessor
+            	if(shareId != null) {//already created the share - user bound sharing
+	        		List<String> groupUserLogins = MySQLOAuthProvider2.getShareUsers(shareId);
+	        		if(!groupUserLogins.contains(username)){ // the username of the one authorized != user that share was created for
+	        			throw new PermissionDeniedException("401 Unauthorized");
+	        		}
+            	} // else share is open for everyone
+            }
+            
+            MySQLOAuthProvider2.markAsAuthorized(reqToken, username);
+
+            if(null != callbackUrl && !callbackUrl.isEmpty()){
+            	if(callbackUrl.indexOf('?')<=0)
+            		callbackUrl += "?"+"oauth_token="+reqToken.getToken();
+            	else
+            		callbackUrl += "&"+"oauth_token="+reqToken.getToken();
+            	logger.debug("Redirecting user to "+callbackUrl);
+            	response.sendRedirect(callbackUrl);
+            } else {
+                response.setContentType("text/plain");
+                PrintWriter out = response.getWriter();
+                out.println("You have successfully authorized " 
+                        + ".\nPlease close this browser window and click continue"
+                        + " in the client.");
+                out.close();
+            }
+        } catch (IOException e) {
+        	logger.error("Error performing the token authorization "+e.getMessage());
+			e.printStackTrace();
+            throw new Oops(e.getMessage());
+		}
+	}
+	private void authorizeRequestToken2(HttpServletRequest request, HttpServletResponse response, String username)
+			throws Oops {
+
+        String token = null, callbackUrl = null;
+        
+        Cookie[] cookies = request.getCookies();
+        
+        String shareId = null;
+        logger.debug("IN authorizeRequestToken2 " + cookies.toString());
+        
+        // if (null != request.getParameter("oauth_token")) {
+        //  	token = request.getParameter("oauth_token");
+        //  	callbackUrl = request.getParameter("oauth_callback");
+        // } else if(cookies != null) {
+        if(cookies != null) {
         	OauthCookie parsedCookie = null;
         	
         	for (Cookie cookie : cookies) {
@@ -330,6 +452,25 @@ public class AuthorizationServlet extends BaseServlet {
         return null; // no errors
     }
 
+    private String initiateOA4MP(HttpServletRequest request, HttpServletResponse response)
+            throws IOException
+    {
+        try {
+        logger.debug("BEFORE FILE ");
+        ClientEnvironment ce = ClientEnvironmentUtil.load(new File("/etc/vospace/client-cfg.xml"));
+        logger.debug("READ FILE ");
+        OA4MPService service = new OA4MPService(ce);
+        logger.debug("OA4MP SERVICE");
+        OA4MPResponse oa4mpResponse = service.requestCert();
+        logger.debug("REDIRECTING TO: " + oa4mpResponse.getRedirect().toURL().toString());
+        response.sendRedirect(oa4mpResponse.getRedirect().toURL().toString());
+        } catch (Exception e) {
+            logger.error("Exception during OA4MP initiation.", e);
+            return "Unable to form OA4MP request: " + e.getMessage();
+        }
+        return null;
+    }
+
     /** The URL to use for identityless authentication for a provider.  Not all providers support it
      * -- we will need to do something fancier with discovery etc. for the general case, although
      * this will work fine with VAO SSO. */
@@ -357,5 +498,9 @@ public class AuthorizationServlet extends BaseServlet {
     
     private boolean isOpenIdResponse(HttpServletRequest request) {
         return !isBlank(request.getParameter("openid.ns"));
+    }
+    
+    private boolean isOA4MPResponse(HttpServletRequest request) {
+        return !isBlank(request.getParameter("oauth_verifier"));
     }
 }
